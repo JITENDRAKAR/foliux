@@ -1,0 +1,189 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block extra_css %}
+<style>
+    .coin-card {
+        background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+        border-radius: 20px;
+        border: 1px solid rgba(247, 147, 26, 0.1);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .coin-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 15px 35px rgba(247, 147, 26, 0.1);
+    }
+    .text-coin {
+        color: #f7931a; /* Bitcoin Orange */
+    }
+    .bg-soft-orange {
+        background-color: rgba(247, 147, 26, 0.05);
+    }
+    .table-container {
+        background: white;
+        border-radius: 20px;
+        overflow: hidden;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.03);
+    }
+    .stats-label {
+        font-size: 0.85rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #64748b;
+    }
+    .stats-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #1e293b;
+    }
+    .btn-coin-gradient {
+        background: linear-gradient(135deg, #f7931a 0%, #ffab40 100%);
+        color: white;
+        border: none;
+        padding: 0.6rem 1.5rem;
+        border-radius: 12px;
+        font-weight: 600;
+        transition: all 0.3s;
+    }
+    .btn-coin-gradient:hover {
+        transform: scale(1.02);
+        box-shadow: 0 5px 15px rgba(247, 147, 26, 0.3);
+        color: white;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Header Area -->
+    <div class="d-flex justify-content-between align-items-center mb-5">
+        <div>
+            <h1 class="fw-800 text-coin mb-1">COIN Portfolio</h1>
+            <p class="text-muted mb-0">Track your cryptocurrency investments (INR) with real-time yfinance updates</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'coin_transaction_history' %}" class="btn btn-outline-warning rounded-pill px-4" style="color: #f7931a; border-color: #f7931a;">
+                <i class="fas fa-history me-2"></i>History
+            </a>
+            <a href="{% url 'refresh_coin_prices' %}" class="btn btn-outline-warning rounded-pill px-4" style="color: #f7931a; border-color: #f7931a;">
+                <i class="fas fa-sync-alt me-2"></i>Refresh Prices
+            </a>
+            <a href="{% url 'add_coin' %}" class="btn btn-coin-gradient rounded-pill px-4">
+                <i class="fas fa-plus me-2"></i>Add New Coin
+            </a>
+        </div>
+    </div>
+
+    <!-- Summary Stats -->
+    <div class="row g-4 mb-5">
+        <div class="col">
+            <div class="coin-card p-4 h-100 animate__animated animate__fadeInUp">
+                <div class="stats-label mb-2">Invested Amount</div>
+                <div class="stats-value">₹ {{ total_invested|floatformat:2 }}</div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="coin-card p-4 h-100 animate__animated animate__fadeInUp" style="animation-delay: 0.1s;">
+                <div class="stats-label mb-2">Current Value</div>
+                <div class="stats-value">₹ {{ total_current_value|floatformat:2 }}</div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="coin-card p-4 h-100 animate__animated animate__fadeInUp" style="animation-delay: 0.2s;">
+                <div class="stats-label mb-2">Day Change</div>
+                <div class="stats-value {% if total_day_change >= 0 %}text-success{% else %}text-danger{% endif %} text-nowrap">
+                    ₹ {{ total_day_change|floatformat:2 }}
+                </div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="coin-card p-4 h-100 animate__animated animate__fadeInUp" style="animation-delay: 0.3s;">
+                <div class="stats-label mb-2">Unrealized P&L</div>
+                <div class="stats-value {% if total_unrealized_pnl >= 0 %}text-success{% else %}text-danger{% endif %} text-nowrap">
+                    ₹ {{ total_unrealized_pnl|floatformat:2 }}
+                </div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="coin-card p-4 h-100 animate__animated animate__fadeInUp" style="animation-delay: 0.4s;">
+                <div class="stats-label mb-2">Realized Profit</div>
+                <div class="stats-value text-primary text-nowrap">
+                    ₹ {{ total_realized_profit|floatformat:2 }}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Portfolio Table -->
+    <div class="table-container p-2">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light">
+                    <tr>
+                        <th class="ps-4 py-3 border-0">Coin Name</th>
+                        <th class="py-3 border-0">Units</th>
+                        <th class="py-3 border-0">Avg Price</th>
+                        <th class="py-3 border-0">Current Price</th>
+                        <th class="py-3 border-0">Invested Val</th>
+                        <th class="py-3 border-0">P&L & Returns</th>
+                        <th class="py-3 border-0">Realized Profit</th>
+                        <th class="py-3 border-0 text-center pe-4">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in coin_holdings %}
+                    <tr>
+                        <td class="ps-4">
+                            <div class="fw-700 text-coin">{{ item.coin.name }}</div>
+                            <div class="x-small text-muted">{{ item.coin.symbol }}</div>
+                        </td>
+                        <td>{{ item.units|floatformat:8 }}</td>
+                        <td>₹ {{ item.avg_price|floatformat:4 }}</td>
+                        <td>
+                            <div class="fw-600">₹ {{ item.coin.price|floatformat:4 }}</div>
+                        </td>
+                        <td class="fw-700">₹ {{ item.invested_amount|floatformat:2 }}</td>
+                        <td>
+                            <div class="{% if item.unrealized_pnl >= 0 %}text-success{% else %}text-danger{% endif %} fw-bold">
+                                ₹ {{ item.unrealized_pnl|floatformat:2 }}
+                            </div>
+                            <div class="{% if item.pnl_percentage >= 0 %}text-success{% else %}text-danger{% endif %} small fw-bold">
+                                {% if item.pnl_percentage >= 0 %}+{% endif %}{{ item.pnl_percentage|floatformat:2 }}%
+                            </div>
+                        </td>
+                        <td class="fw-600 text-primary">₹ {{ item.realized_profit|floatformat:2 }}</td>
+                        <td class="pe-4 py-2" style="min-width: 140px;">
+                            <div class="d-flex flex-column align-items-center">
+                                <div class="d-flex gap-1 w-100">
+                                    <a href="{% url 'add_coin' %}?symbol={{ item.coin.symbol }}" class="btn btn-sm btn-success flex-grow-1 py-1" style="border-radius: 8px; font-size: 0.7rem;">
+                                        <i class="fas fa-plus"></i>
+                                    </a>
+                                    <a href="{% url 'sell_coin' item.id %}" class="btn btn-sm btn-danger flex-grow-1 py-1" style="border-radius: 8px; font-size: 0.7rem;">
+                                        <i class="fas fa-minus"></i>
+                                    </a>
+                                </div>
+                                <a href="{% url 'delete_coin_portfolio' item.id %}" class="text-muted x-small mt-2 opacity-50 text-decoration-none" 
+                                   onclick="return confirm('Remove this coin from your portfolio?')" style="font-size: 0.55rem; letter-spacing: 0.5px;">
+                                    REMOVE
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center py-5">
+                            <div class="text-muted py-4">
+                                <i class="fas fa-coins fa-3x mb-3 opacity-25"></i>
+                                <p>No Coins found. Add your first crypto to start tracking!</p>
+                                <a href="{% url 'add_coin' %}" class="btn btn-warning rounded-pill mt-2" style="color:white; background-color:#f7931a; border:none;">Add My First Coin</a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

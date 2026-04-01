@@ -1,0 +1,416 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block extra_css %}
+<style>
+    /* Premium Dashboard Styles */
+    .portfolio-header-card {
+        background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+        border-radius: 24px;
+        color: white;
+        box-shadow: 0 20px 40px rgba(15, 23, 42, 0.2);
+        position: relative;
+        overflow: hidden;
+    }
+    .portfolio-header-card::before {
+        content: '';
+        position: absolute;
+        top: 0; right: 0; bottom: 0; left: 0;
+        background: radial-gradient(circle at top right, rgba(56, 189, 248, 0.1), transparent 50%);
+        pointer-events: none;
+    }
+    .summary-stat-label {
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #94a3b8;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+    }
+    .summary-stat-value {
+        font-size: clamp(1.2rem, 2.5vw, 1.75rem);
+        font-weight: 800;
+        letter-spacing: -0.02em;
+        word-break: break-word;
+    }
+    .section-card {
+        background: white;
+        border-radius: 20px;
+        padding: 2rem;
+        height: 100%;
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        border: 1px solid rgba(0,0,0,0.05);
+        text-decoration: none;
+        color: inherit;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        position: relative;
+        overflow: hidden;
+    }
+    .section-card:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 25px 50px -12px rgba(0,0,0,0.1);
+        text-decoration: none;
+        color: inherit;
+    }
+    .section-card::after {
+        content: '';
+        position: absolute;
+        bottom: 0; left: 0; right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, var(--card-color-1, #3b82f6), var(--card-color-2, #60a5fa));
+        transform: scaleX(0);
+        transform-origin: left;
+        transition: transform 0.4s ease;
+    }
+    .section-card:hover::after {
+        transform: scaleX(1);
+    }
+    .icon-wrapper {
+        width: 60px;
+        height: 60px;
+        border-radius: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.8rem;
+        margin-bottom: 1.5rem;
+        transition: all 0.3s ease;
+    }
+    .section-card:hover .icon-wrapper {
+        transform: scale(1.1) rotate(5deg);
+    }
+    
+    /* Specific Card Colors */
+    .card-stocks { --card-color-1: #2563eb; --card-color-2: #3b82f6; }
+    .card-mf { --card-color-1: #16a34a; --card-color-2: #22c55e; }
+    .card-coin { --card-color-1: #f59e0b; --card-color-2: #fbbf24; }
+    .card-nps { --card-color-1: #9333ea; --card-color-2: #a855f7; }
+    .card-fixed { --card-color-1: #475569; --card-color-2: #64748b; }
+    .card-other { --card-color-1: #0ea5e9; --card-color-2: #38bdf8; }
+    .card-loads { --card-color-1: #dc2626; --card-color-2: #ef4444; }
+
+    .card-stocks .icon-wrapper { background: rgba(59, 130, 246, 0.1); color: #2563eb; }
+    .card-mf .icon-wrapper { background: rgba(34, 197, 94, 0.1); color: #16a34a; }
+    .card-coin .icon-wrapper { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
+    .card-nps .icon-wrapper { background: rgba(168, 85, 247, 0.1); color: #9333ea; }
+    .card-fixed .icon-wrapper { background: rgba(100, 116, 139, 0.1); color: #475569; }
+    .card-other .icon-wrapper { background: rgba(56, 189, 248, 0.1); color: #0ea5e9; }
+    .card-loads .icon-wrapper { background: rgba(239, 68, 68, 0.1); color: #dc2626; }
+
+    .section-title {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: #1e293b;
+        margin-bottom: 0.5rem;
+    }
+    .section-subtitle {
+        font-size: 0.9rem;
+        color: #64748b;
+        margin: 0;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-5 animate__animated animate__fadeIn">
+    <!-- Consolidated Portfolio Header -->
+    <div class="portfolio-header-card p-5 mb-5">
+        <h2 class="mb-4 fw-800">Unified Portfolio Hub</h2>
+        
+        <div class="row g-3">
+            <!-- Total Investment Cost -->
+            <div class="col-6 col-md flex-fill px-2">
+                <div class="summary-stat-label" style="font-size: 0.75rem;">Invested</div>
+                <div class="summary-stat-value text-white">₹ {{ total_investment_cost|floatformat:2|default:"0.00" }}</div>
+            </div>
+            
+            <!-- Latest Value -->
+            <div class="col-6 col-md flex-fill px-2">
+                <div class="summary-stat-label" style="font-size: 0.75rem;">Current Value</div>
+                <div class="summary-stat-value text-white">₹ {{ total_latest_value|floatformat:2|default:"0.00" }}</div>
+            </div>
+            
+            <!-- Unrealized Gain -->
+            <div class="col-6 col-md flex-fill px-2">
+                <div class="summary-stat-label" style="font-size: 0.75rem;">Unrealized P&L</div>
+                <div class="summary-stat-value {% if total_unrealized_gain >= 0 %}text-success{% else %}text-danger{% endif %}">
+                    {% if total_unrealized_gain > 0 %}+{% endif %}₹ {{ total_unrealized_gain|floatformat:2|default:"0.00" }}
+                </div>
+            </div>
+            
+            <!-- Realized Gain -->
+            <div class="col-6 col-md flex-fill px-2">
+                <div class="summary-stat-label" style="font-size: 0.75rem;">Realized Profit</div>
+                <div class="summary-stat-value text-info">
+                    ₹ {{ total_realized_gain|floatformat:2|default:"0.00" }}
+                </div>
+            </div>
+
+            <!-- Other Gain -->
+            <div class="col-6 col-md flex-fill px-2">
+                <div class="summary-stat-label" style="font-size: 0.75rem;">Other Gain</div>
+                <div class="summary-stat-value text-warning">
+                    ₹ {{ total_other_gain|floatformat:2|default:"0.00" }}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <h4 class="fw-bold mb-4" style="color: #334155;">Asset Categories</h4>
+
+    <!-- Portfolio Sections Table -->
+    <div class="bg-white rounded-4 shadow-sm border overflow-hidden">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light">
+                    <tr>
+                        <th class="ps-4 py-3 border-0 text-muted w-25" style="font-size: 0.85rem; font-weight: 700; letter-spacing: 0.5px;">ASSET CATEGORY</th>
+                        <th class="py-3 border-0 text-muted" style="font-size: 0.85rem; font-weight: 700; letter-spacing: 0.5px;">INVESTED</th>
+                        <th class="py-3 border-0 text-muted" style="font-size: 0.85rem; font-weight: 700; letter-spacing: 0.5px;">CURRENT VALUE</th>
+                        <th class="py-3 border-0 text-muted" style="font-size: 0.85rem; font-weight: 700; letter-spacing: 0.5px;">UNREALIZED P&L</th>
+                        <th class="py-3 border-0 text-muted pe-4" style="font-size: 0.85rem; font-weight: 700; letter-spacing: 0.5px;">REALIZED PROFIT</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Stocks / ETF -->
+                    <tr style="cursor: pointer;" onclick="window.location='{% url 'dashboard' %}'">
+                        <td class="ps-4 py-3">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="icon-wrapper" style="width: 44px; height: 44px; font-size: 1.25rem; margin-bottom: 0; background: rgba(37, 99, 235, 0.1); color: #2563eb;">
+                                    <i class="fas fa-chart-line"></i>
+                                </div>
+                                <div class="fw-bold" style="color: #1e293b; font-size: 1.05rem;">Stocks & ETFs</div>
+                            </div>
+                        </td>
+                        <td class="fw-semibold" style="font-size: 1rem;">₹ {{ stocks_invested|floatformat:2|default:"0.00" }}</td>
+                        <td class="fw-semibold" style="font-size: 1rem;">₹ {{ stocks_current|floatformat:2|default:"0.00" }}</td>
+                        <td class="fw-bold {% if stocks_unrealized >= 0 %}text-success{% else %}text-danger{% endif %}" style="font-size: 1rem;">
+                            {% if stocks_unrealized > 0 %}+{% endif %}₹ {{ stocks_unrealized|floatformat:2|default:"0.00" }}
+                        </td>
+                        <td class="fw-bold text-primary pe-4" style="font-size: 1rem;">₹ {{ stocks_realized|floatformat:2|default:"0.00" }}</td>
+                    </tr>
+
+                    <!-- MF Cue -->
+                    <tr style="cursor: pointer;" onclick="window.location='{% url 'mf_dashboard' %}'">
+                        <td class="ps-4 py-3">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="icon-wrapper" style="width: 44px; height: 44px; font-size: 1.25rem; margin-bottom: 0; background: rgba(34, 197, 94, 0.1); color: #16a34a;">
+                                    <i class="fas fa-leaf"></i>
+                                </div>
+                                <div class="fw-bold" style="color: #1e293b; font-size: 1.05rem;">MF Cue</div>
+                            </div>
+                        </td>
+                        <td class="fw-semibold" style="font-size: 1rem;">₹ {{ mf_invested|floatformat:2|default:"0.00" }}</td>
+                        <td class="fw-semibold" style="font-size: 1rem;">₹ {{ mf_current|floatformat:2|default:"0.00" }}</td>
+                        <td class="fw-bold {% if mf_unrealized >= 0 %}text-success{% else %}text-danger{% endif %}" style="font-size: 1rem;">
+                            {% if mf_unrealized > 0 %}+{% endif %}₹ {{ mf_unrealized|floatformat:2|default:"0.00" }}
+                        </td>
+                        <td class="fw-bold text-primary pe-4" style="font-size: 1rem;">₹ {{ mf_realized|floatformat:2|default:"0.00" }}</td>
+                    </tr>
+
+                    <!-- Coin -->
+                    <tr style="cursor: pointer;" onclick="window.location='{% url 'coin_dashboard' %}'">
+                        <td class="ps-4 py-3">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="icon-wrapper" style="width: 44px; height: 44px; font-size: 1.25rem; margin-bottom: 0; background: rgba(245, 158, 11, 0.1); color: #f59e0b;">
+                                    <i class="fab fa-bitcoin"></i>
+                                </div>
+                                <div class="fw-bold" style="color: #1e293b; font-size: 1.05rem;">Coin</div>
+                            </div>
+                        </td>
+                        <td class="fw-semibold" style="font-size: 1rem;">₹ {{ coin_invested|floatformat:2|default:"0.00" }}</td>
+                        <td class="fw-semibold" style="font-size: 1rem;">₹ {{ coin_current|floatformat:2|default:"0.00" }}</td>
+                        <td class="fw-bold {% if coin_unrealized >= 0 %}text-success{% else %}text-danger{% endif %}" style="font-size: 1rem;">
+                            {% if coin_unrealized > 0 %}+{% endif %}₹ {{ coin_unrealized|floatformat:2|default:"0.00" }}
+                        </td>
+                        <td class="fw-bold text-primary pe-4" style="font-size: 1rem;">₹ {{ coin_realized|floatformat:2|default:"0.00" }}</td>
+                    </tr>
+
+                    <!-- NPS -->
+                    <tr style="cursor: pointer;" onclick="window.location='{% url 'nps_dashboard' %}'">
+                        <td class="ps-4 py-3">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="icon-wrapper" style="width: 44px; height: 44px; font-size: 1.25rem; margin-bottom: 0; background: rgba(168, 85, 247, 0.1); color: #9333ea;">
+                                    <i class="fas fa-piggy-bank"></i>
+                                </div>
+                                <div class="fw-bold" style="color: #1e293b; font-size: 1.05rem;">NPS</div>
+                            </div>
+                        </td>
+                        <td class="fw-semibold" style="font-size: 1rem;">₹ {{ nps_invested|floatformat:2|default:"0.00" }}</td>
+                        <td class="fw-semibold" style="font-size: 1rem;">₹ {{ nps_current|floatformat:2|default:"0.00" }}</td>
+                        <td class="fw-bold {% if nps_unrealized >= 0 %}text-success{% else %}text-danger{% endif %}" style="font-size: 1rem;">
+                            {% if nps_unrealized > 0 %}+{% endif %}₹ {{ nps_unrealized|floatformat:2|default:"0.00" }}
+                        </td>
+                        <td class="fw-bold text-primary pe-4" style="font-size: 1rem;">₹ {{ nps_realized|floatformat:2|default:"0.00" }}</td>
+                    </tr>
+
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <h4 class="fw-bold mb-4 mt-5" style="color: #334155;">Other Assets & Liabilities</h4>
+
+    <div class="bg-white rounded-4 shadow-sm border overflow-hidden">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light">
+                    <tr>
+                        <th class="ps-4 py-3 border-0 text-muted w-25" style="font-size: 0.85rem; font-weight: 700; letter-spacing: 0.5px;">ASSET CATEGORY</th>
+                        <th class="py-3 border-0 text-muted" style="font-size: 0.85rem; font-weight: 700; letter-spacing: 0.5px;">INV/LOAN</th>
+                        <th class="py-3 border-0 text-muted" style="font-size: 0.85rem; font-weight: 700; letter-spacing: 0.5px;">CURRENT VALUE</th>
+                        <th class="py-3 border-0 text-muted" style="font-size: 0.85rem; font-weight: 700; letter-spacing: 0.5px;">PERCENTAGE</th>
+                        <th class="py-3 border-0 text-muted pe-4" style="font-size: 0.85rem; font-weight: 700; letter-spacing: 0.5px;">P&L</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Fixed Assets -->
+                    <tr style="cursor: pointer;" onclick="window.location='{% url 'fd_dashboard' %}'">
+                        <td class="ps-4 py-3">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="icon-wrapper" style="width: 44px; height: 44px; font-size: 1.25rem; margin-bottom: 0; background: rgba(100, 116, 139, 0.1); color: #475569;">
+                                    <i class="fas fa-home"></i>
+                                </div>
+                                <div class="fw-bold" style="color: #1e293b; font-size: 1.05rem;">Fixed Assets</div>
+                            </div>
+                        </td>
+                        <td class="fw-semibold" style="font-size: 1rem;">₹ {{ fd_invested|floatformat:2|default:"0.00" }}</td>
+                        <td class="fw-semibold" style="font-size: 1rem;">₹ {{ fd_current|floatformat:2|default:"0.00" }}</td>
+                        <td class="fw-bold {% if fd_percentage >= 0 %}text-success{% else %}text-danger{% endif %}" style="font-size: 1rem;">{% if fd_percentage >= 0 %}+{% endif %}{{ fd_percentage|floatformat:2|default:"0.00" }}%</td>
+                        <td class="fw-bold {% if fd_unrealized >= 0 %}text-success{% else %}text-danger{% endif %} pe-4" style="font-size: 1rem;">{% if fd_unrealized >= 0 %}+{% endif %}₹ {{ fd_unrealized|floatformat:2|default:"0.00" }}</td>
+                    </tr>
+
+                    <!-- Other Assets -->
+                    <tr style="cursor: pointer;" onclick="window.location='{% url 'other_assets_dashboard' %}'">
+                        <td class="ps-4 py-3">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="icon-wrapper" style="width: 44px; height: 44px; font-size: 1.25rem; margin-bottom: 0; background: rgba(56, 189, 248, 0.1); color: #0ea5e9;">
+                                    <i class="fas fa-shapes"></i>
+                                </div>
+                                <div class="fw-bold" style="color: #1e293b; font-size: 1.05rem;">Other Assets</div>
+                            </div>
+                        </td>
+                        <td class="fw-semibold" style="font-size: 1rem;">₹ {{ other_invested|floatformat:2|default:"0.00" }}</td>
+                        <td class="fw-semibold" style="font-size: 1rem;">₹ {{ other_current|floatformat:2|default:"0.00" }}</td>
+                        <td class="fw-bold {% if other_percentage >= 0 %}text-success{% else %}text-danger{% endif %}" style="font-size: 1rem;">{% if other_percentage >= 0 %}+{% endif %}{{ other_percentage|floatformat:2|default:"0.00" }}%</td>
+                        <td class="fw-bold {% if other_unrealized >= 0 %}text-success{% else %}text-danger{% endif %} pe-4" style="font-size: 1rem;">{% if other_unrealized >= 0 %}+{% endif %}₹ {{ other_unrealized|floatformat:2|default:"0.00" }}</td>
+                    </tr>
+
+                    <!-- Loans -->
+                    <tr style="cursor: pointer;" onclick="window.location='{% url 'loan_dashboard' %}'">
+                        <td class="ps-4 py-3">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="icon-wrapper" style="width: 44px; height: 44px; font-size: 1.25rem; margin-bottom: 0; background: rgba(239, 68, 68, 0.1); color: #dc2626;">
+                                    <i class="fas fa-hand-holding-usd"></i>
+                                </div>
+                                <div class="fw-bold" style="color: #1e293b; font-size: 1.05rem;">Loans</div>
+                            </div>
+                        </td>
+                        <td class="fw-semibold" style="font-size: 1rem;">₹ {{ loan_taken|floatformat:2|default:"0.00" }}</td>
+                        <td class="fw-semibold text-danger" style="font-size: 1rem;">₹ {{ loan_outstanding|floatformat:2|default:"0.00" }}</td>
+                        <td class="fw-bold text-muted" style="font-size: 1rem;">Lability</td>
+                        <td class="fw-bold text-muted pe-4" style="font-size: 1rem;">₹ 0.00</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Alert Signals Section -->
+    <div class="mt-5 animate__animated animate__fadeInUp">
+        <h4 class="fw-bold mb-4" style="color: #334155;">
+            <i class="fas fa-bell text-warning me-2"></i> Actionable Signals
+        </h4>
+        
+        <div class="row g-4">
+            <!-- Stocks & ETFs Alerts -->
+            <div class="col-md-6 col-lg-4">
+                <div class="bg-white rounded-4 shadow-sm border p-4 position-relative overflow-hidden h-100">
+                    <!-- Top accent line -->
+                    <div style="position: absolute; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(90deg, #2563eb, #3b82f6);"></div>
+                    
+                    <div class="d-flex align-items-center mb-4">
+                        <div class="icon-wrapper me-3" style="width: 48px; height: 48px; font-size: 1.25rem; background: rgba(37, 99, 235, 0.1); color: #2563eb; border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
+                        <div>
+                            <h5 class="fw-bold mb-0" style="color: #1e293b;">Stocks & ETFs</h5>
+                            <small class="text-muted">Algorithm Recommendations</small>
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex flex-column gap-3">
+                        <a href="{% url 'dashboard' %}?filter=BUY" class="text-decoration-none d-flex justify-content-between align-items-center p-3 rounded-3 hover-lift" style="background: rgba(34, 197, 94, 0.05); border: 1px solid rgba(34, 197, 94, 0.2); transition: all 0.2s ease;">
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="fas fa-cart-plus text-success"></i>
+                                <span class="fw-semibold text-success" style="font-size: 0.95rem;">BUY</span>
+                            </div>
+                            <span class="badge bg-success rounded-pill px-3 py-2 fs-6 shadow-sm">{{ buy_count|default:"0" }}</span>
+                        </a>
+                        
+                        <a href="{% url 'dashboard' %}?filter=SELL" class="text-decoration-none d-flex justify-content-between align-items-center p-3 rounded-3 hover-lift" style="background: rgba(239, 68, 68, 0.05); border: 1px solid rgba(239, 68, 68, 0.2); transition: all 0.2s ease;">
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="fas fa-arrow-trend-up text-danger"></i>
+                                <span class="fw-semibold text-danger" style="font-size: 0.95rem;">SELL</span>
+                            </div>
+                            <span class="badge bg-danger rounded-pill px-3 py-2 fs-6 shadow-sm">{{ sell_count|default:"0" }}</span>
+                        </a>
+                        
+                        <a href="{% url 'dashboard' %}?filter=REDUCE" class="text-decoration-none d-flex justify-content-between align-items-center p-3 rounded-3 hover-lift" style="background: rgba(245, 158, 11, 0.05); border: 1px solid rgba(245, 158, 11, 0.2); transition: all 0.2s ease;">
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="fas fa-arrow-trend-down text-warning"></i>
+                                <span class="fw-semibold text-warning" style="font-size: 0.95rem;">REDUCE</span>
+                            </div>
+                            <span class="badge bg-warning text-dark rounded-pill px-3 py-2 fs-6 shadow-sm">{{ reduce_count|default:"0" }}</span>
+                        </a>
+                    </div>
+                    
+                    <div class="mt-4 text-center">
+                        <a href="{% url 'dashboard' %}" class="btn btn-outline-primary btn-sm rounded-pill px-4 fw-bold">View Details <i class="fas fa-arrow-right ms-1"></i></a>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Other Asset Placeholders Note (Hidden) -->
+            <!-- MF, NPS, and Coin signal cards will be added here in the future -->
+            
+            {% if upcoming_emis_count > 0 %}
+            <!-- Loan & Liabilities Alerts -->
+            <div class="col-md-6 col-lg-4">
+                <div class="bg-white rounded-4 shadow-sm border p-4 position-relative overflow-hidden h-100">
+                    <!-- Top accent line -->
+                    <div style="position: absolute; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(90deg, #dc2626, #ef4444);"></div>
+                    
+                    <div class="d-flex align-items-center mb-4">
+                        <div class="icon-wrapper me-3" style="width: 48px; height: 48px; font-size: 1.25rem; background: rgba(239, 68, 68, 0.1); color: #dc2626; border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                            <i class="fas fa-hand-holding-usd"></i>
+                        </div>
+                        <div>
+                            <h5 class="fw-bold mb-0" style="color: #1e293b;">Liabilities</h5>
+                            <small class="text-muted">EMI Reminders</small>
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex flex-column gap-3">
+                        <div class="p-3 rounded-3" style="background: rgba(239, 68, 68, 0.05); border: 1px solid rgba(239, 68, 68, 0.2);">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="fw-semibold text-danger" style="font-size: 0.95rem;">Upcoming EMIs</span>
+                                <span class="badge bg-danger rounded-pill px-3 py-2 fs-6 shadow-sm">{{ upcoming_emis_count }}</span>
+                            </div>
+                            <div class="mt-2 text-muted small">Due in the next 7 days</div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4 text-center">
+                        <a href="{% url 'loan_dashboard' %}" class="btn btn-outline-danger btn-sm rounded-pill px-4 fw-bold">Manage Loans <i class="fas fa-arrow-right ms-1"></i></a>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+</div>
+{% endblock %}

@@ -12,6 +12,7 @@ class Instrument(models.Model):
     price_change = models.DecimalField(max_digits=20, decimal_places=2, default=0)
     previous_close = models.DecimalField(max_digits=20, decimal_places=2, default=0)
     pe_ratio = models.DecimalField(max_digits=20, decimal_places=2, null=True, blank=True)
+    high_52w = models.DecimalField(max_digits=20, decimal_places=2, null=True, blank=True)
     diff_from_lh_pct = models.DecimalField(max_digits=20, decimal_places=2, null=True, blank=True)
     last_updated = models.DateTimeField(null=True, blank=True)
 
@@ -283,3 +284,329 @@ class FinancialYearData(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - {self.financial_year}"
+
+class MutualFund(models.Model):
+    name = models.CharField(max_length=200)
+    symbol = models.CharField(max_length=50, unique=True) # Yahoo Symbol (e.g. 0P0000XWWI.BO)
+    isin = models.CharField(max_length=20, unique=True, null=True, blank=True)
+    amc = models.CharField(max_length=100, null=True, blank=True)
+    nav = models.DecimalField(max_digits=20, decimal_places=4, default=0)
+    prev_nav = models.DecimalField(max_digits=20, decimal_places=4, default=0)
+    last_updated = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.name
+
+class MFPortfolio(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='mf_portfolios')
+    fund = models.ForeignKey(MutualFund, on_delete=models.CASCADE)
+    units = models.DecimalField(max_digits=20, decimal_places=4)
+    avg_nav = models.DecimalField(max_digits=20, decimal_places=4)
+    realized_profit = models.DecimalField(max_digits=20, decimal_places=2, default=0)
+    
+    @property
+    def day_change(self):
+        if self.fund.prev_nav == 0: return 0
+        return self.units * (self.fund.nav - self.fund.prev_nav)
+
+    @property
+    def day_change_pct(self):
+        if self.fund.prev_nav == 0: return 0
+        return ((self.fund.nav - self.fund.prev_nav) / self.fund.prev_nav) * 100
+    @property
+    def invested_amount(self):
+        return self.units * self.avg_nav
+
+    @property
+    def current_value(self):
+        return self.units * self.fund.nav
+
+    @property
+    def unrealized_pnl(self):
+        return self.current_value - self.invested_amount
+
+    @property
+    def pnl_percentage(self):
+        if self.invested_amount == 0: return 0
+        return (self.unrealized_pnl / self.invested_amount) * 100
+
+    class Meta:
+        unique_together = ('user', 'fund')
+
+class MFTransaction(models.Model):
+    TRANSACTION_TYPES = [('BUY', 'Buy'), ('SELL', 'Sell')]
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='mf_transactions')
+    fund = models.ForeignKey(MutualFund, on_delete=models.CASCADE)
+    transaction_type = models.CharField(max_length=4, choices=TRANSACTION_TYPES)
+    units = models.DecimalField(max_digits=20, decimal_places=4)
+    price = models.DecimalField(max_digits=20, decimal_places=4)
+    date = models.DateField()
+    remaining_units = models.DecimalField(max_digits=20, decimal_places=4, default=0) # Only for BUY
+    created_at = models.DateTimeField(auto_now_add=True)
+
+class Coin(models.Model):
+    name = models.CharField(max_length=200)
+    symbol = models.CharField(max_length=50, unique=True) # Yahoo Symbol (e.g. BTC-INR)
+    price = models.DecimalField(max_digits=20, decimal_places=4, default=0)
+    prev_price = models.DecimalField(max_digits=20, decimal_places=4, default=0)
+    last_updated = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.name
+
+class CoinPortfolio(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='coin_portfolios')
+    coin = models.ForeignKey(Coin, on_delete=models.CASCADE)
+    units = models.DecimalField(max_digits=20, decimal_places=8) # More precision for crypto
+    avg_price = models.DecimalField(max_digits=20, decimal_places=4)
+    realized_profit = models.DecimalField(max_digits=20, decimal_places=2, default=0)
+    
+    @property
+    def day_change(self):
+        if self.coin.prev_price == 0: return 0
+        return self.units * (self.coin.price - self.coin.prev_price)
+
+    @property
+    def invested_amount(self):
+        return self.units * self.avg_price
+
+    @property
+    def current_value(self):
+        return self.units * self.coin.price
+
+    @property
+    def unrealized_pnl(self):
+        return self.current_value - self.invested_amount
+
+    @property
+    def pnl_percentage(self):
+        if self.invested_amount == 0: return 0
+        return (self.unrealized_pnl / self.invested_amount) * 100
+
+    class Meta:
+        unique_together = ('user', 'coin')
+
+class CoinTransaction(models.Model):
+    TRANSACTION_TYPES = [('BUY', 'Buy'), ('SELL', 'Sell')]
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='coin_transactions')
+    coin = models.ForeignKey(Coin, on_delete=models.CASCADE)
+    transaction_type = models.CharField(max_length=4, choices=TRANSACTION_TYPES)
+    units = models.DecimalField(max_digits=20, decimal_places=8)
+    price = models.DecimalField(max_digits=20, decimal_places=4)
+    date = models.DateField()
+    remaining_units = models.DecimalField(max_digits=20, decimal_places=8, default=0) # Only for BUY
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    @property
+    def total_value(self):
+        return self.units * self.price
+
+class NPSFund(models.Model):
+    name = models.CharField(max_length=200, unique=True)
+    nav = models.DecimalField(max_digits=20, decimal_places=4, default=0)
+    prev_nav = models.DecimalField(max_digits=20, decimal_places=4, default=0)
+    last_updated = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.name
+
+class NPSPortfolio(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='nps_portfolios')
+    fund = models.ForeignKey(NPSFund, on_delete=models.CASCADE)
+    units = models.DecimalField(max_digits=20, decimal_places=4)
+    avg_nav = models.DecimalField(max_digits=20, decimal_places=4)
+    realized_profit = models.DecimalField(max_digits=20, decimal_places=2, default=0)
+    
+    @property
+    def day_change(self):
+        if self.fund.prev_nav == 0: return 0
+        return self.units * (self.fund.nav - self.fund.prev_nav)
+
+    @property
+    def invested_amount(self):
+        return self.units * self.avg_nav
+
+    @property
+    def current_value(self):
+        return self.units * self.fund.nav
+
+    @property
+    def unrealized_pnl(self):
+        return self.current_value - self.invested_amount
+
+    @property
+    def pnl_percentage(self):
+        if self.invested_amount == 0: return 0
+        return (self.unrealized_pnl / self.invested_amount) * 100
+
+    class Meta:
+        unique_together = ('user', 'fund')
+
+class NPSTransaction(models.Model):
+    TRANSACTION_TYPES = [('BUY', 'Buy'), ('SELL', 'Sell')]
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='nps_transactions')
+    fund = models.ForeignKey(NPSFund, on_delete=models.CASCADE)
+    transaction_type = models.CharField(max_length=4, choices=TRANSACTION_TYPES)
+    units = models.DecimalField(max_digits=20, decimal_places=4)
+    price = models.DecimalField(max_digits=20, decimal_places=4)
+    date = models.DateField()
+    remaining_units = models.DecimalField(max_digits=20, decimal_places=4, default=0) # Only for BUY
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    @property
+    def total_value(self):
+        return self.units * self.price
+
+class FixedAsset(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='fixed_assets')
+    instrument_name = models.CharField(max_length=100) # FD, PPF, PF, Corporate Bond
+    invested_amount = models.DecimalField(max_digits=20, decimal_places=2)
+    interest_rate = models.DecimalField(max_digits=5, decimal_places=2) # Annual interest rate
+    investment_date = models.DateField()
+    maturity_date = models.DateField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    @property
+    def current_value(self):
+        from datetime import date
+        today = date.today()
+        # Interest compounding stops at the maturity date if it has passed
+        calculation_date = min(today, self.maturity_date) if self.maturity_date else today
+        
+        months = max(0, (calculation_date.year - self.investment_date.year) * 12 + (calculation_date.month - self.investment_date.month))
+        monthly_rate = float(self.interest_rate) / 100 / 12
+        return float(self.invested_amount) * ((1 + monthly_rate) ** months)
+        
+    @property
+    def is_matured(self):
+        from datetime import date
+        if self.maturity_date:
+            return date.today() >= self.maturity_date
+        return False
+
+    @property
+    def unrealized_pnl(self):
+        return self.current_value - float(self.invested_amount)
+
+    @property
+    def pnl_percentage(self):
+        if self.invested_amount == 0: return 0
+        return (self.unrealized_pnl / float(self.invested_amount)) * 100
+
+    def __str__(self):
+        return f"{self.user.username} - {self.instrument_name}"
+
+class OtherAsset(models.Model):
+    ASSET_TYPES = [
+        ('Plot', 'Plot'),
+        ('Flat', 'Flat'),
+        ('Gold', 'Gold'),
+        ('Silver', 'Silver'),
+        ('Land', 'Land'),
+        ('Commercial', 'Commercial Unit'),
+        ('Other', 'Other Physical Asset'),
+    ]
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='other_assets')
+    name = models.CharField(max_length=100) # e.g. "Green Valley Plot"
+    asset_type = models.CharField(max_length=50, choices=ASSET_TYPES, default='Other')
+    purchase_date = models.DateField()
+    purchase_price = models.DecimalField(max_digits=20, decimal_places=2)
+    current_value = models.DecimalField(max_digits=20, decimal_places=2)
+    monthly_rent = models.DecimalField(max_digits=20, decimal_places=2, default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    @property
+    def unrealized_pnl(self):
+        return float(self.current_value) - float(self.purchase_price)
+
+    @property
+    def pnl_percentage(self):
+        if self.purchase_price == 0: return 0
+        return (self.unrealized_pnl / float(self.purchase_price)) * 100
+
+    def __str__(self):
+        return f"{self.user.username} - {self.name} ({self.asset_type})"
+
+class Loan(models.Model):
+    LOAN_CATEGORIES = [
+        ('Home', 'Home Loan'),
+        ('Car', 'Car Loan'),
+        ('Personal', 'Personal Loan'),
+        ('Education', 'Education Loan'),
+        ('Gold', 'Gold Loan'),
+        ('Other', 'Other Loan'),
+    ]
+    INTEREST_TYPES = [('Reducing', 'Reducing'), ('Flat', 'Flat')]
+    INTEREST_LOCKS = [('Fixed', 'Fixed'), ('Floating', 'Floating')]
+    
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='loans')
+    bank_name = models.CharField(max_length=100)
+    category = models.CharField(max_length=50, choices=LOAN_CATEGORIES, default='Personal')
+    loan_amount = models.DecimalField(max_digits=20, decimal_places=2)
+    start_date = models.DateField()
+    interest_rate = models.DecimalField(max_digits=5, decimal_places=2)
+    interest_type = models.CharField(max_length=20, choices=INTEREST_TYPES, default='Reducing')
+    tenure_months = models.IntegerField()
+    emi_amount = models.DecimalField(max_digits=20, decimal_places=2)
+    interest_lock = models.CharField(max_length=20, choices=INTEREST_LOCKS, default='Fixed')
+    next_emi_date = models.DateField(null=True, blank=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.user.username} - {self.bank_name} ({self.category})"
+
+    @property
+    def total_paid_till_date(self):
+        return sum(p.amount for p in self.payments.all())
+
+    @property
+    def total_interest_paid(self):
+        return sum(p.interest_component for p in self.payments.all())
+
+    @property
+    def total_principal_paid(self):
+        return sum(p.principal_component for p in self.payments.all())
+
+    @property
+    def current_outstanding(self):
+        return self.loan_amount - self.total_principal_paid
+
+    @property
+    def progress_percentage(self):
+        if self.loan_amount == 0: return 0
+        return (self.total_principal_paid / self.loan_amount) * 100
+
+    @property
+    def remaining_tenure_months(self):
+        # Rough estimate based on EMI and outstanding principal if reducing
+        if self.emi_amount <= 0 or self.current_outstanding <= 0: return 0
+        if self.interest_type == 'Flat':
+            total_payable = self.loan_amount + (self.loan_amount * self.interest_rate / 100 * self.tenure_months / 12)
+            remaining_to_pay = total_payable - self.total_paid_till_date
+            return int(remaining_to_pay / self.emi_amount)
+        else:
+            # For reducing balance
+            import math
+            P = float(self.current_outstanding)
+            r = float(self.interest_rate) / 100 / 12
+            E = float(self.emi_amount)
+            if E <= P * r: return 999 # EMI too small to cover interest
+            try:
+                n = -math.log(1 - (P * r / E)) / math.log(1 + r)
+                return int(math.ceil(n))
+            except Exception:
+                return 0
+
+class LoanPayment(models.Model):
+    PAYMENT_TYPES = [('EMI', 'EMI'), ('Prepayment', 'Prepayment')]
+    loan = models.ForeignKey(Loan, on_delete=models.CASCADE, related_name='payments')
+    payment_type = models.CharField(max_length=20, choices=PAYMENT_TYPES, default='EMI')
+    amount = models.DecimalField(max_digits=20, decimal_places=2)
+    date = models.DateField()
+    principal_component = models.DecimalField(max_digits=20, decimal_places=2)
+    interest_component = models.DecimalField(max_digits=20, decimal_places=2)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['date', 'created_at']

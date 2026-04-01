@@ -22,6 +22,10 @@ def signal_info(request):
         
         return {
             'total_signal_count': buy_count + reduce_count + sell_count,
+            'action_count': buy_count + reduce_count + sell_count,
+            'sell_count': sell_count,
+            'buy_count': buy_count,
+            'reduce_count': reduce_count,
         }
     except Exception as e:
         # Avoid crashing the entire site if recommendation logic fails

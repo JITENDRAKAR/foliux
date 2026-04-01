@@ -1,5 +1,5 @@
 from django import forms
-from .models import Portfolio, Profile
+from .models import Portfolio, Profile, Loan, LoanPayment
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.contrib.auth.models import User
 
@@ -156,3 +156,36 @@ class SetPasswordForm(forms.Form):
         if new_password and confirm_password and new_password != confirm_password:
             raise forms.ValidationError("Passwords do not match.")
         return cleaned_data
+
+class LoanForm(forms.ModelForm):
+    class Meta:
+        model = Loan
+        fields = [
+            'bank_name', 'category', 'loan_amount', 'start_date', 
+            'interest_rate', 'interest_type', 'tenure_months', 
+            'emi_amount', 'interest_lock', 'next_emi_date'
+        ]
+        widgets = {
+            'bank_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g. HDFC Bank'}),
+            'category': forms.Select(attrs={'class': 'form-control'}),
+            'loan_amount': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Total Principal'}),
+            'start_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'interest_rate': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'placeholder': 'Annual Rate %'}),
+            'interest_type': forms.Select(attrs={'class': 'form-control'}),
+            'tenure_months': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Total months'}),
+            'emi_amount': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'placeholder': 'Monthly EMI'}),
+            'interest_lock': forms.Select(attrs={'class': 'form-control'}),
+            'next_emi_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+        }
+
+class LoanPaymentForm(forms.ModelForm):
+    class Meta:
+        model = LoanPayment
+        fields = ['payment_type', 'amount', 'date', 'principal_component', 'interest_component']
+        widgets = {
+            'payment_type': forms.Select(attrs={'class': 'form-control'}),
+            'amount': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'principal_component': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'interest_component': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+        }

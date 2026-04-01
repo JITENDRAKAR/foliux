@@ -523,8 +523,16 @@
     }
 
     document.addEventListener('DOMContentLoaded', function () {
-        // Initial filter to show only portfolio items
-        filterPortfolio('ALL');
+        // Read URL parameters to auto-trigger category filtering (e.g. from Portfolio Hub)
+        const urlParams = new URL(window.location.toLocaleString()).searchParams;
+        const filterParam = urlParams.get('filter');
+        
+        if (filterParam) {
+            filterPortfolio(filterParam.toUpperCase());
+        } else {
+            // Initial default filter to show only portfolio items
+            filterPortfolio('ALL');
+        }
 
         const tables = document.querySelectorAll('.table');
 

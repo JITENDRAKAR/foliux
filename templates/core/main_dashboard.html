@@ -1,0 +1,230 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --glass-bg: rgba(255, 255, 255, 0.7);
+        --glass-border: rgba(255, 255, 255, 0.3);
+    }
+
+    .main-dash-container {
+        padding-top: 40px;
+        padding-bottom: 80px;
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        min-height: calc(100vh - 80px);
+    }
+
+    .stat-card {
+        background: var(--glass-bg);
+        backdrop-filter: blur(10px);
+        border: 1px solid var(--glass-border);
+        border-radius: 24px;
+        padding: 25px;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        cursor: pointer;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+    }
+
+    .stat-card:hover {
+        transform: translateY(-10px);
+        box-shadow: 0 20px 40px rgba(0,0,0,0.08);
+        background: #fff;
+    }
+
+    .card-icon {
+        width: 50px;
+        height: 50px;
+        border-radius: 15px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 20px;
+        font-size: 1.5rem;
+    }
+
+    .cat-stock { background: rgba(13, 110, 253, 0.1); color: #0d6efd; }
+    .cat-mf { background: rgba(25, 135, 84, 0.1); color: #198754; }
+    .cat-coin { background: rgba(255, 193, 7, 0.1); color: #ffc107; }
+    .cat-nps { background: rgba(102, 16, 242, 0.1); color: #6610f2; }
+
+    .stat-label {
+        color: #6c757d;
+        font-size: 0.9rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .stat-value {
+        font-size: 1.8rem;
+        font-weight: 800;
+        color: #212529;
+        margin: 5px 0;
+    }
+
+    .pnl-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 5px 12px;
+        border-radius: 12px;
+        font-size: 0.85rem;
+        font-weight: 700;
+    }
+
+    .pnl-plus { background: rgba(25, 135, 84, 0.1); color: #198754; }
+    .pnl-minus { background: rgba(220, 53, 69, 0.1); color: #dc3545; }
+
+    .summary-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 25px;
+        margin-bottom: 50px;
+    }
+
+    .total-summary-bar {
+        background: #212529;
+        color: white;
+        border-radius: 30px;
+        padding: 30px;
+        margin-bottom: 40px;
+        display: flex;
+        justify-content: space-around;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 20px;
+    }
+
+    .total-item { text-align: center; }
+    .total-label { font-size: 0.8rem; color: #adb5bd; text-transform: uppercase; }
+    .total-val { font-size: 1.4rem; font-weight: 700; }
+
+    .section-title {
+        font-weight: 800;
+        margin-bottom: 30px;
+        color: #1a1d23;
+        display: flex;
+        align-items: center;
+        gap: 15px;
+    }
+
+    .section-title::after {
+        content: "";
+        height: 2px;
+        flex-grow: 1;
+        background: linear-gradient(to right, #dee2e6, transparent);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="main-dash-container">
+    <div class="container">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="fw-800">Portfolio Hub</h1>
+            <div class="text-muted small">
+                <i class="fas fa-sync-alt me-1"></i> Last sync: {{ last_updated|date:"d M, H:i" }}
+            </div>
+        </div>
+
+        <div class="total-summary-bar">
+            <div class="total-item">
+                <div class="total-label">Invested Value</div>
+                <div class="total-val">₹ {{ total_invested|floatformat:0|intcomma }}</div>
+            </div>
+            <div class="total-item">
+                <div class="total-label">Current Value</div>
+                <div class="total-val">₹ {{ total_current_value|floatformat:0|intcomma }}</div>
+            </div>
+            <div class="total-item">
+                <div class="total-label">Total Realized</div>
+                <div class="total-val text-info">₹ {{ total_realized_profit|floatformat:0|intcomma }}</div>
+            </div>
+            <div class="total-item">
+                <div class="total-label">Unrealized P&L</div>
+                <div class="total-val {% if total_unrealized_pnl >= 0 %}text-success{% else %}text-danger{% endif %}">
+                    ₹ {{ total_unrealized_pnl|floatformat:0|intcomma }}
+                </div>
+            </div>
+        </div>
+
+        <h2 class="section-title">Asset Allocation</h2>
+        
+        <div class="summary-grid">
+            <!-- Stock/ETF Dashboard -->
+            <div class="stat-card" onclick="location.href='{% url 'stock_etf_dashboard' %}'">
+                <div>
+                    <div class="card-icon cat-stock">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <div class="stat-label">Stock/ETF</div>
+                    <div class="stat-value">₹ {{ categories.stock_etf.invested|floatformat:0|intcomma }}</div>
+                </div>
+                <div class="mt-3">
+                    <span class="pnl-badge {% if categories.stock_etf.pnl >= 0 %}pnl-plus{% else %}pnl-minus{% endif %}">
+                        <i class="fas fa-caret-{% if categories.stock_etf.pnl >= 0 %}up{% else %}down{% endif %}"></i>
+                        {{ categories.stock_etf.pnl_pct|floatformat:2 }}%
+                    </span>
+                </div>
+            </div>
+
+            <!-- Mutual Fund Dashboard -->
+            <div class="stat-card" onclick="location.href='{% url 'mf_dashboard' %}'">
+                <div>
+                    <div class="card-icon cat-mf">
+                        <i class="fas fa-layer-group"></i>
+                    </div>
+                    <div class="stat-label">Mutual Fund</div>
+                    <div class="stat-value">₹ {{ categories.mf.invested|floatformat:0|intcomma }}</div>
+                </div>
+                <div class="mt-3">
+                    <span class="pnl-badge {% if categories.mf.pnl >= 0 %}pnl-plus{% else %}pnl-minus{% endif %}">
+                        <i class="fas fa-caret-{% if categories.mf.pnl >= 0 %}up{% else %}down{% endif %}"></i>
+                        {{ categories.mf.pnl_pct|floatformat:2 }}%
+                    </span>
+                </div>
+            </div>
+
+            <!-- Coin Dashboard -->
+            <div class="stat-card" onclick="location.href='{% url 'coin_dashboard' %}'">
+                <div>
+                    <div class="card-icon cat-coin">
+                        <i class="fas fa-coins"></i>
+                    </div>
+                    <div class="stat-label">Coin</div>
+                    <div class="stat-value">₹ {{ categories.coin.invested|floatformat:0|intcomma }}</div>
+                </div>
+                <div class="mt-3">
+                    <span class="pnl-badge {% if categories.coin.pnl >= 0 %}pnl-plus{% else %}pnl-minus{% endif %}">
+                        <i class="fas fa-caret-{% if categories.coin.pnl >= 0 %}up{% else %}down{% endif %}"></i>
+                        {{ categories.coin.pnl_pct|floatformat:2 }}%
+                    </span>
+                </div>
+            </div>
+
+            <!-- NPS Dashboard -->
+            <div class="stat-card" onclick="location.href='{% url 'nps_dashboard' %}'">
+                <div>
+                    <div class="card-icon cat-nps">
+                        <i class="fas fa-hand-holding-usd"></i>
+                    </div>
+                    <div class="stat-label">NPS</div>
+                    <div class="stat-value">₹ {{ categories.nps.invested|floatformat:0|intcomma }}</div>
+                </div>
+                <div class="mt-3">
+                    <span class="pnl-badge {% if categories.nps.pnl >= 0 %}pnl-plus{% else %}pnl-minus{% endif %}">
+                        <i class="fas fa-caret-{% if categories.nps.pnl >= 0 %}up{% else %}down{% endif %}"></i>
+                        {{ categories.nps.pnl_pct|floatformat:2 }}%
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

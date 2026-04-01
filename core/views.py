@@ -9,26 +9,119 @@ from django.contrib.auth import login
 from django.core.mail import send_mail
 from django.conf import settings
 from django.http import JsonResponse
-from .forms import (
-    UploadFileForm, PortfolioForm, ManualPortfolioForm, 
-    CustomUserCreationForm, ProfileForm, ForgotPasswordForm, 
-    VerifyOTPForm, SetPasswordForm, EditLotForm
-)
+from django.utils import timezone
+from dateutil.relativedelta import relativedelta
 from django.contrib.auth.views import PasswordChangeView
 from django.contrib.auth.forms import SetPasswordForm as DjangoSetPasswordForm
 try:
     from allauth.account.forms import SetPasswordForm as AllauthSetPasswordForm
 except ImportError:
     AllauthSetPasswordForm = DjangoSetPasswordForm
-from .models import Portfolio, PnLStatement, Instrument, Profile, OTP, Transaction, SignupOTP, MarketTicker, Strategy
+
+from .models import (
+    Portfolio, PnLStatement, Instrument, Profile, OTP, Transaction, 
+    SignupOTP, MarketTicker, Strategy, MutualFund, MFPortfolio, MFTransaction,
+    Coin, CoinPortfolio, CoinTransaction,
+    NPSFund, NPSPortfolio, NPSTransaction, FixedAsset, OtherAsset,
+    Loan, LoanPayment
+)
+from .forms import (
+    UploadFileForm, PortfolioForm, ManualPortfolioForm, 
+    CustomUserCreationForm, ProfileForm, ForgotPasswordForm, 
+    VerifyOTPForm, SetPasswordForm, EditLotForm,
+    LoanForm, LoanPaymentForm
+)
 from .utils import fetch_live_ltp, perform_sync, get_recommendations, fetch_strategy_stocks
 import random
 import json
 import yfinance as yf
 import pandas as pd
 import math
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 
+import logging
+import logging
+logger = logging.getLogger(__name__)
+
+def _auto_update_mf():
+    try:
+        from django.utils import timezone
+        from datetime import timedelta
+        from .models import MutualFund
+        from decimal import Decimal
+        import yfinance as yf
+        import pandas as pd
+        
+        ten_mins_ago = timezone.now() - timedelta(minutes=10)
+        stale_funds = MutualFund.objects.filter(last_updated__lt=ten_mins_ago)
+        if not stale_funds.exists(): return
+        
+        symbols = list(set([f.symbol for f in stale_funds if f.symbol]))
+        if not symbols: return
+        
+        if len(symbols) == 1:
+            ticker = yf.Ticker(symbols[0])
+            hist = ticker.history(period="1d")
+            if not hist.empty:
+                val = hist['Close'].iloc[-1]
+                for f in stale_funds:
+                    if f.symbol == symbols[0]:
+                        f.prev_nav = f.nav
+                        f.nav = Decimal(str(val))
+                        f.save()
+        else:
+            data = yf.download(symbols, period="1d", progress=False)
+            close_data = data['Close'] if isinstance(data.columns, pd.MultiIndex) else data[['Close']]
+            for f in stale_funds:
+                if f.symbol in close_data.columns:
+                    val = close_data[f.symbol].iloc[-1]
+                    if not pd.isna(val):
+                        f.prev_nav = f.nav
+                        f.nav = Decimal(str(val))
+                        f.save()
+    except Exception as e:
+        logger.error(f"Auto update MF failed: {e}")
+
+def _auto_update_coin():
+    try:
+        from django.utils import timezone
+        from datetime import timedelta
+        from .models import Coin
+        from decimal import Decimal
+        import requests
+        
+        ten_mins_ago = timezone.now() - timedelta(minutes=10)
+        stale_coins = Coin.objects.filter(last_updated__lt=ten_mins_ago)
+        if not stale_coins.exists(): return
+        
+        headers = {'User-Agent': 'Mozilla/5.0'}
+        for symbol in set([c.symbol for c in stale_coins if c.symbol]):
+            try:
+                url = f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}"
+                response = requests.get(url, headers=headers, timeout=5)
+                price_val = response.json()['chart']['result'][0]['meta']['regularMarketPrice']
+                for c in stale_coins:
+                    if c.symbol == symbol and price_val:
+                        c.prev_price = c.price
+                        c.price = Decimal(str(price_val))
+                        c.save()
+            except Exception: pass
+    except Exception as e:
+        logger.error(f"Auto update Coin failed: {e}")
+
+def _auto_update_nps():
+    try:
+        from django.utils import timezone
+        from datetime import timedelta
+        from .models import NPSFund
+        from .utils import sync_nps_from_sheet
+        
+        ten_mins_ago = timezone.now() - timedelta(minutes=10)
+        stale_funds = NPSFund.objects.filter(last_updated__lt=ten_mins_ago)
+        if stale_funds.exists():
+            sync_nps_from_sheet()
+    except Exception as e:
+        logger.error(f"Auto update NPS failed: {e}")
 @login_required
 def forgot_password_session(request):
     user = request.user
@@ -410,13 +503,644 @@ def strategy(request):
     return render(request, 'core/strategy.html', context)
 
 def mf_guide(request):
-    """Mutual Fund Guide page."""
+    """Mutual Fund Guide page - redirects authenticated users to dashboard."""
+    if request.user.is_authenticated:
+        return redirect('mf_dashboard')
     return render(request, 'core/mf_guide.html')
 
-def stock_guide(request):
-    """Stock Guide page."""
-    return render(request, 'core/stock_guide.html')
+@login_required
+def mf_dashboard(request):
+    """Isolated dashboard for Mutual Funds."""
+    all_holdings = MFPortfolio.objects.filter(user=request.user).select_related('fund')
+    
+    total_invested = sum(h.invested_amount for h in all_holdings)
+    total_current_value = sum(h.current_value for h in all_holdings)
+    total_unrealized_pnl = total_current_value - total_invested
+    total_realized_profit = sum(h.realized_profit for h in all_holdings)
+    total_day_change = sum(h.day_change for h in all_holdings)
+    
+    total_pnl_pct = 0
+    if total_invested > 0:
+        total_pnl_pct = (total_unrealized_pnl / total_invested) * 100
+        
+    # Only display holdings with units > 0
+    mf_holdings = [h for h in all_holdings if h.units > 0]
+    
+    # Process advice for each holding
+    for h in mf_holdings:
+        h.advice = []
+        if h.pnl_percentage >= 22:
+            h.advice.append({'type': 'SELL', 'reason': f'Target 22% reached ({float(h.pnl_percentage):.2f}%)'})
+        
+        if h.realized_profit > 0:
+            target = Decimal('100000') + h.realized_profit
+            if h.invested_amount < target:
+                gap = target - h.invested_amount
+                h.advice.append({'type': 'BUY', 'reason': f'Realized profit target ₹{float(gap):,.0f} gap'})
 
+    context = {
+        'mf_holdings': mf_holdings,
+        'total_invested': total_invested,
+        'total_current_value': total_current_value,
+        'total_unrealized_pnl': total_unrealized_pnl,
+        'total_realized_profit': total_realized_profit,
+        'total_day_change': total_day_change,
+        'total_pnl_pct': total_pnl_pct,
+        'last_updated': timezone.now(),
+    }
+    return render(request, 'core/mf_dashboard.html', context)
+
+@login_required
+def add_mf_portfolio(request):
+    """Add a mutual fund holding manually."""
+    if request.method == 'POST':
+        symbol = request.POST.get('symbol', '').strip().upper()
+        
+        try:
+            units = Decimal(request.POST.get('units', '0'))
+            avg_nav = Decimal(request.POST.get('avg_nav', '0'))
+            realized_profit = Decimal(request.POST.get('realized_profit', '0'))
+        except (ValueError, TypeError, InvalidOperation):
+            messages.error(request, "Invalid numeric values provided.")
+            return redirect('mf_dashboard')
+
+        if not symbol or units < 0 or avg_nav < 0:
+            messages.error(request, "Please provide valid symbol, units, and average NAV.")
+            return redirect('mf_dashboard')
+            
+        # Try to find or create MutualFund
+        fund, created = MutualFund.objects.get_or_create(symbol=symbol)
+        if created or fund.nav == 0:
+            # Try to fetch initial NAV
+            try:
+                import yfinance as yf
+                ticker = yf.Ticker(symbol)
+                info = ticker.info
+                nav_val = info.get('regularMarketPrice') or info.get('navPrice') or info.get('previousClose')
+                if nav_val:
+                    fund.nav = Decimal(str(nav_val))
+                else:
+                    fund.nav = avg_nav # Fallback to avg_nav
+                fund.name = info.get('longName') or symbol
+                fund.save()
+            except Exception as e:
+                logger.error(f"Error fetching NAV for {symbol}: {e}")
+                if created: 
+                    fund.name = symbol
+                    fund.nav = avg_nav
+                    fund.save()
+
+        # Update or create MFPortfolio item
+        portfolio_item, p_created = MFPortfolio.objects.get_or_create(
+            user=request.user, fund=fund,
+            defaults={'units': units, 'avg_nav': avg_nav, 'realized_profit': realized_profit}
+        )
+        if not p_created:
+            if units > 0:
+                # Weighted average calculation
+                total_units = portfolio_item.units + units
+                new_avg_nav = ((portfolio_item.units * portfolio_item.avg_nav) + (units * avg_nav)) / total_units
+                portfolio_item.units = total_units
+                portfolio_item.avg_nav = new_avg_nav
+            
+            # Add to realized profit if provided (don't overwrite existing with 0)
+            if realized_profit != 0:
+                portfolio_item.realized_profit += realized_profit
+            portfolio_item.save()
+            
+        # Record transaction if units > 0
+        if units > 0:
+            MFTransaction.objects.create(
+                user=request.user,
+                fund=fund,
+                transaction_type='BUY',
+                units=units,
+                remaining_units=units,
+                price=avg_nav,
+                date=timezone.now().date()
+            )
+            
+        messages.success(request, f"Successfully added {fund.name} to your Mutual Fund portfolio.")
+        return redirect('mf_dashboard')
+        
+    prefill_symbol = request.GET.get('symbol', '')
+    return render(request, 'core/mf_add_item.html', {'prefill_symbol': prefill_symbol})
+
+@login_required
+def sell_mf_portfolio(request, pk):
+    holding = get_object_or_404(MFPortfolio, pk=pk, user=request.user)
+    if request.method == 'POST':
+        try:
+            units_to_sell = Decimal(request.POST.get('units', '0'))
+            sell_price = Decimal(request.POST.get('price', '0'))
+            sell_date_str = request.POST.get('date')
+            sell_date = pd.to_datetime(sell_date_str).date() if sell_date_str else timezone.now().date()
+        except (ValueError, TypeError, InvalidOperation):
+            messages.error(request, "Invalid numeric values provided.")
+            return redirect('mf_dashboard')
+
+        if units_to_sell <= 0:
+            messages.error(request, "Units to sell must be greater than zero.")
+            return redirect('mf_dashboard')
+
+        if units_to_sell > holding.units:
+            messages.error(request, f"Insufficient units. You only have {holding.units} units.")
+            return redirect('mf_dashboard')
+            
+        # FIFO Calculation: Find buy lots for this user and fund
+        buy_lots = MFTransaction.objects.filter(
+            user=request.user,
+            fund=holding.fund,
+            transaction_type='BUY',
+            remaining_units__gt=0
+        ).order_by('date', 'created_at')
+        
+        remaining_to_sell = units_to_sell
+        total_cost = Decimal('0')
+        
+        for lot in buy_lots:
+            if remaining_to_sell <= 0:
+                break
+            
+            units_from_lot = min(lot.remaining_units, remaining_to_sell)
+            total_cost += units_from_lot * lot.price
+            
+            lot.remaining_units -= units_from_lot
+            lot.save()
+            
+            remaining_to_sell -= units_from_lot
+            
+        sell_value = units_to_sell * sell_price
+        profit = sell_value - total_cost
+        
+        # Update Portfolio
+        holding.units -= units_to_sell
+        holding.realized_profit += profit
+        
+        # Recalculate Avg NAV based on remaining lots
+        remaining_lots = MFTransaction.objects.filter(
+            user=request.user,
+            fund=holding.fund,
+            transaction_type='BUY',
+            remaining_units__gt=0
+        )
+        total_rem_units = sum(l.remaining_units for l in remaining_lots)
+        total_rem_cost = sum(l.remaining_units * l.price for l in remaining_lots)
+        
+        if total_rem_units > 0:
+            holding.avg_nav = total_rem_cost / total_rem_units
+        else:
+            # If all sold, we can either keep the last avg_nav or reset to 0. 
+            # Usually, keeping it is fine, but since units are 0, it doesn't matter for valuation.
+            pass
+            
+        holding.save()
+        
+        # Record Transaction
+        MFTransaction.objects.create(
+            user=request.user,
+            fund=holding.fund,
+            transaction_type='SELL',
+            units=units_to_sell,
+            price=sell_price,
+            date=sell_date
+        )
+        
+        messages.success(request, f"Sold {units_to_sell} units of {holding.fund.name} at {sell_price}. Profit: ₹{float(profit):,.2f}")
+        return redirect('mf_dashboard')
+        
+    return render(request, 'core/mf_sell_item.html', {'holding': holding})
+
+@login_required
+def delete_mf_portfolio(request, pk):
+    holding = get_object_or_404(MFPortfolio, pk=pk, user=request.user)
+    fund_name = holding.fund.name
+    holding.delete()
+    messages.success(request, f"Removed {fund_name} from your portfolio.")
+    return redirect('mf_dashboard')
+
+@login_required
+def mf_transaction_history(request):
+    transactions = MFTransaction.objects.filter(user=request.user).select_related('fund').order_by('-date', '-created_at')
+    return render(request, 'core/mf_transactions.html', {'transactions': transactions})
+
+@login_required
+def refresh_mf_navs(request):
+    """Fetch latest NAVs for all funds in the user's portfolio."""
+    mf_holdings = MFPortfolio.objects.filter(user=request.user).select_related('fund')
+    if not mf_holdings:
+        return redirect('mf_dashboard')
+    
+    import yfinance as yf
+    symbols = [h.fund.symbol for h in mf_holdings]
+    
+    try:
+        # Fetch data for all symbols at once
+        if len(symbols) == 1:
+            ticker = yf.Ticker(symbols[0])
+            hist = ticker.history(period="1d")
+            if not hist.empty:
+                new_nav = hist['Close'].iloc[-1]
+                fund = mf_holdings[0].fund
+                fund.prev_nav = fund.nav # Store old NAV
+                fund.nav = Decimal(str(new_nav))
+                fund.save()
+        else:
+            data = yf.download(symbols, period="1d", progress=False)
+            # Handle the case where download returns a multi-index or single Series
+            close_data = data['Close']
+            for h in mf_holdings:
+                try:
+                    sym = h.fund.symbol
+                    if sym in close_data.columns:
+                        val = close_data[sym].iloc[-1]
+                        if not pd.isna(val):
+                            h.fund.prev_nav = h.fund.nav # Store old NAV
+                            h.fund.nav = Decimal(str(val))
+                            h.fund.save()
+                except Exception: continue
+                
+        messages.success(request, "Mutual Fund NAVs refreshed successfully.")
+    except Exception as e:
+        logger.error(f"NAV Refresh failed: {e}")
+        messages.error(request, "Failed to refresh some NAVs. Yahoo Finance might be temporarily unavailable.")
+        
+    return redirect('mf_dashboard')
+
+# --- COIN (Crypto) Module ---
+
+@login_required
+def coin_dashboard(request):
+    """Dashboard for Cryptocurrency holdings using FIFO."""
+    all_holdings = CoinPortfolio.objects.filter(user=request.user).select_related('coin')
+    
+    total_invested = sum(h.invested_amount for h in all_holdings)
+    total_current_value = sum(h.current_value for h in all_holdings)
+    total_unrealized_pnl = total_current_value - total_invested
+    total_realized_profit = sum(h.realized_profit for h in all_holdings)
+    total_day_change = sum(h.day_change for h in all_holdings)
+    
+    total_pnl_pct = 0
+    if total_invested > 0:
+        total_pnl_pct = (total_unrealized_pnl / total_invested) * 100
+        
+    # Only display holdings with units > 0
+    coin_holdings = [h for h in all_holdings if h.units > 0]
+    
+    context = {
+        'coin_holdings': coin_holdings,
+        'total_invested': total_invested,
+        'total_current_value': total_current_value,
+        'total_unrealized_pnl': total_unrealized_pnl,
+        'total_realized_profit': total_realized_profit,
+        'total_day_change': total_day_change,
+        'total_pnl_pct': total_pnl_pct,
+        'last_updated': timezone.now(),
+    }
+    return render(request, 'core/coin_dashboard.html', context)
+
+@login_required
+def add_coin(request):
+    """Add a cryptocurrency holding manually."""
+    if request.method == 'POST':
+        symbol = request.POST.get('symbol', '').strip().upper()
+        # Ensure Crypto-INR symbol style if not provided (e.g. BTC -> BTC-INR)
+        if '-' not in symbol and not symbol.endswith('.NS') and not symbol.endswith('.BO'):
+            symbol = f"{symbol}-INR"
+            
+        try:
+            units = Decimal(request.POST.get('units', '0'))
+            avg_price = Decimal(request.POST.get('avg_price', '0'))
+        except (ValueError, TypeError, InvalidOperation):
+            messages.error(request, "Invalid numeric values provided.")
+            return redirect('coin_dashboard')
+
+        if not symbol or units <= 0 or avg_price <= 0:
+            messages.error(request, "Please provide valid symbol, units, and average price.")
+            return redirect('coin_dashboard')
+            
+        coin, created = Coin.objects.get_or_create(symbol=symbol)
+        if created or coin.price == 0:
+            try:
+                import requests
+                headers = {'User-Agent': 'Mozilla/5.0'}
+                url = f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}"
+                response = requests.get(url, headers=headers, timeout=5)
+                data = response.json()
+                price_val = data['chart']['result'][0]['meta']['regularMarketPrice']
+                
+                if price_val:
+                    coin.price = Decimal(str(price_val))
+                else:
+                    coin.price = avg_price
+                    
+                # Try to get a nicer name, fallback to symbol
+                try:
+                    import yfinance as yf
+                    ticker = yf.Ticker(symbol)
+                    info = ticker.info
+                    coin.name = info.get('shortName') or info.get('longName') or symbol
+                except Exception:
+                    coin.name = symbol
+                    
+                coin.save()
+            except Exception as e:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(f"Error fetching price for {symbol}: {e}")
+                if created: 
+                    coin.name = symbol
+                    coin.price = avg_price
+                    coin.save()
+
+        holding, h_created = CoinPortfolio.objects.get_or_create(
+            user=request.user, 
+            coin=coin,
+            defaults={'units': 0, 'avg_price': 0}
+        )
+        
+        # Update Portfolio with weighted average for the main display (though we use FIFO for sells)
+        total_units = holding.units + units
+        total_cost = (holding.units * holding.avg_price) + (units * avg_price)
+        holding.units = total_units
+        holding.avg_price = total_cost / total_units if total_units > 0 else 0
+        holding.save()
+
+        # Record Transaction for FIFO
+        CoinTransaction.objects.create(
+            user=request.user,
+            coin=coin,
+            transaction_type='BUY',
+            units=units,
+            remaining_units=units,
+            price=avg_price,
+            date=timezone.now().date()
+        )
+        
+        messages.success(request, f"Added {units} units of {coin.name} to your portfolio.")
+        return redirect('coin_dashboard')
+        
+    return render(request, 'core/coin_add_item.html')
+
+@login_required
+def sell_coin(request, pk):
+    """Sell a cryptocurrency holding using FIFO."""
+    holding = get_object_or_404(CoinPortfolio, pk=pk, user=request.user)
+    if request.method == 'POST':
+        try:
+            units_to_sell = Decimal(request.POST.get('units', '0'))
+            sell_price = Decimal(request.POST.get('price', '0'))
+            sell_date_str = request.POST.get('date')
+            sell_date = pd.to_datetime(sell_date_str).date() if sell_date_str else timezone.now().date()
+        except (ValueError, TypeError, InvalidOperation):
+            messages.error(request, "Invalid numeric values provided.")
+            return redirect('coin_dashboard')
+
+        if units_to_sell <= 0:
+            messages.error(request, "Units to sell must be greater than zero.")
+            return redirect('coin_dashboard')
+
+        if units_to_sell > holding.units:
+            messages.error(request, f"Insufficient units. You only have {holding.units} units.")
+            return redirect('coin_dashboard')
+            
+        # FIFO Calculation
+        buy_lots = CoinTransaction.objects.filter(
+            user=request.user,
+            coin=holding.coin,
+            transaction_type='BUY',
+            remaining_units__gt=0
+        ).order_by('date', 'created_at')
+        
+        remaining_to_sell = units_to_sell
+        total_cost = Decimal('0')
+        
+        for lot in buy_lots:
+            if remaining_to_sell <= 0:
+                break
+            
+            units_from_lot = min(lot.remaining_units, remaining_to_sell)
+            total_cost += units_from_lot * lot.price
+            
+            lot.remaining_units -= units_from_lot
+            lot.save()
+            
+            remaining_to_sell -= units_from_lot
+            
+        sell_value = units_to_sell * sell_price
+        profit = sell_value - total_cost
+        
+        # Update Portfolio
+        holding.units -= units_to_sell
+        holding.realized_profit += profit
+        
+        # Recalculate Avg Price based on remaining lots
+        remaining_lots = CoinTransaction.objects.filter(
+            user=request.user,
+            coin=holding.coin,
+            transaction_type='BUY',
+            remaining_units__gt=0
+        )
+        total_rem_units = sum(l.remaining_units for l in remaining_lots)
+        total_rem_cost = sum(l.remaining_units * l.price for l in remaining_lots)
+        
+        if total_rem_units > 0:
+            holding.avg_price = total_rem_cost / total_rem_units
+            
+        holding.save()
+        
+        # Record Transaction
+        CoinTransaction.objects.create(
+            user=request.user,
+            coin=holding.coin,
+            transaction_type='SELL',
+            units=units_to_sell,
+            price=sell_price,
+            date=sell_date
+        )
+        
+        messages.success(request, f"Sold {units_to_sell} units of {holding.coin.name} at {sell_price}. Profit: ₹{float(profit):,.2f}")
+        return redirect('coin_dashboard')
+        
+    return render(request, 'core/coin_sell_item.html', {'holding': holding})
+
+@login_required
+def delete_coin_portfolio(request, pk):
+    holding = get_object_or_404(CoinPortfolio, pk=pk, user=request.user)
+    coin_name = holding.coin.name
+    holding.delete()
+    messages.success(request, f"Removed {coin_name} from your portfolio.")
+    return redirect('coin_dashboard')
+
+@login_required
+def coin_transaction_history(request):
+    transactions = CoinTransaction.objects.filter(user=request.user).select_related('coin').order_by('-date', '-created_at')
+    return render(request, 'core/coin_transactions.html', {'transactions': transactions})
+
+@login_required
+def refresh_coin_prices(request):
+    """Fetch latest prices for all crypto coins in the user's portfolio."""
+    coin_holdings = CoinPortfolio.objects.filter(user=request.user).select_related('coin')
+    if not coin_holdings:
+        return redirect('coin_dashboard')
+    
+    import requests
+    headers = {'User-Agent': 'Mozilla/5.0'}
+    
+    success_count = 0
+    symbols = list(set([h.coin.symbol for h in coin_holdings]))
+    
+    try:
+        for symbol in symbols:
+            url = f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}"
+            try:
+                response = requests.get(url, headers=headers, timeout=5)
+                data = response.json()
+                price_val = data['chart']['result'][0]['meta']['regularMarketPrice']
+                
+                if price_val:
+                    for h in coin_holdings:
+                        if h.coin.symbol == symbol:
+                            h.coin.prev_price = h.coin.price
+                            h.coin.price = Decimal(str(price_val))
+                            h.coin.save()
+                            success_count += 1
+            except Exception as e:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(f"Direct request failed for {symbol}: {e}")
+                
+        if success_count > 0:
+            messages.success(request, "Coin prices refreshed successfully.")
+        else:
+            messages.error(request, "Failed to refresh some prices.")
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Coin Price Refresh failed: {e}")
+        messages.error(request, "Failed to refresh some prices.")
+        
+    return redirect('coin_dashboard')
+
+@login_required
+def portfolio(request):
+    """Unified Portfolio Dashboard."""
+    # 1. Stocks/ETF
+    recommendations, realized_profits, _ = get_recommendations(request.user)
+    stocks_recs = [r for r in recommendations if r.get('in_portfolio', False)]
+    stocks_invested = float(sum(r.get('invested_amount', 0) for r in stocks_recs))
+    stocks_current = float(sum(r.get('current_value', 0) for r in stocks_recs))
+    stocks_unrealized = stocks_current - stocks_invested
+    stocks_realized = float(sum(realized_profits.values()) if isinstance(realized_profits, dict) else 0)
+
+    # 2. Mutual Funds
+    mf_holdings = MFPortfolio.objects.filter(user=request.user).select_related('fund')
+    mf_invested = float(sum(h.invested_amount for h in mf_holdings))
+    mf_current = float(sum(h.current_value for h in mf_holdings))
+    mf_unrealized = mf_current - mf_invested
+    mf_realized = float(sum(h.realized_profit for h in mf_holdings))
+
+    # 3. Coin (Crypto)
+    coin_holdings = CoinPortfolio.objects.filter(user=request.user).select_related('coin')
+    coin_invested = float(sum(h.invested_amount for h in coin_holdings))
+    coin_current = float(sum(h.current_value for h in coin_holdings))
+    coin_unrealized = coin_current - coin_invested
+    coin_realized = float(sum(h.realized_profit for h in coin_holdings))
+
+    # 4. NPS
+    nps_holdings = NPSPortfolio.objects.filter(user=request.user).select_related('fund')
+    nps_invested = float(sum(h.invested_amount for h in nps_holdings))
+    nps_current = float(sum(h.current_value for h in nps_holdings))
+    nps_unrealized = nps_current - nps_invested
+    nps_realized = float(sum(h.realized_profit for h in nps_holdings))
+
+    # 5. Fixed Assets
+    fd_invested = fd_current = fd_unrealized = fd_percentage = 0.0
+    try:
+        fd_holdings = FixedAsset.objects.filter(user=request.user)
+        fd_invested = float(sum(h.invested_amount for h in fd_holdings))
+        fd_current = float(sum(h.current_value for h in fd_holdings))
+        fd_unrealized = float(sum(h.unrealized_pnl for h in fd_holdings))
+        if fd_invested > 0:
+            fd_percentage = (fd_unrealized / fd_invested) * 100
+    except Exception:
+        pass
+
+    # 6. Other Assets (Real Estate, Gold, etc)
+    other_invested = other_current = other_unrealized = other_percentage = 0.0
+    try:
+        other_holdings = OtherAsset.objects.filter(user=request.user)
+        other_invested = float(sum(h.purchase_price for h in other_holdings))
+        other_current = float(sum(h.current_value for h in other_holdings))
+        other_unrealized = float(sum(h.unrealized_pnl for h in other_holdings))
+        if other_invested > 0:
+            other_percentage = (other_unrealized / other_invested) * 100
+    except Exception:
+        pass
+
+    # 7. Loans
+    loans = Loan.objects.filter(user=request.user, is_active=True)
+    for l in loans:
+        _process_auto_emis(l)
+    
+    loan_taken = float(sum(l.loan_amount for l in loans))
+    loan_outstanding = float(sum(l.current_outstanding for l in loans))
+    
+    # Calculate upcoming EMIs (due in next 7 days)
+    from datetime import timedelta
+    next_week = timezone.now().date() + timedelta(days=7)
+    upcoming_emis_count = loans.filter(next_emi_date__lte=next_week, next_emi_date__isnull=False).count()
+
+    # Calculate Totals
+    total_investment_cost = stocks_invested + mf_invested + coin_invested + nps_invested + fd_invested + other_invested
+    # USER REQUEST: Deduct loan outstanding from Current Value
+    total_latest_value = (stocks_current + mf_current + coin_current + nps_current + fd_current + other_current) - loan_outstanding
+    total_unrealized_gain = total_latest_value + loan_outstanding - total_investment_cost
+    total_realized_gain = stocks_realized + mf_realized + coin_realized + nps_realized
+    total_other_gain = 0  # Placeholder for future models
+
+    context = {
+        'total_investment_cost': total_investment_cost,
+        'total_latest_value': total_latest_value,
+        'total_unrealized_gain': total_unrealized_gain,
+        'total_realized_gain': total_realized_gain,
+        'total_other_gain': total_other_gain,
+
+        'stocks_invested': stocks_invested,
+        'stocks_current': stocks_current,
+        'stocks_unrealized': stocks_unrealized,
+        'stocks_realized': stocks_realized,
+
+        'mf_invested': mf_invested,
+        'mf_current': mf_current,
+        'mf_unrealized': mf_unrealized,
+        'mf_realized': mf_realized,
+
+        'coin_invested': coin_invested,
+        'coin_current': coin_current,
+        'coin_unrealized': coin_unrealized,
+        'coin_realized': coin_realized,
+
+        'nps_invested': nps_invested,
+        'nps_current': nps_current,
+        'nps_unrealized': nps_unrealized,
+        'nps_realized': nps_realized,
+
+        'fd_invested': fd_invested,
+        'fd_current': fd_current,
+        'fd_unrealized': fd_unrealized,
+        'fd_percentage': fd_percentage,
+
+        'other_invested': other_invested,
+        'other_current': other_current,
+        'other_unrealized': other_unrealized,
+        'other_percentage': other_percentage,
+
+        'loan_taken': loan_taken,
+        'loan_outstanding': loan_outstanding,
+        'upcoming_emis_count': upcoming_emis_count,
+    }
+    return render(request, 'core/portfolio.html', context)
 def etf_guide(request):
     """ETF Guide page."""
     return render(request, 'core/etf_guide.html')
@@ -1550,17 +2274,15 @@ def index_data_api(request):
 
         if period == '1d':
             # Proper 1-day change: relative to previous day's close
-            info = ticker.info
-            prev_price = info.get('regularMarketPreviousClose') or info.get('previousClose')
-            
-            if not prev_price:
-                # period='1d' is currently intraday 5m data.
-                # Fetch daily data to get yesterday's close.
+            # Avoid using ticker.info as it is unreliable and slow. Use history instead.
+            try:
                 hist_daily = ticker.history(period='5d', interval='1d')
                 if len(hist_daily) >= 2:
                     prev_price = float(hist_daily['Close'].iloc[-2])
                 else:
-                    prev_price = prices[0] # Fallback to open
+                    prev_price = float(hist_daily['Close'].iloc[-1]) if not hist_daily.empty else prices[0]
+            except:
+                prev_price = prices[0] # Fallback to open
         else:
             prev_price = prices[0]
 
@@ -1747,16 +2469,15 @@ def stock_history_api(request):
         current_price = prices[-1]
 
         if period == '1d':
-            # Use ticker.info for accurate baseline
-            info = ticker.info
-            prev_price = info.get('regularMarketPreviousClose') or info.get('previousClose')
-
-            if not prev_price:
+            # Avoid using ticker.info as it is unreliable and slow. Use history instead.
+            try:
                 hist_daily = ticker.history(period='5d', interval='1d')
                 if len(hist_daily) >= 2:
                     prev_price = float(hist_daily['Close'].iloc[-2])
                 else:
-                    prev_price = prices[0]
+                    prev_price = float(hist_daily['Close'].iloc[-1]) if not hist_daily.empty else prices[0]
+            except:
+                prev_price = prices[0]
         else:
             prev_price = prices[0]
 
@@ -1809,12 +2530,17 @@ def watchlist(request):
         
         p_data = portfolio_data.get(inst.id, {'qty': 0, 'invested': 0})
         
+        h52 = float(inst.high_52w or 0)
+        diff_52w_pct = (ltp / h52 - 1) * 100 if h52 > 0 else 0
+        
         results.append({
             'symbol': inst.symbol,
             'name': inst.name,
             'ltp': ltp,
             'change': change,
             'change_pct': change_pct,
+            'high_52w': h52,
+            'diff_52w_pct': diff_52w_pct,
             'notes': item.notes,
             'added_at': item.added_at,
             'instrument_id': inst.id,
@@ -1891,4 +2617,562 @@ def remove_from_watchlist_api(request):
         return JsonResponse({'status': 'success', 'message': f'{symbol} removed from watchlist'})
     
     return JsonResponse({'status': 'error', 'message': 'Instrument not found'}, status=404)
+
+@login_required
+def auto_migrate(request):
+    """Temporary utility to run migrations from the browser."""
+    from django.http import HttpResponse # Import inside for safety
+    if not request.user.is_superuser:
+        return HttpResponse("Unauthorized. Superuser access required.", status=403)
+    
+    from django.core.management import call_command
+    import io
+    from django.utils import timezone
+    
+    output = io.StringIO()
+    try:
+        output.write(f"--- Migration Started at {timezone.now()} ---\n")
+        
+        # 1. Run makemigrations
+        output.write("Running makemigrations core...\n")
+        call_command('makemigrations', 'core', stdout=output)
+        
+        # 2. Run migrate
+        output.write("\nRunning migrate core...\n")
+        call_command('migrate', 'core', stdout=output)
+        
+        output.write(f"\n--- Migration Finished Successfully ---\n")
+        return HttpResponse(f"<h1>Migration Success</h1><pre>{output.getvalue()}</pre>")
+    except Exception as e:
+        output.write(f"\nCRITICAL ERROR: {str(e)}\n")
+        return HttpResponse(f"<h1>Migration Failed</h1><pre>{output.getvalue()}</pre>", status=500)
+
+@login_required
+def mf_suggestions_api(request):
+    """API for Mutual Fund autocomplete by name or symbol."""
+    from django.db.models import Q
+    query = request.GET.get('q', '').strip()
+    if not query:
+        return JsonResponse([], safe=False)
+    
+    # Search specifically in MutualFund model (populated from Excel)
+    funds = MutualFund.objects.filter(
+        Q(name__icontains=query) | Q(symbol__icontains=query)
+    )[:15]
+    
+    results = [
+        {
+            'name': f.name,
+            'symbol': f.symbol,
+            'nav': float(f.nav) if f.nav else 0
+        } for f in funds
+    ]
+    return JsonResponse(results, safe=False)
+
+@csrf_exempt
+def coin_price_api(request):
+    """API to fetch live price for a coin symbol via yfinance."""
+    symbol = request.GET.get('symbol', '').strip().upper()
+    if not symbol:
+        return JsonResponse({'status': 'error', 'message': 'Symbol required'}, status=400)
+    
+    # Handle crypto symbols (BTC -> BTC-INR)
+    if '-' not in symbol and not symbol.endswith('.NS') and not symbol.endswith('.BO'):
+        symbol = f"{symbol}-INR"
+        
+    try:
+        ticker = yf.Ticker(symbol)
+        # Fetch price reliably via history
+        hist = ticker.history(period="1d")
+        if not hist.empty:
+            price = hist['Close'].iloc[-1]
+            try:
+                # Provide a graceful fallback for name if info fails due to YF limits
+                info = ticker.info
+                name = info.get('shortName') or info.get('longName') or symbol
+            except Exception:
+                name = symbol
+            
+            return JsonResponse({
+                'status': 'success',
+                'symbol': symbol,
+                'name': name,
+                'price': float(price)
+            })
+        else:
+            return JsonResponse({'status': 'error', 'message': 'Price not found in history'}, status=404)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+@login_required
+def nps_dashboard(request):
+    """NPS Portfolio Dashboard."""
+    nps_holdings = NPSPortfolio.objects.filter(user=request.user).select_related('fund')
+    nps_holdings = [h for h in nps_holdings if h.units > 0]
+    total_invested = sum(h.invested_amount for h in nps_holdings)
+    total_current_value = sum(h.current_value for h in nps_holdings)
+    total_unrealized_pnl = sum(h.unrealized_pnl for h in nps_holdings)
+    total_day_change = sum(h.day_change for h in nps_holdings)
+    total_realized_profit = NPSPortfolio.objects.filter(user=request.user).aggregate(
+        total=models.Sum('realized_profit'))['total'] or 0
+    context = {
+        'nps_holdings': nps_holdings,
+        'total_invested': total_invested,
+        'total_current_value': total_current_value,
+        'total_unrealized_pnl': total_unrealized_pnl,
+        'total_day_change': total_day_change,
+        'total_realized_profit': total_realized_profit,
+    }
+    return render(request, 'core/nps_dashboard.html', context)
+
+@login_required
+def add_nps(request):
+    if request.method == 'POST':
+        fund_name = request.POST.get('fund_name').strip()
+        units = Decimal(request.POST.get('units', '0'))
+        avg_nav = Decimal(request.POST.get('avg_nav', '0'))
+        date_str = request.POST.get('date')
+        transaction_date = pd.to_datetime(date_str).date() if date_str else timezone.now().date()
+        fund, _ = NPSFund.objects.get_or_create(name=fund_name)
+        NPSTransaction.objects.create(
+            user=request.user, fund=fund, transaction_type='BUY',
+            units=units, remaining_units=units, price=avg_nav, date=transaction_date
+        )
+        holding, created = NPSPortfolio.objects.get_or_create(
+            user=request.user, fund=fund, defaults={'units': 0, 'avg_nav': 0}
+        )
+        total_units = holding.units + units
+        total_cost = (holding.units * holding.avg_nav) + (units * avg_nav)
+        holding.units = total_units
+        holding.avg_nav = total_cost / total_units if total_units > 0 else 0
+        holding.save()
+        messages.success(request, f"Added {units} units of {fund_name} to NPS.")
+        return redirect('nps_dashboard')
+    all_funds = NPSFund.objects.all().order_by('name')
+    return render(request, 'core/nps_add_item.html', {'all_funds': all_funds})
+
+@login_required
+def sell_nps(request, pk):
+    holding = get_object_or_404(NPSPortfolio, pk=pk, user=request.user)
+    if request.method == 'POST':
+        units_to_sell = Decimal(request.POST.get('units', '0'))
+        sell_price = Decimal(request.POST.get('price', '0'))
+        date_str = request.POST.get('date')
+        sell_date = pd.to_datetime(date_str).date() if date_str else timezone.now().date()
+        if units_to_sell > holding.units:
+            messages.error(request, f"Insufficient units.")
+            return redirect('nps_dashboard')
+        buy_lots = NPSTransaction.objects.filter(
+            user=request.user, fund=holding.fund, transaction_type='BUY', remaining_units__gt=0
+        ).order_by('date', 'created_at')
+        total_buy_cost = Decimal('0')
+        remaining_to_sell = units_to_sell
+        for lot in buy_lots:
+            if remaining_to_sell <= 0: break
+            deduct = min(lot.remaining_units, remaining_to_sell)
+            total_buy_cost += deduct * lot.price
+            lot.remaining_units -= deduct
+            lot.save()
+            remaining_to_sell -= deduct
+        realized_profit = (units_to_sell * sell_price) - total_buy_cost
+        NPSTransaction.objects.create(
+            user=request.user, fund=holding.fund, transaction_type='SELL',
+            units=units_to_sell, price=sell_price, date=sell_date
+        )
+        holding.units -= units_to_sell
+        holding.realized_profit += realized_profit
+        remaining_lots = NPSTransaction.objects.filter(
+            user=request.user, fund=holding.fund, transaction_type='BUY', remaining_units__gt=0
+        )
+        total_rem_units = sum(l.remaining_units for l in remaining_lots)
+        total_rem_cost = sum(l.remaining_units * l.price for l in remaining_lots)
+        if total_rem_units > 0:
+            holding.avg_nav = total_rem_cost / total_rem_units
+        holding.save()
+        messages.success(request, f"Sold {units_to_sell} units. Profit: ₹{realized_profit:.2f}")
+        return redirect('nps_dashboard')
+    return render(request, 'core/nps_sell_item.html', {'holding': holding, 'now': timezone.now()})
+
+@login_required
+def delete_nps_portfolio(request, pk):
+    holding = get_object_or_404(NPSPortfolio, pk=pk, user=request.user)
+    if request.method == 'POST':
+        name = holding.fund.name
+        holding.delete()
+        messages.success(request, f"Removed {name}.")
+    return redirect('nps_dashboard')
+
+@login_required
+def nps_transaction_history(request):
+    transactions = NPSTransaction.objects.filter(user=request.user).select_related('fund').order_by('-date', '-created_at')
+    return render(request, 'core/nps_transactions.html', {'transactions': transactions})
+
+@login_required
+def refresh_nps_navs(request):
+    from .utils import sync_nps_from_sheet
+    count = sync_nps_from_sheet()
+    if count > 0:
+        messages.success(request, f"Synced {count} NPS Funds.")
+    else:
+        messages.warning(request, "NPS sync completed.")
+    return redirect('nps_dashboard')
+
+# --- FIXED ASSETS (FD) Module ---
+
+@login_required
+def fd_dashboard(request):
+    """Dashboard for Fixed Assets (FD, PPF, etc)."""
+    fd_holdings = FixedAsset.objects.filter(user=request.user).order_by('-investment_date')
+    
+    total_invested = sum(h.invested_amount for h in fd_holdings)
+    total_current_value = sum(h.current_value for h in fd_holdings)
+    total_unrealized_pnl = sum(h.unrealized_pnl for h in fd_holdings)
+    
+    total_pnl_pct = 0
+    if total_invested > 0:
+        total_pnl_pct = (total_unrealized_pnl / float(total_invested)) * 100
+        
+    context = {
+        'fd_holdings': fd_holdings,
+        'total_invested': total_invested,
+        'total_current_value': total_current_value,
+        'total_unrealized_pnl': total_unrealized_pnl,
+        'total_pnl_pct': total_pnl_pct,
+        'last_updated': timezone.now(),
+    }
+    return render(request, 'core/fd_dashboard.html', context)
+
+@login_required
+def add_fd(request):
+    """Add a fixed asset manually."""
+    if request.method == 'POST':
+        instrument_name = request.POST.get('instrument_name', '').strip()
+        investment_date_str = request.POST.get('investment_date')
+        maturity_date_str = request.POST.get('maturity_date')
+        
+        try:
+            invested_amount = Decimal(request.POST.get('invested_amount', '0'))
+            interest_rate = Decimal(request.POST.get('interest_rate', '0'))
+            investment_date = pd.to_datetime(investment_date_str).date() if investment_date_str else timezone.now().date()
+            maturity_date = pd.to_datetime(maturity_date_str).date() if maturity_date_str else None
+        except (ValueError, TypeError, InvalidOperation):
+            messages.error(request, "Invalid numeric or date values provided.")
+            return redirect('add_fd')
+
+        if not instrument_name or invested_amount <= 0 or interest_rate <= 0:
+            messages.error(request, "Please provide valid instrument name, amount, and rate.")
+            return redirect('add_fd')
+            
+        FixedAsset.objects.create(
+            user=request.user,
+            instrument_name=instrument_name,
+            invested_amount=invested_amount,
+            interest_rate=interest_rate,
+            investment_date=investment_date,
+            maturity_date=maturity_date
+        )
+        messages.success(request, f"Added Fixed Asset: {instrument_name}.")
+        return redirect('fd_dashboard')
+        
+    return render(request, 'core/fd_add_item.html')
+
+@login_required
+def delete_fd(request, pk):
+    holding = get_object_or_404(FixedAsset, pk=pk, user=request.user)
+    name = holding.instrument_name
+    holding.delete()
+    messages.success(request, f"Removed {name} from your Fixed Assets.")
+    return redirect('fd_dashboard')
+
+# --- OTHER ASSETS Module (Plots, Flats, Gold, etc) ---
+
+@login_required
+def other_assets_dashboard(request):
+    """Dashboard for Other Assets (Plot, Flat, Gold, etc)."""
+    other_holdings = OtherAsset.objects.filter(user=request.user).order_by('-purchase_date')
+    
+    total_invested = sum(h.purchase_price for h in other_holdings)
+    total_current_value = sum(h.current_value for h in other_holdings)
+    total_unrealized_pnl = sum(h.unrealized_pnl for h in other_holdings)
+    total_monthly_rent = sum(h.monthly_rent for h in other_holdings)
+    
+    total_pnl_pct = 0
+    if total_invested > 0:
+        total_pnl_pct = (total_unrealized_pnl / float(total_invested)) * 100
+        
+    context = {
+        'other_holdings': other_holdings,
+        'total_invested': total_invested,
+        'total_current_value': total_current_value,
+        'total_unrealized_pnl': total_unrealized_pnl,
+        'total_monthly_rent': total_monthly_rent,
+        'total_pnl_pct': total_pnl_pct,
+        'last_updated': timezone.now(),
+    }
+    return render(request, 'core/other_assets_dashboard.html', context)
+
+@login_required
+def add_other_asset(request):
+    """Add a new other asset."""
+    if request.method == 'POST':
+        name = request.POST.get('name', '').strip()
+        asset_type = request.POST.get('asset_type', 'Other')
+        purchase_date_str = request.POST.get('purchase_date')
+        
+        try:
+            purchase_price = Decimal(request.POST.get('purchase_price', '0'))
+            current_value = Decimal(request.POST.get('current_value', '0'))
+            monthly_rent = Decimal(request.POST.get('monthly_rent', '0'))
+            purchase_date = pd.to_datetime(purchase_date_str).date() if purchase_date_str else timezone.now().date()
+        except (ValueError, TypeError, InvalidOperation):
+            messages.error(request, "Invalid numeric or date values provided.")
+            return redirect('add_other_asset')
+
+        if not name or purchase_price < 0:
+            messages.error(request, "Please provide valid name and purchase price.")
+            return redirect('add_other_asset')
+            
+        OtherAsset.objects.create(
+            user=request.user,
+            name=name,
+            asset_type=asset_type,
+            purchase_date=purchase_date,
+            purchase_price=purchase_price,
+            current_value=current_value,
+            monthly_rent=monthly_rent
+        )
+        messages.success(request, f"Added Asset: {name}.")
+        return redirect('other_assets_dashboard')
+        
+    return render(request, 'core/other_asset_form.html', {'action': 'Add', 'asset_types': OtherAsset.ASSET_TYPES})
+
+@login_required
+def edit_other_asset(request, pk):
+    """Edit an existing other asset."""
+    asset = get_object_or_404(OtherAsset, pk=pk, user=request.user)
+    
+    if request.method == 'POST':
+        asset.name = request.POST.get('name', asset.name).strip()
+        asset.asset_type = request.POST.get('asset_type', asset.asset_type)
+        purchase_date_str = request.POST.get('purchase_date')
+        
+        try:
+            asset.purchase_price = Decimal(request.POST.get('purchase_price', str(asset.purchase_price)))
+            asset.current_value = Decimal(request.POST.get('current_value', str(asset.current_value)))
+            asset.monthly_rent = Decimal(request.POST.get('monthly_rent', str(asset.monthly_rent)))
+            if purchase_date_str:
+                asset.purchase_date = pd.to_datetime(purchase_date_str).date()
+        except (ValueError, TypeError, InvalidOperation):
+            messages.error(request, "Invalid numeric or date values provided.")
+            return redirect('edit_other_asset', pk=pk)
+
+        asset.save()
+        messages.success(request, f"Updated Asset: {asset.name}.")
+        return redirect('other_assets_dashboard')
+        
+    return render(request, 'core/other_asset_form.html', {
+        'action': 'Edit', 
+        'asset': asset, 
+        'asset_types': OtherAsset.ASSET_TYPES
+    })
+
+@login_required
+def delete_other_asset(request, pk):
+    """Delete an other asset."""
+    asset = get_object_or_404(OtherAsset, pk=pk, user=request.user)
+    name = asset.name
+    asset.delete()
+    messages.success(request, f"Removed {name} from your Other Assets.")
+    return redirect('other_assets_dashboard')
+
+# --- LOAN Module ---
+
+def _process_auto_emis(loan):
+    """Automatically record EMIs that have passed since the last processed EMI."""
+    from dateutil.relativedelta import relativedelta
+    from decimal import Decimal
+    from datetime import date
+    
+    today = date.today()
+    # Limit iterations to avoid infinite loops in case of bad data
+    iterations = 0
+    while loan.next_emi_date and today >= loan.next_emi_date and iterations < 360:
+        iterations += 1
+        
+        # Calculate interest component
+        if loan.interest_type == 'Flat':
+            interest = (loan.loan_amount * loan.interest_rate / 100) / 12
+        else:
+            # Reducing balance: based on current outstanding
+            interest = (loan.current_outstanding * loan.interest_rate / 100) / 12
+            
+        interest = Decimal(str(interest)).quantize(Decimal('0.01'))
+        
+        # Principal component is EMI minus interest
+        principal = loan.emi_amount - interest
+        if principal < 0: principal = 0
+        
+        # If remaining principal is less than calculated principal, adjust
+        cur_out = loan.current_outstanding
+        if principal > cur_out:
+            principal = cur_out
+            # Optional: adjust amount or record as last EMI
+            
+        LoanPayment.objects.create(
+            loan=loan,
+            payment_type='EMI',
+            amount=loan.emi_amount,
+            date=loan.next_emi_date,
+            principal_component=principal,
+            interest_component=interest
+        )
+        
+        # Update next emi date
+        loan.next_emi_date = loan.next_emi_date + relativedelta(months=1)
+        
+        # If loan is fully paid, stop
+        if loan.current_outstanding <= 0:
+            loan.is_active = False
+            loan.next_emi_date = None
+            loan.save()
+            break
+            
+        loan.save()
+
+@login_required
+def loan_dashboard(request):
+    """Dashboard for all loans."""
+    loans = Loan.objects.filter(user=request.user).order_by('-start_date')
+    
+    # Process auto EMIs before calculating totals
+    for l in loans:
+        if l.is_active:
+            _process_auto_emis(l)
+            
+    total_loan_amount = float(sum(l.loan_amount for l in loans))
+    total_outstanding = float(sum(l.current_outstanding for l in loans))
+    total_interest_paid = float(sum(l.total_interest_paid for l in loans))
+    total_paid = float(sum(l.total_paid_till_date for l in loans))
+    
+    context = {
+        'loans': loans,
+        'total_loan_amount': total_loan_amount,
+        'total_outstanding': total_outstanding,
+        'total_interest_paid': total_interest_paid,
+        'total_paid': total_paid,
+        'last_updated': timezone.now(),
+    }
+    return render(request, 'core/loan_dashboard.html', context)
+
+@login_required
+def add_loan(request):
+    """Add a new loan."""
+    if request.method == 'POST':
+        form = LoanForm(request.POST)
+        if form.is_valid():
+            loan = form.save(commit=False)
+            loan.user = request.user
+            loan.save()
+            messages.success(request, f"Loan from {loan.bank_name} added successfully.")
+            return redirect('loan_dashboard')
+    else:
+        # Suggest today's date for next EMI
+        form = LoanForm(initial={'next_emi_date': timezone.now().date()})
+        
+    return render(request, 'core/loan_form.html', {'form': form, 'action': 'Add'})
+
+@login_required
+def edit_loan(request, pk):
+    """Edit an existing loan."""
+    loan = get_object_or_404(Loan, pk=pk, user=request.user)
+    if request.method == 'POST':
+        form = LoanForm(request.POST, instance=loan)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f"Updated loan from {loan.bank_name}.")
+            return redirect('loan_dashboard')
+    else:
+        form = LoanForm(instance=loan)
+        
+    return render(request, 'core/loan_form.html', {'form': form, 'action': 'Edit'})
+
+@login_required
+def delete_loan(request, pk):
+    """Delete a loan."""
+    loan = get_object_or_404(Loan, pk=pk, user=request.user)
+    bank = loan.bank_name
+    loan.delete()
+    messages.success(request, f"Removed loan from {bank}.")
+    return redirect('loan_dashboard')
+
+@login_required
+def loan_detail(request, pk):
+    """Detail view for a loan, showing payment history and breakup."""
+    loan = get_object_or_404(Loan, pk=pk, user=request.user)
+    payments = loan.payments.all().order_by('-date', '-created_at')
+    
+    # Simple Amortization for UI (next 12 months)
+    amortization = []
+    temp_outstanding = float(loan.current_outstanding)
+    temp_date = loan.next_emi_date or (timezone.now().date() + relativedelta(months=1))
+    
+    for i in range(12):
+        if temp_outstanding <= 0: break
+        
+        if loan.interest_type == 'Flat':
+            interest = (float(loan.loan_amount) * float(loan.interest_rate) / 100) / 12
+        else:
+            interest = (temp_outstanding * float(loan.interest_rate) / 100) / 12
+            
+        principal = float(loan.emi_amount) - interest
+        if principal > temp_outstanding:
+            principal = temp_outstanding
+            
+        amortization.append({
+            'date': temp_date,
+            'emi': loan.emi_amount,
+            'principal': principal,
+            'interest': interest,
+            'balance': temp_outstanding - principal
+        })
+        temp_outstanding -= principal
+        temp_date += relativedelta(months=1)
+
+    context = {
+        'loan': loan,
+        'payments': payments,
+        'amortization': amortization,
+    }
+    return render(request, 'core/loan_detail.html', context)
+
+@login_required
+def add_loan_payment(request, pk):
+    """Record a prepayment or manual payment."""
+    loan = get_object_or_404(Loan, pk=pk, user=request.user)
+    if request.method == 'POST':
+        amount = Decimal(request.POST.get('amount', '0'))
+        date_str = request.POST.get('date')
+        payment_date = pd.to_datetime(date_str).date() if date_str else timezone.now().date()
+        
+        # Prepayment logic: typically all goes to principal
+        principal = amount
+        interest = Decimal('0')
+        
+        LoanPayment.objects.create(
+            loan=loan,
+            payment_type='Prepayment',
+            amount=amount,
+            date=payment_date,
+            principal_component=principal,
+            interest_component=interest
+        )
+        
+        if loan.current_outstanding <= 0:
+            loan.is_active = False
+            loan.save()
+            
+        messages.success(request, f"Recorded prepayment of ₹{amount} for {loan.bank_name} loan.")
+        return redirect('loan_detail', pk=pk)
+        
+    return render(request, 'core/loan_payment_form.html', {'loan': loan})
 

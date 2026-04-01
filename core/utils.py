@@ -3,6 +3,7 @@ import requests
 import io
 import logging
 from django.core.cache import cache
+import yfinance as yf
 
 logger = logging.getLogger(__name__)
 
@@ -177,24 +178,72 @@ def perform_sync():
                     except (ValueError, TypeError):
                         pass
 
+                high_52w_val = None
+                if len(row) > 7:
+                    try:
+                        hv = row.iloc[7]
+                        if pd.notna(hv):
+                            high_52w_val = float(hv)
+                    except (ValueError, TypeError):
+                        pass
+
                 if ltp > 0:
-                    ltp_map[symbol] = (ltp, change_val, pe_val, lh_diff_val)
+                    ltp_map[symbol] = (ltp, change_val, pe_val, lh_diff_val, high_52w_val)
             except (ValueError, TypeError, IndexError):
                 continue
         
+        # Override with real 52W High from yfinance for verified instruments
+        try:
+            from core.models import Instrument
+            verified_symbols = list(Instrument.objects.filter(is_verified=True).values_list('symbol', flat=True))
+            if verified_symbols:
+                # Prepare symbols for yfinance (append .NS if needed)
+                yf_symbols = []
+                for s in verified_symbols:
+                    if not any(x in s for x in ['^', '.', '=F']):
+                        yf_symbols.append(f"{s}.NS")
+                    else:
+                        yf_symbols.append(s)
+                
+                # Fetch 1y data in batches to get max High (52W High)
+                # Batching for reliability
+                batch_size = 50
+                for i in range(0, len(yf_symbols), batch_size):
+                    batch = yf_symbols[i:i+batch_size]
+                    import yfinance as yf
+                    tickers = yf.Tickers(" ".join(batch))
+                    hist = tickers.history(period='1y', interval='1d')
+                    if not hist.empty and 'High' in hist:
+                        highs = hist['High'].max()
+                        for s_full in batch:
+                            s_clean = s_full.replace('.NS', '').upper()
+                            if s_full in highs and not pd.isna(highs[s_full]):
+                                h52 = float(highs[s_full])
+                                if s_clean in ltp_map:
+                                    # Update ltp_map if it exists (index 4 is high_52w)
+                                    m = list(ltp_map[s_clean])
+                                    m[4] = h52
+                                    ltp_map[s_clean] = tuple(m)
+                                else:
+                                    # Placeholder ltp/change if not in sheet map
+                                    ltp_map[s_clean] = (0, 0, None, None, h52)
+        except Exception as ey:
+            logger.error(f"Error fetching real 52W High via yfinance: {ey}")
+
         if ltp_map:
             with transaction.atomic():
                 # Update Instruments
                 instruments = Instrument.objects.filter(symbol__in=ltp_map.keys())
                 for inst in instruments:
-                    ltp, change, pe, lh_diff = ltp_map[inst.symbol]
+                    ltp, change, pe, lh_diff, h52 = ltp_map[inst.symbol]
                     inst.last_price = ltp
                     inst.price_change = change
                     inst.previous_close = ltp - change
                     inst.pe_ratio = pe
                     inst.diff_from_lh_pct = lh_diff
+                    inst.high_52w = h52
                     inst.last_updated = timezone.now()
-                    inst.save(update_fields=['last_price', 'price_change', 'previous_close', 'pe_ratio', 'diff_from_lh_pct', 'last_updated'])
+                    inst.save(update_fields=['last_price', 'price_change', 'previous_close', 'pe_ratio', 'diff_from_lh_pct', 'high_52w', 'last_updated'])
                 
                 # Update Portfolios
                 portfolios = Portfolio.objects.all().select_related('instrument')
@@ -256,6 +305,128 @@ def perform_sync():
             logger.error(f"Error syncing {tab_name} strategy stocks: {e}")
     
     logger.info("Sync process completed.")
+
+def sync_mutual_funds_from_sheet():
+    """Sync Mutual Fund NAVs from Google Sheet with yfinance fallback."""
+    from core.models import MutualFund
+    from decimal import Decimal
+    import re
+    
+    sheet_url = "https://docs.google.com/spreadsheets/d/12eLJHTlHO1naQgJ-dzf-UTgUbasVv02tgwlHKofG2Y4/export?format=csv&gid=956419944"
+    
+    try:
+        response = requests.get(sheet_url, timeout=15)
+        response.raise_for_status()
+        
+        # Read the sheet (CSV). Assuming headerless based on content view.
+        df = pd.read_csv(io.StringIO(response.text), header=None)
+        
+        count = 0
+        for _, row in df.iterrows():
+            try:
+                name_val = row.iloc[0]
+                if pd.isna(name_val): continue
+                raw_name = str(name_val).strip()
+                if not raw_name or raw_name == 'nan': continue
+                
+                # Extract clean name (often contains emails/notes after / or ;)
+                clean_name = re.split(r'[/;]', raw_name)[0].strip()
+                # Remove technical codes often appended in parentheses like (MUTF_IN:...)
+                clean_name = re.sub(r'\s*[\(\[].*?MUTF_IN:.*?[\)\]]', '', clean_name).strip()
+                
+                # Column B is Symbol or ID
+                symbol = str(row.iloc[1]).strip() if len(row) > 1 else raw_name
+                
+                # Column C is NAV Price
+                try:
+                    sheet_nav = float(row.iloc[2]) if len(row) > 2 else 0
+                except (ValueError, TypeError): sheet_nav = 0
+                
+                # Column D is % Changes
+                try:
+                    sheet_change = float(row.iloc[3]) if len(row) > 3 else 0
+                except (ValueError, TypeError): sheet_change = 0
+
+                target_nav = sheet_nav
+                
+                # yfinance logic: Try if symbol looks like a ticker and is not an internal ID
+                if symbol and 'MUTF_IN:' not in symbol:
+                    try:
+                        ticker = yf.Ticker(symbol)
+                        info = ticker.info
+                        yf_nav = info.get('regularMarketPrice') or info.get('navPrice')
+                        if yf_nav:
+                            target_nav = float(yf_nav)
+                    except Exception:
+                        pass
+                
+                # Update or create MutualFund record
+                MutualFund.objects.update_or_create(
+                    symbol=symbol,
+                    defaults={
+                        'name': clean_name,
+                        'nav': Decimal(str(target_nav)),
+                    }
+                )
+                count += 1
+            except Exception as e:
+                logger.error(f"Error processing MF row: {e}")
+                continue
+        
+        logger.info(f"Successfully synced {count} Mutual Funds from Google Sheet.")
+        return count
+    except Exception as e:
+        logger.error(f"Error syncing Mutual Funds: {e}")
+        return 0
+
+def sync_nps_from_sheet():
+    """Sync NPS NAVs from Google Sheet (Tab: NPS)."""
+    from core.models import NPSFund
+    from decimal import Decimal
+    
+    # URL for the 'NPS' tab
+    sheet_url = "https://docs.google.com/spreadsheets/d/12eLJHTlHO1naQgJ-dzf-UTgUbasVv02tgwlHKofG2Y4/gviz/tq?tqx=out:csv&sheet=NPS"
+    
+    try:
+        response = requests.get(sheet_url, timeout=15)
+        response.raise_for_status()
+        
+        # Column A: Scheme Name (iloc[0]), Column B: NAV Value (iloc[1])
+        df = pd.read_csv(io.StringIO(response.text))
+        
+        count = 0
+        for _, row in df.iterrows():
+            try:
+                name_val = row.iloc[0]
+                if pd.isna(name_val): continue
+                name = str(name_val).strip()
+                if not name or name.lower() == 'nan': continue
+                
+                try:
+                    nav_val = row.iloc[1]
+                    nav = float(nav_val) if pd.notna(nav_val) else 0
+                except (ValueError, TypeError): 
+                    nav = 0
+
+                # Update or create NPSFund record
+                fund, created = NPSFund.objects.get_or_create(name=name)
+                
+                # Store previous nav for day change calculation
+                if not created:
+                    fund.prev_nav = fund.nav
+                
+                fund.nav = Decimal(str(nav))
+                fund.save()
+                count += 1
+            except Exception as e:
+                logger.error(f"Error processing NPS row: {e}")
+                continue
+        
+        logger.info(f"Successfully synced {count} NPS Funds from Google Sheet.")
+        return count
+    except Exception as e:
+        logger.error(f"Error syncing NPS: {e}")
+        return 0
 
 def fetch_live_ltp():
     """Fetch live LTP from Google Sheet CSV export with caching."""

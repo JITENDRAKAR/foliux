@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+
+{% block extra_css %}
+<style>
+    .form-container {
+        max-width: 700px;
+        margin: 0 auto;
+        background: white;
+        padding: 40px;
+        border-radius: 24px;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.05);
+        border: 1px solid rgba(133, 77, 14, 0.1);
+    }
+    .form-label {
+        font-weight: 600;
+        color: #854d0e;
+        margin-bottom: 8px;
+    }
+    .form-control, .form-select {
+        border-radius: 12px;
+        padding: 12px 16px;
+        border: 2px solid #e2e8f0;
+        transition: all 0.3s;
+    }
+    .form-control:focus, .form-select:focus {
+        border-color: #854d0e;
+        box-shadow: 0 0 0 4px rgba(133, 77, 14, 0.1);
+    }
+    .btn-submit {
+        background: linear-gradient(135deg, #854d0e 0%, #a16207 100%);
+        color: white;
+        border: none;
+        padding: 14px;
+        border-radius: 12px;
+        font-weight: 700;
+        width: 100%;
+        margin-top: 20px;
+        transition: all 0.3s;
+    }
+    .btn-submit:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 20px rgba(133, 77, 14, 0.2);
+        color: white;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center py-5">
+    <div class="col-md-9">
+        <div class="text-center mb-5">
+            <h1 class="fw-800 text-other" style="color: #854d0e;">{{ action }} Physical Asset</h1>
+            <p class="text-muted">Record your Plot, Flat, Gold or other valuable physical assets.</p>
+        </div>
+        
+        <div class="form-container">
+            <form method="POST">
+                {% csrf_token %}
+                
+                <div class="row mb-4">
+                    <div class="col-md-8">
+                        <label for="name" class="form-label">Asset Description</label>
+                        <input type="text" name="name" id="name" class="form-control" placeholder="e.g. Dream Valley Villa, 50g Gold Coin" required value="{{ asset.name|default:'' }}">
+                    </div>
+                    <div class="col-md-4">
+                        <label for="asset_type" class="form-label">Asset Type</label>
+                        <select name="asset_type" id="asset_type" class="form-select">
+                            {% for code, label in asset_types %}
+                                <option value="{{ code }}" {% if asset.asset_type == code %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <label for="purchase_price" class="form-label">Purchase Price (INR)</label>
+                        <input type="number" step="0.01" name="purchase_price" id="purchase_price" class="form-control" placeholder="0.00" required value="{{ asset.purchase_price|default:'' }}">
+                    </div>
+                    <div class="col-md-6">
+                        <label for="current_value" class="form-label">Current Market Value (INR)</label>
+                        <input type="number" step="0.01" name="current_value" id="current_value" class="form-control" placeholder="0.00" required value="{{ asset.current_value|default:'' }}">
+                        <div class="help-text text-muted small mt-1">Manual updates required for accurate P&L.</div>
+                    </div>
+                </div>
+
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <label for="purchase_date" class="form-label">Purchase Date</label>
+                        <input type="date" name="purchase_date" id="purchase_date" class="form-control" required value="{{ asset.purchase_date|date:'Y-m-d' }}">
+                    </div>
+                    <div class="col-md-6">
+                        <label for="monthly_rent" class="form-label">Monthly Rental Income (INR)</label>
+                        <input type="number" step="0.01" name="monthly_rent" id="monthly_rent" class="form-control" placeholder="0.00" value="{{ asset.monthly_rent|default:'0' }}">
+                        <div class="help-text text-muted small mt-1">Enter monthly rent if applicable.</div>
+                    </div>
+                </div>
+                
+                <button type="submit" class="btn-submit">
+                    <i class="fas fa-save me-2"></i>{{ action }} Asset
+                </button>
+                
+                <div class="mt-4 pt-3 border-top text-center">
+                    <a href="{% url 'other_assets_dashboard' %}" class="text-decoration-none fw-600" style="color: #854d0e;">
+                        <i class="fas fa-arrow-left me-2"></i>Back to Assets Dashboard
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

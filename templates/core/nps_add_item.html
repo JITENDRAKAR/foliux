@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+
+{% block extra_css %}
+<style>
+    .form-container {
+        max-width: 600px;
+        margin: 0 auto;
+        background: white;
+        padding: 40px;
+        border-radius: 24px;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.05);
+        border: 1px solid rgba(0, 51, 102, 0.1);
+    }
+    .form-label {
+        font-weight: 600;
+        color: #475569;
+        margin-bottom: 8px;
+    }
+    .form-control {
+        border-radius: 12px;
+        padding: 12px 16px;
+        border: 2px solid #e2e8f0;
+        transition: all 0.3s;
+    }
+    .form-control:focus {
+        border-color: #003366;
+        box-shadow: 0 0 0 4px rgba(0, 51, 102, 0.1);
+    }
+    .btn-submit {
+        background: linear-gradient(135deg, #003366 0%, #00509e 100%);
+        color: white;
+        border: none;
+        padding: 14px;
+        border-radius: 12px;
+        font-weight: 700;
+        width: 100%;
+        margin-top: 20px;
+        transition: all 0.3s;
+    }
+    .btn-submit:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 20px rgba(0, 51, 102, 0.2);
+        color: white;
+    }
+    .help-text {
+        font-size: 0.85rem;
+        color: #64748b;
+        margin-top: 4px;
+    }
+    .autocomplete-results {
+        position: absolute;
+        z-index: 1000;
+        background: white;
+        border: 1px solid #e2e8f0;
+        width: 100%;
+        max-height: 250px;
+        overflow-y: auto;
+        border-radius: 12px;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        margin-top: 5px;
+    }
+    .autocomplete-item {
+        padding: 12px 16px;
+        cursor: pointer;
+        border-bottom: 1px solid #f1f5f9;
+        transition: background 0.2s;
+    }
+    .autocomplete-item:hover { background-color: #f8fafc; }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const nameInput = document.getElementById('fund_name');
+    const resultsDiv = document.getElementById('nps-autocomplete-results');
+    const navInput = document.getElementById('avg_nav');
+    const unitsInput = document.getElementById('units');
+    const amountInput = document.getElementById('invested_amount');
+
+    const funds = [
+        {% for f in all_funds %}
+        { "name": "{{ f.name|escapejs }}", "nav": "{{ f.nav }}" },
+        {% endfor %}
+    ];
+
+    nameInput.addEventListener('input', function() {
+        const query = this.value.trim().toLowerCase();
+        resultsDiv.innerHTML = '';
+        if (query.length < 2) {
+            resultsDiv.classList.add('d-none');
+            return;
+        }
+
+        const matches = funds.filter(f => f.name.toLowerCase().includes(query)).slice(0, 10);
+        if (matches.length > 0) {
+            matches.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'autocomplete-item';
+                div.innerHTML = `<span class="fw-bold">${item.name}</span><br><small class="text-muted">NAV: ₹${item.nav}</small>`;
+                div.addEventListener('click', () => {
+                    nameInput.value = item.name;
+                    navInput.value = item.nav;
+                    resultsDiv.classList.add('d-none');
+                    calculate();
+                });
+                resultsDiv.appendChild(div);
+            });
+            resultsDiv.classList.remove('d-none');
+        } else {
+            resultsDiv.classList.add('d-none');
+        }
+    });
+
+    function calculate() {
+        const units = parseFloat(unitsInput.value) || 0;
+        const nav = parseFloat(navInput.value) || 0;
+        const amount = parseFloat(amountInput.value) || 0;
+
+        if (document.activeElement === amountInput) {
+            if (amount > 0 && units > 0) navInput.value = (amount / units).toFixed(4);
+            else if (amount > 0 && nav > 0) unitsInput.value = (amount / nav).toFixed(4);
+        } else {
+            if (units > 0 && nav > 0) amountInput.value = (units * nav).toFixed(2);
+        }
+    }
+
+    unitsInput.addEventListener('input', calculate);
+    navInput.addEventListener('input', calculate);
+    amountInput.addEventListener('input', calculate);
+
+    document.addEventListener('click', (e) => {
+        if (!nameInput.contains(e.target) && !resultsDiv.contains(e.target)) {
+            resultsDiv.classList.add('d-none');
+        }
+    });
+});
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center py-5">
+    <div class="col-md-8">
+        <div class="text-center mb-5">
+            <h1 class="fw-800 text-nps">Add NPS Investment</h1>
+            <p class="text-muted">Record your purchase details. We'll track FIFO logs automatically.</p>
+        </div>
+        
+        <div class="form-container">
+            <form method="POST">
+                {% csrf_token %}
+                
+                <div class="mb-4 position-relative">
+                    <label for="fund_name" class="form-label">NPS Scheme Name</label>
+                    <input type="text" name="fund_name" id="fund_name" class="form-control" placeholder="Search for NPS Scheme..." autocomplete="off" required value="{{ request.GET.fund|default:'' }}">
+                    <div id="nps-autocomplete-results" class="autocomplete-results d-none"></div>
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <label for="units" class="form-label">Total Units</label>
+                        <input type="number" step="0.0001" name="units" id="units" class="form-control" placeholder="0.0000" required>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="avg_nav" class="form-label">Avg NAV (INR)</label>
+                        <input type="number" step="0.0001" name="avg_nav" id="avg_nav" class="form-control" placeholder="0.00" required>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="invested_amount" class="form-label">Invested Amount (INR)</label>
+                        <input type="number" step="0.01" id="invested_amount" class="form-control" placeholder="0.00">
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label for="date" class="form-label">Investment Date</label>
+                    <input type="date" name="date" id="date" class="form-control" value="{{ now|date:'Y-m-d' }}">
+                </div>
+                
+                <button type="submit" class="btn btn-submit">
+                    <i class="fas fa-plus-circle me-2"></i>Add to Portfolio
+                </button>
+                
+                <div class="mt-4 pt-3 border-top text-center">
+                    <a href="{% url 'nps_dashboard' %}" class="text-decoration-none fw-600" style="color: #003366;">
+                        <i class="fas fa-arrow-left me-2"></i>Back to NPS Dashboard
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

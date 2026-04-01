@@ -1,0 +1,209 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block extra_css %}
+<style>
+    .loan-header {
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        border-radius: 24px;
+        color: white;
+        padding: 3rem;
+        box-shadow: 0 20px 40px rgba(220, 38, 38, 0.15);
+    }
+    .detail-card {
+        background: white;
+        border-radius: 20px;
+        border: 1px solid rgba(0,0,0,0.05);
+        padding: 2rem;
+        box-shadow: 0 10px 20px rgba(0,0,0,0.02);
+    }
+    .progress {
+        height: 12px;
+        border-radius: 10px;
+    }
+    .table thead th {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #64748b;
+        border-bottom: 2px solid #f1f5f9;
+        font-weight: 700;
+        padding-bottom: 1rem;
+    }
+    .badge-payment {
+        padding: 0.4rem 1rem;
+        border-radius: 100px;
+        font-size: 0.75rem;
+        font-weight: 800;
+    }
+    .bg-emi { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
+    .bg-prepayment { background: rgba(16, 185, 129, 0.1); color: #10b981; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4 animate__animated animate__fadeIn">
+    <div class="mb-4">
+        <a href="{% url 'loan_dashboard' %}" class="btn btn-link link-dark p-0 text-decoration-none fw-bold">
+            <i class="fas fa-arrow-left me-2"></i> Back to Dashboard
+        </a>
+    </div>
+
+    <!-- Loan Header -->
+    <div class="loan-header mb-5">
+        <div class="row align-items-center">
+            <div class="col-lg-8">
+                <span class="badge bg-white bg-opacity-20 rounded-pill px-3 py-1 mb-2 text-uppercase fw-bold" style="font-size: 0.65rem;">{{ loan.category }} LOAN</span>
+                <h1 class="fw-800 mb-2">{{ loan.bank_name }}</h1>
+                <p class="mb-4 opacity-75">Started on {{ loan.start_date|date:"d M Y" }} • {{ loan.interest_rate }}% {{ loan.interest_type }}</p>
+                
+                <div class="mb-2">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="small fw-bold">Loan Progress</span>
+                        <span class="small fw-bold">{{ loan.progress_percentage|floatformat:1 }}% COMPLETED</span>
+                    </div>
+                    <div class="progress bg-white bg-opacity-20">
+                        <div class="progress-bar bg-white" role="progressbar" style="width: {{ loan.progress_percentage }}%"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4 text-lg-end mt-4 mt-lg-0">
+                <div class="bg-white bg-opacity-10 p-4 rounded-4 backdrop-blur shadow-sm border border-white border-opacity-10">
+                    <div class="small opacity-75 text-uppercase fw-bold mb-1">Current Outstanding</div>
+                    <div class="display-6 fw-800">₹ {{ loan.current_outstanding|floatformat:2 }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Quick Stats -->
+        <div class="col-lg-4">
+            <div class="detail-card h-100">
+                <h5 class="fw-bold mb-4">Loan Details</h5>
+                <div class="d-flex flex-column gap-3">
+                    <div class="d-flex justify-content-between align-items-center border-bottom pb-2">
+                        <span class="text-muted">Total Principal</span>
+                        <span class="fw-bold">₹ {{ loan.loan_amount|floatformat:2 }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center border-bottom pb-2">
+                        <span class="text-muted">Tenure</span>
+                        <span class="fw-bold">{{ loan.tenure_months }} Months</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center border-bottom pb-2">
+                        <span class="text-muted">Monthly EMI</span>
+                        <span class="fw-bold">₹ {{ loan.emi_amount|floatformat:2 }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center border-bottom pb-2">
+                        <span class="text-muted">Interest Type</span>
+                        <span class="fw-bold">{{ loan.interest_type }} / {{ loan.interest_lock }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center border-bottom pb-2">
+                        <span class="text-muted">Total Paid</span>
+                        <span class="fw-bold text-success">₹ {{ loan.total_paid_till_date|floatformat:2 }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center border-bottom pb-2">
+                        <span class="text-muted">Total Interest Paid</span>
+                        <span class="fw-bold text-warning">₹ {{ loan.total_interest_paid|floatformat:2 }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="text-muted">Remaining Tenure</span>
+                        <span class="fw-bold">~{{ loan.remaining_tenure_months }} Months</span>
+                    </div>
+                </div>
+
+                <div class="mt-5 d-grid gap-2">
+                    <a href="{% url 'add_loan_payment' loan.id %}" class="btn btn-success rounded-pill fw-bold py-3 shadow-sm hover-lift">
+                        <i class="fas fa-plus-circle me-1"></i> Add Prepayment entry
+                    </a>
+                    <div class="row g-2 mt-2">
+                        <div class="col-6">
+                            <a href="{% url 'edit_loan' loan.id %}" class="btn btn-outline-info rounded-pill fw-bold w-100">
+                                <i class="fas fa-edit me-1"></i> Edit
+                            </a>
+                        </div>
+                        <div class="col-6">
+                            <a href="{% url 'delete_loan' loan.id %}" class="btn btn-outline-danger rounded-pill fw-bold w-100">
+                                <i class="fas fa-trash me-1"></i> Delete
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Payment History -->
+        <div class="col-lg-8">
+            <div class="detail-card h-100">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h5 class="fw-bold mb-0">Payment History</h5>
+                </div>
+                
+                <div class="table-responsive">
+                    <table class="table align-middle">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Type</th>
+                                <th>Amount</th>
+                                <th>Principal</th>
+                                <th>Interest</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for p in payments %}
+                            <tr>
+                                <td class="fw-semibold">{{ p.date|date:"d M Y" }}</td>
+                                <td>
+                                    <span class="badge-payment bg-{% if p.payment_type == 'EMI' %}emi{% else %}prepayment{% endif %}">
+                                        {{ p.payment_type }}
+                                    </span>
+                                </td>
+                                <td class="fw-bold">₹ {{ p.amount|floatformat:2 }}</td>
+                                <td class="text-success fw-semibold">₹ {{ p.principal_component|floatformat:2 }}</td>
+                                <td class="text-warning fw-semibold">₹ {{ p.interest_component|floatformat:2 }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" class="text-center py-4 text-muted small">No payments recorded yet.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- EMI Breakdown / Amortization Preview -->
+    <div class="mt-5 mb-5">
+        <h4 class="fw-bold mb-4">Upcoming Schedule (Next 12 Months)</h4>
+        <div class="bg-white rounded-4 shadow-sm border p-4">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th class="border-0">Due Date</th>
+                            <th class="border-0">EMI Amount</th>
+                            <th class="border-0">Principal</th>
+                            <th class="border-0">Interest</th>
+                            <th class="border-0">Ending Balance</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for am in amortization %}
+                        <tr>
+                            <td class="fw-semibold">{{ am.date|date:"d M Y" }}</td>
+                            <td class="fw-bold">₹ {{ am.emi|floatformat:2 }}</td>
+                            <td class="text-success">₹ {{ am.principal|floatformat:2 }}</td>
+                            <td class="text-warning">₹ {{ am.interest|floatformat:2 }}</td>
+                            <td class="text-muted fw-bold">₹ {{ am.balance|floatformat:2 }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

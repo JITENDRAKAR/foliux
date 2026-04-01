@@ -1,6 +1,7 @@
 from django.urls import path
 from django.contrib.auth import views as auth_views
 from . import views
+from . import api_views
 from .forms import EmailOrMobileAuthenticationForm
 
 urlpatterns = [
@@ -29,7 +30,49 @@ urlpatterns = [
     path('strategy/', views.strategy, name='strategy'),
     path('profile/edit/', views.edit_profile, name='edit_profile'),
     path('mf-guide/', views.mf_guide, name='mf_guide'),
-    path('stock-guide/', views.stock_guide, name='stock_guide'),
+    path('mf-dashboard/', views.mf_dashboard, name='mf_dashboard'),
+    path('mf-portfolio/add/', views.add_mf_portfolio, name='add_mf_portfolio'),
+    path('mf-portfolio/sell/<int:pk>/', views.sell_mf_portfolio, name='sell_mf_portfolio'),
+    path('mf-portfolio/delete/<int:pk>/', views.delete_mf_portfolio, name='delete_mf_portfolio'),
+    path('mf-transactions/', views.mf_transaction_history, name='mf_transaction_history'),
+    path('mf-portfolio/refresh/', views.refresh_mf_navs, name='refresh_mf_navs'),
+    
+    # Coin (Crypto) URLs
+    path('coin/', views.coin_dashboard, name='coin_dashboard'),
+    path('coin/add/', views.add_coin, name='add_coin'),
+    path('coin/sell/<int:pk>/', views.sell_coin, name='sell_coin'),
+    path('coin/delete/<int:pk>/', views.delete_coin_portfolio, name='delete_coin_portfolio'),
+    path('coin/transactions/', views.coin_transaction_history, name='coin_transaction_history'),
+    path('coin/refresh/', views.refresh_coin_prices, name='refresh_coin_prices'),
+    
+    # NPS URLs
+    path('nps/', views.nps_dashboard, name='nps_dashboard'),
+    path('nps/add/', views.add_nps, name='add_nps'),
+    path('nps/sell/<int:pk>/', views.sell_nps, name='sell_nps'),
+    path('nps/delete/<int:pk>/', views.delete_nps_portfolio, name='delete_nps_portfolio'),
+    path('nps/transactions/', views.nps_transaction_history, name='nps_transaction_history'),
+    path('nps/refresh/', views.refresh_nps_navs, name='refresh_nps_navs'),
+    
+    # FD / Fixed Assets URLs
+    path('fd/', views.fd_dashboard, name='fd_dashboard'),
+    path('fd/add/', views.add_fd, name='add_fd'),
+    path('fd/delete/<int:pk>/', views.delete_fd, name='delete_fd'),
+    
+    # Other Assets URLs
+    path('other-assets/', views.other_assets_dashboard, name='other_assets_dashboard'),
+    path('other-assets/add/', views.add_other_asset, name='add_other_asset'),
+    path('other-assets/edit/<int:pk>/', views.edit_other_asset, name='edit_other_asset'),
+    path('other-assets/delete/<int:pk>/', views.delete_other_asset, name='delete_other_asset'),
+    
+    # Loan Module URLs
+    path('loan/', views.loan_dashboard, name='loan_dashboard'),
+    path('loan/add/', views.add_loan, name='add_loan'),
+    path('loan/edit/<int:pk>/', views.edit_loan, name='edit_loan'),
+    path('loan/delete/<int:pk>/', views.delete_loan, name='delete_loan'),
+    path('loan/detail/<int:pk>/', views.loan_detail, name='loan_detail'),
+    path('loan/payment/<int:pk>/', views.add_loan_payment, name='add_loan_payment'),
+    
+    path('portfolio/', views.portfolio, name='portfolio'),
     path('etf-guide/', views.etf_guide, name='etf_guide'),
     path('nps-guide/', views.nps_guide, name='nps_guide'),
     path('donation/', views.donation, name='donation'),
@@ -51,9 +94,18 @@ urlpatterns = [
     
     # Internal Sync API
     path('api/sync-data/', views.sync_data_api, name='sync_data_api'),
+    path('auto-migrate/', views.auto_migrate, name='auto_migrate'),
+    path('api/mf-suggestions/', views.mf_suggestions_api, name='mf_suggestions_api'),
     path('api/index-data/', views.index_data_api, name='index_data_api'),
     path('api/stock-price/', views.stock_price_api, name='stock_price_api'),
     path('api/stock-suggestions/', views.stock_suggestions_api, name='stock_suggestions_api'),
     path('api/stock-history/', views.stock_history_api, name='stock_history_api'),
+    path('api/coin-price/', views.coin_price_api, name='coin_price_api'),
+    
+    # Mobile App API
+    path('api/login/', api_views.api_login, name='api_login'),
+    path('api/portfolio/', api_views.api_portfolio, name='api_portfolio'),
+    path('api/add-transaction/', api_views.api_add_transaction, name='api_add_transaction'),
+    
     path('.well-known/assetlinks.json', views.assetlinks_json, name='assetlinks_json'),
 ]

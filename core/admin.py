@@ -8,7 +8,9 @@ from .models import (
     Instrument, Portfolio, PnLStatement, Profile, OTP, 
     Transaction, SignupOTP, MarketTicker, Strategy, 
     StrategyStock, Watchlist, Dividend, InvestmentGoal,
-    CorporateAction
+    CorporateAction, MutualFund, MFPortfolio, MFTransaction,
+    Coin, CoinPortfolio, CoinTransaction,
+    NPSFund, NPSPortfolio, NPSTransaction
 )
 
 class CsvImportForm(forms.Form):
@@ -133,5 +135,68 @@ class CorporateActionAdmin(admin.ModelAdmin):
     list_filter = ('action_type', 'announcement_date')
     search_fields = ('instrument__symbol',)
 
+@admin.register(MutualFund)
+class MutualFundAdmin(admin.ModelAdmin):
+    list_display = ('name', 'symbol', 'nav', 'isin', 'amc', 'last_updated')
+    search_fields = ('name', 'symbol', 'isin', 'amc')
+    list_filter = ('amc',)
+    change_list_template = "admin/mf_changelist.html"
+
+    def get_urls(self):
+        urls = super().get_urls()
+        my_urls = [
+            path('sync-sheet/', self.sync_sheet),
+        ]
+        return my_urls + urls
+
+    def sync_sheet(self, request):
+        from .utils import sync_mutual_funds_from_sheet
+        count = sync_mutual_funds_from_sheet()
+        if count > 0:
+            self.message_user(request, f"Successfully synced {count} Mutual Funds.")
+        else:
+            self.message_user(request, "Failed to sync Mutual Funds. Check logs.", level=messages.ERROR)
+        return redirect("..")
+
+@admin.register(MFPortfolio)
+class MFPortfolioAdmin(admin.ModelAdmin):
+    list_display = ('user', 'fund', 'units', 'avg_nav', 'realized_profit')
+    search_fields = ('user__username', 'fund__name')
+    list_filter = ('user',)
+
 admin.site.register(OTP)
 admin.site.register(SignupOTP)
+
+@admin.register(Coin)
+class CoinAdmin(admin.ModelAdmin):
+    list_display = ('name', 'symbol', 'price', 'prev_price', 'last_updated')
+    search_fields = ('name', 'symbol')
+
+@admin.register(CoinPortfolio)
+class CoinPortfolioAdmin(admin.ModelAdmin):
+    list_display = ('user', 'coin', 'units', 'avg_price', 'realized_profit')
+    search_fields = ('user__username', 'coin__name')
+    list_filter = ('user',)
+
+@admin.register(CoinTransaction)
+class CoinTransactionAdmin(admin.ModelAdmin):
+    list_display = ('user', 'coin', 'transaction_type', 'units', 'price', 'date')
+    list_filter = ('transaction_type', 'date', 'user')
+    search_fields = ('user__username', 'coin__name')
+
+@admin.register(NPSFund)
+class NPSFundAdmin(admin.ModelAdmin):
+    list_display = ('name', 'nav', 'prev_nav', 'last_updated')
+    search_fields = ('name',)
+
+@admin.register(NPSPortfolio)
+class NPSPortfolioAdmin(admin.ModelAdmin):
+    list_display = ('user', 'fund', 'units', 'avg_nav', 'realized_profit')
+    search_fields = ('user__username', 'fund__name')
+    list_filter = ('user',)
+
+@admin.register(NPSTransaction)
+class NPSTransactionAdmin(admin.ModelAdmin):
+    list_display = ('user', 'fund', 'transaction_type', 'units', 'price', 'date')
+    list_filter = ('transaction_type', 'date', 'user')
+    search_fields = ('user__username', 'fund__name')

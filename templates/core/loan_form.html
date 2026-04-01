@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="container py-5 animate__animated animate__fadeIn">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="bg-white rounded-4 shadow-sm border p-4 p-md-5">
+                <div class="mb-4">
+                    <a href="{% url 'loan_dashboard' %}" class="btn btn-link link-dark p-0 text-decoration-none fw-bold mb-3">
+                        <i class="fas fa-arrow-left me-2"></i> Back to Dashboard
+                    </a>
+                    <h2 class="fw-800 mb-2">{{ action }} Loan</h2>
+                    <p class="text-muted">Enter the details of your loan to start tracking.</p>
+                </div>
+
+                <form method="post" class="row g-4">
+                    {% csrf_token %}
+                    
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Bank / Lender Name</label>
+                        {{ form.bank_name }}
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Loan Category</label>
+                        {{ form.category }}
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Loan Amount (Principal)</label>
+                        {{ form.loan_amount }}
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Start Date</label>
+                        {{ form.start_date }}
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Interest Rate (%)</label>
+                        {{ form.interest_rate }}
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Tenure (Months)</label>
+                        {{ form.tenure_months }}
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Interest Type</label>
+                        {{ form.interest_type }}
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Interest Lock</label>
+                        {{ form.interest_lock }}
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Monthly EMI Amount</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light">₹</span>
+                            {{ form.emi_amount }}
+                            <button type="button" class="btn btn-outline-secondary" id="btn_calc_emi" title="Recalculate EMI">
+                                <i class="fas fa-calculator"></i>
+                            </button>
+                        </div>
+                        <small class="text-info mt-1 d-block" id="emi_calc_hint">Calculated automatically based on inputs.</small>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Next EMI Date</label>
+                        {{ form.next_emi_date }}
+                        <small class="text-muted mt-1 d-block">Used for automatic tracking.</small>
+                    </div>
+
+                    <div class="col-12 mt-5">
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <a href="{% url 'loan_dashboard' %}" class="btn btn-light rounded-pill px-5 fw-bold">Cancel</a>
+                            <button type="submit" class="btn btn-danger rounded-pill px-5 fw-bold shadow-sm">Save Loan</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const loanAmountInput = document.getElementById('id_loan_amount');
+    const interestRateInput = document.getElementById('id_interest_rate');
+    const tenureMonthsInput = document.getElementById('id_tenure_months');
+    const interestTypeInput = document.getElementById('id_interest_type');
+    const emiAmountInput = document.getElementById('id_emi_amount');
+    const calcBtn = document.getElementById('btn_calc_emi');
+
+    function calculateEMI() {
+        const P = parseFloat(loanAmountInput.value);
+        const R = parseFloat(interestRateInput.value);
+        const N = parseInt(tenureMonthsInput.value);
+        const type = interestTypeInput.value;
+
+        if (isNaN(P) || isNaN(R) || isNaN(N) || P <= 0 || N <= 0) {
+            return;
+        }
+
+        let emi = 0;
+        if (type === 'Flat') {
+            const totalInterest = (P * R * (N / 12)) / 100;
+            emi = (P + totalInterest) / N;
+        } else {
+            // Reducing balance formula
+            const r = (R / 100) / 12;
+            if (r === 0) {
+                emi = P / N;
+            } else {
+                emi = (P * r * Math.pow(1 + r, N)) / (Math.pow(1 + r, N) - 1);
+            }
+        }
+
+        emiAmountInput.value = emi.toFixed(2);
+    }
+
+    // Auto-calculate on input change
+    [loanAmountInput, interestRateInput, tenureMonthsInput, interestTypeInput].forEach(el => {
+        el.addEventListener('input', calculateEMI);
+    });
+
+    // Manual recalculate button
+    calcBtn.addEventListener('click', calculateEMI);
+});
+</script>
+{% endblock %}

@@ -1,0 +1,204 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block extra_css %}
+<style>
+    .mf-card {
+        background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+        border-radius: 20px;
+        border: 1px solid rgba(0, 61, 124, 0.1);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .mf-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 15px 35px rgba(0, 61, 124, 0.1);
+    }
+    .text-primary-dark {
+        color: #003D7C;
+    }
+    .bg-soft-blue {
+        background-color: rgba(0, 61, 124, 0.05);
+    }
+    .table-container {
+        background: white;
+        border-radius: 20px;
+        overflow: hidden;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.03);
+    }
+    .stats-label {
+        font-size: 0.85rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #64748b;
+    }
+    .stats-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #1e293b;
+    }
+    .btn-gradient {
+        background: linear-gradient(135deg, #003D7C 0%, #0056b3 100%);
+        color: white;
+        border: none;
+        padding: 0.6rem 1.5rem;
+        border-radius: 12px;
+        font-weight: 600;
+        transition: all 0.3s;
+    }
+    .btn-gradient:hover {
+        transform: scale(1.02);
+        box-shadow: 0 5px 15px rgba(0, 61, 124, 0.3);
+        color: white;
+    }
+    .badge-pnl {
+        padding: 0.5rem 1rem;
+        border-radius: 10px;
+        font-weight: 700;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Header Area -->
+    <div class="d-flex justify-content-between align-items-center mb-5">
+        <div>
+            <h1 class="fw-800 text-primary-dark mb-1">Mutual Fund Portfolio</h1>
+            <p class="text-muted mb-0">Track your mutual fund investments with real-time NAV updates</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'mf_transaction_history' %}" class="btn btn-outline-primary rounded-pill px-4">
+                <i class="fas fa-history me-2"></i>History
+            </a>
+            <a href="{% url 'refresh_mf_navs' %}" class="btn btn-outline-primary rounded-pill px-4">
+                <i class="fas fa-sync-alt me-2"></i>Refresh NAVs
+            </a>
+            <a href="{% url 'add_mf_portfolio' %}" class="btn btn-gradient rounded-pill px-4">
+                <i class="fas fa-plus me-2"></i>Add New Fund
+            </a>
+        </div>
+    </div>
+
+    <!-- Summary Stats -->
+    <div class="row g-4 mb-5">
+        <div class="col">
+            <div class="mf-card p-4 h-100 animate__animated animate__fadeInUp">
+                <div class="stats-label mb-2">Invested Amount</div>
+                <div class="stats-value">₹ {{ total_invested|floatformat:2 }}</div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="mf-card p-4 h-100 animate__animated animate__fadeInUp" style="animation-delay: 0.1s;">
+                <div class="stats-label mb-2">Current Value</div>
+                <div class="stats-value">₹ {{ total_current_value|floatformat:2 }}</div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="mf-card p-4 h-100 animate__animated animate__fadeInUp" style="animation-delay: 0.2s;">
+                <div class="stats-label mb-2">Day Change</div>
+                <div class="stats-value {% if total_day_change >= 0 %}text-success{% else %}text-danger{% endif %} text-nowrap">
+                    ₹ {{ total_day_change|floatformat:2 }}
+                </div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="mf-card p-4 h-100 animate__animated animate__fadeInUp" style="animation-delay: 0.3s;">
+                <div class="stats-label mb-2">Unrealized P&L</div>
+                <div class="stats-value {% if total_unrealized_pnl >= 0 %}text-success{% else %}text-danger{% endif %} text-nowrap">
+                    ₹ {{ total_unrealized_pnl|floatformat:2 }}
+                </div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="mf-card p-4 h-100 animate__animated animate__fadeInUp" style="animation-delay: 0.4s;">
+                <div class="stats-label mb-2">Realized Profit</div>
+                <div class="stats-value text-primary text-nowrap">
+                    ₹ {{ total_realized_profit|floatformat:2 }}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Portfolio Table -->
+    <div class="table-container p-2">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light">
+                    <tr>
+                        <th class="ps-4 py-3 border-0">Scheme Name</th>
+                        <th class="py-3 border-0">Units</th>
+                        <th class="py-3 border-0">Avg NAV</th>
+                        <th class="py-3 border-0">Current NAV</th>
+                        <th class="py-3 border-0">Invested Val</th>
+                        <th class="py-3 border-0">P&L & Returns</th>
+                        <th class="py-3 border-0">Realized Profit</th>
+                        <th class="py-3 border-0 text-center pe-4">Action & Advice</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in mf_holdings %}
+                    <tr>
+                        <td class="ps-4">
+                            <div class="fw-700 text-primary-dark">{{ item.fund.name }}</div>
+                        </td>
+                        <td>{{ item.units|floatformat:4 }}</td>
+                        <td>₹ {{ item.avg_nav|floatformat:4 }}</td>
+                        <td>
+                            <div class="fw-600">₹ {{ item.fund.nav|floatformat:4 }}</div>
+                        </td>
+                        <td class="fw-700">₹ {{ item.invested_amount|floatformat:2 }}</td>
+                        <td>
+                            <div class="{% if item.unrealized_pnl >= 0 %}text-success{% else %}text-danger{% endif %} fw-bold">
+                                ₹ {{ item.unrealized_pnl|floatformat:2 }}
+                            </div>
+                            <div class="{% if item.pnl_percentage >= 0 %}text-success{% else %}text-danger{% endif %} small fw-bold">
+                                {% if item.pnl_percentage >= 0 %}+{% endif %}{{ item.pnl_percentage|floatformat:2 }}%
+                            </div>
+                        </td>
+                        <td class="fw-600 text-primary">₹ {{ item.realized_profit|floatformat:2 }}</td>
+                        <td class="pe-4 py-2" style="min-width: 140px;">
+                            <div class="d-flex flex-column align-items-center">
+                                {% for adv in item.advice %}
+                                    <div class="mb-2 text-center">
+                                        <div class="badge rounded-pill {% if adv.type == 'SELL' %}bg-danger{% else %}bg-success{% endif %} mb-1" style="font-size: 0.6rem; padding: 0.2rem 0.6rem;">
+                                            {{ adv.type }}
+                                        </div>
+                                        <div class="text-muted" style="font-size: 0.6rem; line-height: 1.1; max-width: 130px;">
+                                            {{ adv.reason }}
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                                
+                                <div class="d-flex gap-1 w-100">
+                                    <a href="{% url 'add_mf_portfolio' %}?symbol={{ item.fund.symbol }}" class="btn btn-sm btn-success flex-grow-1 py-1" style="border-radius: 8px; font-size: 0.7rem;">
+                                        <i class="fas fa-plus"></i>
+                                    </a>
+                                    <a href="{% url 'sell_mf_portfolio' item.id %}" class="btn btn-sm btn-danger flex-grow-1 py-1" style="border-radius: 8px; font-size: 0.7rem;">
+                                        <i class="fas fa-minus"></i>
+                                    </a>
+                                </div>
+                                <a href="{% url 'delete_mf_portfolio' item.id %}" class="text-muted x-small mt-2 opacity-50 text-decoration-none" 
+                                   onclick="return confirm('Remove this fund from your portfolio?')" style="font-size: 0.55rem; letter-spacing: 0.5px;">
+                                    REMOVE
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center py-5">
+                            <div class="text-muted py-4">
+                                <i class="fas fa-chart-pie fa-3x mb-3 opacity-25"></i>
+                                <p>No Mutual Fund holdings found. Add your first fund to start tracking!</p>
+                                <a href="{% url 'add_mf_portfolio' %}" class="btn btn-primary rounded-pill mt-2">Add My First MF</a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

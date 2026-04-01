@@ -90,6 +90,9 @@ INSTALLED_APPS = [
     'allauth.socialaccount.providers.microsoft',
     'allauth.socialaccount.providers.facebook',
     'allauth.socialaccount.providers.apple',
+    'rest_framework',
+    'rest_framework.authtoken',
+    'corsheaders',
 ]
 
 SITE_ID = 1
@@ -100,6 +103,7 @@ CRISPY_TEMPLATE_PACK = "bootstrap5"
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -211,7 +215,7 @@ SOCIALACCOUNT_EMAIL_REQUIRED = True
 SOCIALACCOUNT_EMAIL_AUTHENTICATION = True
 SOCIALACCOUNT_QUERY_EMAIL = True
 SOCIALACCOUNT_LOGIN_ON_GET = True     # Allow GET-based social redirects
-LOGIN_REDIRECT_URL = 'dashboard'
+LOGIN_REDIRECT_URL = 'portfolio'
 
 # OAuth Provider credentials (set in .env)
 SOCIALACCOUNT_PROVIDERS = {
@@ -278,7 +282,7 @@ STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-LOGIN_REDIRECT_URL = 'dashboard'
+LOGIN_REDIRECT_URL = 'portfolio'
 LOGOUT_REDIRECT_URL = 'landing'
 
 # Cache configuration
@@ -298,5 +302,19 @@ EMAIL_HOST_USER = 'netprofit.i.t.s@gmail.com'
 EMAIL_HOST_PASSWORD = 'vdhddqssiroxpfnx'
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 EMAIL_USE_SSL = False
+
+# CORS Configuration
+CORS_ALLOW_ALL_ORIGINS = True
+
+# Django REST Framework Configuration
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.TokenAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
+}
 
 

@@ -1,0 +1,25 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+<div style="padding: 20px; max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+    <h1 style="margin-top: 0; color: #1e293b;">{{ title|default:"Add Mutual Fund" }}</h1>
+    <p style="color: #64748b; margin-bottom: 20px;">Enter the Yahoo Finance symbol for the fund. We will automatically fetch the name and current NAV.</p>
+    
+    <form action="." method="POST" style="display: flex; flex-direction: column; gap: 15px;">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <div style="margin-top: 10px;">
+            <input type="submit" value="Fetch & Save Fund" style="background-color: #28a745; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-weight: bold;">
+            <a href=".." style="margin-left: 10px; color: #6c757d; text-decoration: none;">Cancel</a>
+        </div>
+    </form>
+    
+    <div style="margin-top: 30px; padding: 15px; background: #f8f9fa; border-radius: 4px; font-size: 0.9em;">
+        <strong>Common Indian MF Symbols:</strong>
+        <ul style="margin-top: 10px; list-style: none; padding: 0;">
+            <li style="margin-bottom: 5px;">• HDFC Index S&P BSE Sensex: <code style="background: #e9ecef; padding: 2px 4px;">0P0000XWWI.BO</code></li>
+            <li style="margin-bottom: 5px;">• ICICI Pru Nifty 50 Index: <code style="background: #e9ecef; padding: 2px 4px;">0P0000XWWI.NS</code></li>
+            <li>• Parag Parikh Flexi Cap: <code style="background: #e9ecef; padding: 2px 4px;">0P0000Y7B0.BO</code></li>
+        </ul>
+    </div>
+</div>
+{% endblock %}

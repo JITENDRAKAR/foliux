@@ -83,8 +83,8 @@
                         <th class="border-0 text-uppercase small fw-bold text-muted text-center">LTP</th>
                         <th class="border-0 text-uppercase small fw-bold text-muted text-center">Change</th>
                         <th class="border-0 text-uppercase small fw-bold text-muted text-center">Chg %</th>
-                        <th class="border-0 text-uppercase small fw-bold text-muted">Notes</th>
-                        <th class="border-0 text-uppercase small fw-bold text-muted">Added</th>
+                        <th class="border-0 text-uppercase small fw-bold text-muted text-center">52W H</th>
+                        <th class="border-0 text-uppercase small fw-bold text-muted text-center">Diff52WH</th>
                         <th class="pe-4 border-0 text-uppercase small fw-bold text-muted text-center">Action</th>
                     </tr>
                 </thead>
@@ -109,8 +109,10 @@
                         <td class="{% if item.change_pct >= 0 %}text-success{% else %}text-danger{% endif %} fw-bold text-center text-nowrap">
                             {% if item.change_pct > 0 %}<span class="sign-small">+</span>{% endif %}{{ item.change_pct|floatformat:2 }}%
                         </td>
-                        <td><small class="text-muted">{{ item.notes|default:"-" }}</small></td>
-                        <td><small class="text-muted">{{ item.added_at|date:"d M Y" }}</small></td>
+                        <td class="fw-bold text-center">&#8377;{{ item.high_52w|floatformat:2 }}</td>
+                        <td class="{% if item.diff_52w_pct >= 0 %}text-success{% else %}text-danger{% endif %} fw-bold text-center text-nowrap">
+                            {{ item.diff_52w_pct|floatformat:2 }}%
+                        </td>
                         <td class="pe-4 text-center">
                             <div class="d-flex gap-1 justify-content-center">
                                 <button type="button" class="btn btn-sm btn-success-subtle border-success-subtle text-success p-1" 

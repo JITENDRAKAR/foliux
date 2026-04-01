@@ -1,0 +1,215 @@
+{% extends "base.html" %}
+
+{% block extra_css %}
+<style>
+    .form-container {
+        max-width: 600px;
+        margin: 0 auto;
+        background: white;
+        padding: 40px;
+        border-radius: 24px;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.05);
+        border: 1px solid rgba(0,0,0,0.05);
+    }
+    .form-label {
+        font-weight: 600;
+        color: #475569;
+        margin-bottom: 8px;
+    }
+    .form-control {
+        border-radius: 12px;
+        padding: 12px 16px;
+        border: 2px solid #e2e8f0;
+        transition: all 0.3s;
+    }
+    .form-control:focus {
+        border-color: #003D7C;
+        box-shadow: 0 0 0 4px rgba(0, 61, 124, 0.1);
+    }
+    .btn-submit {
+        background: linear-gradient(135deg, #003D7C 0%, #0056b3 100%);
+        color: white;
+        border: none;
+        padding: 14px;
+        border-radius: 12px;
+        font-weight: 700;
+        width: 100%;
+        margin-top: 20px;
+        transition: all 0.3s;
+    }
+    .btn-submit:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 20px rgba(0, 61, 124, 0.2);
+        color: white;
+    }
+    .help-text {
+        font-size: 0.85rem;
+        color: #64748b;
+        margin-top: 4px;
+    }
+    .autocomplete-results {
+        position: absolute;
+        z-index: 1000;
+        background: white;
+        border: 1px solid #e2e8f0;
+        width: 100%;
+        max-height: 250px;
+        overflow-y: auto;
+        border-radius: 12px;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        margin-top: 5px;
+    }
+    .autocomplete-item {
+        padding: 12px 16px;
+        cursor: pointer;
+        border-bottom: 1px solid #f1f5f9;
+        transition: background 0.2s;
+    }
+    .autocomplete-item:hover { background-color: #f8fafc; }
+    .autocomplete-name { font-weight: 600; color: #1e293b; display: block; line-height: 1.4; }
+    .autocomplete-symbol { font-size: 0.75rem; color: #64748b; }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const nameInput = document.getElementById('mf_name');
+    const symbolInput = document.getElementById('symbol');
+    const resultsDiv = document.getElementById('mf-autocomplete-results');
+
+    if (!nameInput || !resultsDiv) return;
+
+    nameInput.addEventListener('input', function() {
+        const query = this.value.trim();
+        if (query.length < 2) {
+            resultsDiv.classList.add('d-none');
+            return;
+        }
+
+        fetch(`/api/mf-suggestions/?q=${encodeURIComponent(query)}`)
+            .then(response => response.json())
+            .then(data => {
+                resultsDiv.innerHTML = '';
+                if (data.length > 0) {
+                    data.forEach(item => {
+                        const div = document.createElement('div');
+                        div.className = 'autocomplete-item';
+                        div.innerHTML = `
+                            <span class="autocomplete-name">${item.name}</span>
+                        `;
+                        div.addEventListener('click', () => {
+                            nameInput.value = item.name;
+                            symbolInput.value = item.symbol;
+                            const navInput = document.getElementById('avg_nav');
+                            if (navInput && item.nav > 0) {
+                                navInput.value = item.nav;
+                            }
+                            resultsDiv.classList.add('d-none');
+                        });
+                        resultsDiv.appendChild(div);
+                    });
+                    resultsDiv.classList.remove('d-none');
+                } else {
+                    resultsDiv.classList.add('d-none');
+                }
+            });
+    });
+
+    document.addEventListener('click', function(e) {
+        if (e.target !== nameInput && e.target !== resultsDiv) {
+            resultsDiv.classList.add('d-none');
+        }
+    });
+
+    // Auto-calculation logic
+    const unitsInput = document.getElementById('units');
+    const avgNavInput = document.getElementById('avg_nav');
+    const amountInput = document.getElementById('invested_amount');
+
+    function calculate() {
+        const units = parseFloat(unitsInput.value);
+        const avgNav = parseFloat(avgNavInput.value);
+        const amount = parseFloat(amountInput.value);
+
+        // Track which input triggered the change to avoid circular updates
+        // If units and avg_nav are present, update amount
+        if (this === unitsInput || this === avgNavInput) {
+            if (units > 0 && avgNav > 0) {
+                amountInput.value = (units * avgNav).toFixed(2);
+            }
+        } 
+        // If amount and units are present, update avg_nav
+        else if (this === amountInput) {
+            if (amount > 0 && units > 0) {
+                avgNavInput.value = (amount / units).toFixed(4);
+            } else if (amount > 0 && avgNav > 0) {
+                unitsInput.value = (amount / avgNav).toFixed(4);
+            }
+        }
+    }
+
+    unitsInput.addEventListener('input', calculate);
+    avgNavInput.addEventListener('input', calculate);
+    amountInput.addEventListener('input', calculate);
+});
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center py-5">
+    <div class="col-md-8">
+        <div class="text-center mb-5">
+            <h1 class="fw-800 text-primary-dark">Add Mutual Fund Investment</h1>
+            <p class="text-muted">Enter your investment details below. We'll automatically fetch the latest NAV.</p>
+        </div>
+        
+        <div class="form-container">
+            <form method="POST">
+                {% csrf_token %}
+                
+                <div class="mb-4 position-relative">
+                    <label for="mf_name" class="form-label">Mutualfund Scheme Name</label>
+                    <input type="text" id="mf_name" class="form-control" placeholder="Search for Mutual Fund Name..." autocomplete="off" required value="{{ prefill_symbol|default:'' }}">
+                    <input type="hidden" name="symbol" id="symbol" value="{{ prefill_symbol|default:'' }}">
+                    <div id="mf-autocomplete-results" class="autocomplete-results d-none"></div>
+                    <div class="help-text">
+                        Start typing to see schemes synced from your Excel sheet.
+                    </div>
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <label for="units" class="form-label">Total Units</label>
+                        <input type="number" step="0.0001" name="units" id="units" class="form-control" placeholder="0.0000" required>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="avg_nav" class="form-label">Avg NAV (Price)</label>
+                        <input type="number" step="0.0001" name="avg_nav" id="avg_nav" class="form-control" placeholder="0.0000" required>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="invested_amount" class="form-label">Invested Amount</label>
+                        <input type="number" step="0.01" id="invested_amount" class="form-control" placeholder="0.00">
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label for="realized_profit" class="form-label">Realized Profit (Total so far)</label>
+                    <input type="number" step="0.01" name="realized_profit" id="realized_profit" class="form-control" placeholder="0.00" value="0.00">
+                    <div class="help-text">Enter any profit already booked for this scheme.</div>
+                </div>
+                
+                <button type="submit" class="btn btn-submit">
+                    <i class="fas fa-plus-circle me-2"></i>Add to Portfolio
+                </button>
+                
+                <div class="mt-4 pt-3 border-top text-center">
+                    <a href="{% url 'mf_dashboard' %}" class="text-primary text-decoration-none fw-600">
+                        <i class="fas fa-arrow-left me-2"></i>Back to MF Dashboard
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,203 @@
+{% extends "base.html" %}
+
+{% block extra_css %}
+<style>
+    .form-container {
+        max-width: 600px;
+        margin: 0 auto;
+        background: white;
+        padding: 40px;
+        border-radius: 24px;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.05);
+        border: 1px solid rgba(247, 147, 26, 0.1);
+    }
+    .form-label {
+        font-weight: 600;
+        color: #475569;
+        margin-bottom: 8px;
+    }
+    .form-control {
+        border-radius: 12px;
+        padding: 12px 16px;
+        border: 2px solid #e2e8f0;
+        transition: all 0.3s;
+    }
+    .form-control:focus {
+        border-color: #f7931a;
+        box-shadow: 0 0 0 4px rgba(247, 147, 26, 0.1);
+    }
+    .btn-submit {
+        background: linear-gradient(135deg, #f7931a 0%, #ffab40 100%);
+        color: white;
+        border: none;
+        padding: 14px;
+        border-radius: 12px;
+        font-weight: 700;
+        width: 100%;
+        margin-top: 20px;
+        transition: all 0.3s;
+    }
+    .btn-submit:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 20px rgba(247, 147, 26, 0.2);
+        color: white;
+    }
+    .help-text {
+        font-size: 0.85rem;
+        color: #64748b;
+        margin-top: 4px;
+    }
+    .autocomplete-results {
+        position: absolute;
+        z-index: 1000;
+        background: white;
+        border: 1px solid #e2e8f0;
+        width: 100%;
+        max-height: 250px;
+        overflow-y: auto;
+        border-radius: 12px;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        margin-top: 5px;
+    }
+    .autocomplete-item {
+        padding: 12px 16px;
+        cursor: pointer;
+        border-bottom: 1px solid #f1f5f9;
+        transition: background 0.2s;
+    }
+    .autocomplete-item:hover { background-color: #f8fafc; }
+    .autocomplete-name { font-weight: 600; color: #1e293b; display: block; line-height: 1.4; }
+    .autocomplete-symbol { font-size: 0.75rem; color: #64748b; }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const symbolInput = document.getElementById('symbol');
+    const resultsDiv = document.getElementById('coin-autocomplete-results');
+
+    if (!symbolInput || !resultsDiv) return;
+
+    symbolInput.addEventListener('input', function() {
+        const query = this.value.trim().toUpperCase();
+        if (query.length < 2) {
+            resultsDiv.classList.add('d-none');
+            return;
+        }
+
+        // Debounce or just fetch if it looks like a symbol
+        clearTimeout(window.coinTimeout);
+        window.coinTimeout = setTimeout(() => {
+            fetch(`/api/coin-price/?symbol=${encodeURIComponent(query)}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        const priceInput = document.getElementById('avg_price');
+                        if (priceInput && (!priceInput.value || priceInput.value == "0")) {
+                            priceInput.value = data.price;
+                            // Trigger calculation
+                            priceInput.dispatchEvent(new Event('input', { bubbles: true }));
+                        }
+                        
+                        // Show a small success indicator or name
+                        resultsDiv.innerHTML = `<div class="autocomplete-item"><span class="autocomplete-name">${data.name}</span><span class="autocomplete-symbol">Live Price: ₹${data.price}</span></div>`;
+                        resultsDiv.classList.remove('d-none');
+                    } else {
+                        resultsDiv.classList.add('d-none');
+                    }
+                })
+                .catch(err => {
+                    console.error('Fetch error:', err);
+                    resultsDiv.classList.add('d-none');
+                });
+        }, 500);
+    });
+
+    // Auto-calculation logic
+    const unitsInput = document.getElementById('units');
+    const avgPriceInput = document.getElementById('avg_price');
+    const amountInput = document.getElementById('invested_amount');
+
+    function calculate(e) {
+        const units = parseFloat(unitsInput.value);
+        const avgPrice = parseFloat(avgPriceInput.value);
+        const amount = parseFloat(amountInput.value);
+
+        if (e.target === unitsInput || e.target === avgPriceInput) {
+            if (units > 0 && avgPrice > 0) {
+                amountInput.value = (units * avgPrice).toFixed(2);
+            }
+        } 
+        else if (e.target === amountInput) {
+            if (amount > 0 && units > 0) {
+                avgPriceInput.value = (amount / units).toFixed(4);
+            } else if (amount > 0 && avgPrice > 0) {
+                unitsInput.value = (amount / avgPrice).toFixed(8);
+            }
+        }
+    }
+
+    unitsInput.addEventListener('input', calculate);
+    avgPriceInput.addEventListener('input', calculate);
+    amountInput.addEventListener('input', calculate);
+});
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center py-5">
+    <div class="col-md-8">
+        <div class="text-center mb-5">
+            <h1 class="fw-800" style="color: #f7931a;">Add Coin Investment</h1>
+            <p class="text-muted">Enter your crypto investment details (INR). We'll track FIFO logs automatically.</p>
+        </div>
+        
+        <div class="form-container">
+            <form method="POST">
+                {% csrf_token %}
+                
+                <div class="mb-4 position-relative">
+                    <label for="symbol" class="form-label">Coin Symbol (e.g., BTC, ETH)</label>
+                    <input type="text" name="symbol" id="symbol" class="form-control" placeholder="BTC" required value="{{ prefill_symbol|default:'' }}" style="text-transform: uppercase;">
+                    <div id="coin-autocomplete-results" class="autocomplete-results d-none"></div>
+                    <div class="help-text">
+                        Tip: Just enter the coin symbol like <b>BTC</b>. We'll fetch <b>BTC-INR</b> from yfinance.
+                    </div>
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <label for="units" class="form-label">Total Units</label>
+                        <input type="number" step="0.00000001" name="units" id="units" class="form-control" placeholder="0.00000000" required>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="avg_price" class="form-label">Avg Price (INR)</label>
+                        <input type="number" step="0.01" name="avg_price" id="avg_price" class="form-control" placeholder="0.00" required>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="invested_amount" class="form-label">Invested Amount (INR)</label>
+                        <input type="number" step="0.01" id="invested_amount" class="form-control" placeholder="0.00">
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label for="realized_profit" class="form-label">Realized Profit (Total so far)</label>
+                    <input type="number" step="0.01" name="realized_profit" id="realized_profit" class="form-control" placeholder="0.00" value="0.00">
+                    <div class="help-text">Enter any profit already booked for this coin.</div>
+                </div>
+                
+                <button type="submit" class="btn btn-submit">
+                    <i class="fas fa-plus-circle me-2"></i>Add to Portfolio
+                </button>
+                
+                <div class="mt-4 pt-3 border-top text-center">
+                    <a href="{% url 'coin_dashboard' %}" class="text-warning text-decoration-none fw-600" style="color: #f7931a;">
+                        <i class="fas fa-arrow-left me-2"></i>Back to Coin Dashboard
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,177 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block extra_css %}
+<style>
+    .loan-header-card {
+        background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+        border-radius: 24px;
+        color: white;
+        box-shadow: 0 20px 40px rgba(15, 23, 42, 0.1);
+        position: relative;
+        overflow: hidden;
+    }
+    .stat-label {
+        font-size: 0.8rem;
+        color: #94a3b8;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+    }
+    .stat-value {
+        font-size: 1.5rem;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+    }
+    .loan-card {
+        background: white;
+        border-radius: 20px;
+        border: 1px solid rgba(0,0,0,0.05);
+        transition: all 0.3s ease;
+        height: 100%;
+    }
+    .loan-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 15px 30px rgba(0,0,0,0.08);
+    }
+    .progress {
+        height: 8px;
+        border-radius: 10px;
+        background-color: #f1f5f9;
+    }
+    .progress-bar {
+        border-radius: 10px;
+        background: linear-gradient(90deg, #ef4444, #f87171);
+    }
+    .category-badge {
+        font-size: 0.7rem;
+        padding: 0.4rem 0.8rem;
+        border-radius: 100px;
+        font-weight: 700;
+        text-transform: uppercase;
+    }
+    .bg-loan-home { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
+    .bg-loan-car { background: rgba(16, 185, 129, 0.1); color: #10b981; }
+    .bg-loan-personal { background: rgba(139, 92, 246, 0.1); color: #8b5cf6; }
+    .bg-loan-education { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
+    .bg-loan-other { background: rgba(107, 114, 128, 0.1); color: #6b7280; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4 animate__animated animate__fadeIn">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-800 mb-1">Loan Dashboard</h2>
+            <p class="text-muted small mb-0">Track and manage your liabilities</p>
+        </div>
+        <a href="{% url 'add_loan' %}" class="btn btn-danger rounded-pill px-4 fw-bold shadow-sm">
+            <i class="fas fa-plus me-2"></i> Add New Loan
+        </a>
+    </div>
+
+    <!-- Summary Header -->
+    <div class="loan-header-card p-4 mb-5">
+        <div class="row g-4 text-center">
+            <div class="col-6 col-md-3">
+                <div class="stat-label">Total Loan Taken</div>
+                <div class="stat-value">₹ {{ total_loan_amount|floatformat:2 }}</div>
+            </div>
+            <div class="col-6 col-md-3 border-start border-secondary border-opacity-25">
+                <div class="stat-label">Total Outstanding</div>
+                <div class="stat-value text-danger">₹ {{ total_outstanding|floatformat:2 }}</div>
+            </div>
+            <div class="col-6 col-md-3 border-start border-secondary border-opacity-25">
+                <div class="stat-label">Interest Paid</div>
+                <div class="stat-value text-warning">₹ {{ total_interest_paid|floatformat:2 }}</div>
+            </div>
+            <div class="col-6 col-md-3 border-start border-secondary border-opacity-25">
+                <div class="stat-label">Total Paid (P+I)</div>
+                <div class="stat-value text-success">₹ {{ total_paid|floatformat:2 }}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loan List -->
+    <div class="row g-4">
+        {% for loan in loans %}
+        <div class="col-md-6 col-lg-4">
+            <div class="loan-card p-4 shadow-sm position-relative">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div>
+                        <span class="category-badge bg-loan-{{ loan.category|lower }} mb-2 d-inline-block">{{ loan.category }}</span>
+                        <h5 class="fw-bold mb-0">{{ loan.bank_name }}</h5>
+                    </div>
+                    <div class="dropdown">
+                        <button class="btn btn-link text-muted p-0" data-bs-toggle="dropdown">
+                            <i class="fas fa-ellipsis-v"></i>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end shadow border-0 rounded-3">
+                            <li><a class="dropdown-item py-2" href="{% url 'loan_detail' loan.id %}"><i class="fas fa-eye me-2 text-primary"></i> View Details</a></li>
+                            <li><a class="dropdown-item py-2" href="{% url 'edit_loan' loan.id %}"><i class="fas fa-edit me-2 text-info"></i> Edit Loan</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item py-2 text-danger" href="{% url 'delete_loan' loan.id %}"><i class="fas fa-trash me-2"></i> Delete</a></li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <div class="d-flex justify-content-between align-items-end mb-1">
+                        <span class="text-muted small">Outstanding Balance</span>
+                        <span class="fw-bold text-danger">₹ {{ loan.current_outstanding|floatformat:2 }}</span>
+                    </div>
+                    <div class="progress">
+                        <div class="progress-bar" role="progressbar" style="width: {{ loan.progress_percentage }}%"></div>
+                    </div>
+                    <div class="d-flex justify-content-between mt-1">
+                        <small class="text-muted">{{ loan.progress_percentage|floatformat:1 }}% Paid</small>
+                        <small class="text-muted">₹ {{ loan.loan_amount|floatformat:0 }} Total</small>
+                    </div>
+                </div>
+
+                <div class="row g-2 mb-4">
+                    <div class="col-6">
+                        <div class="bg-light p-2 rounded-3 text-center">
+                            <div class="small text-muted" style="font-size: 0.7rem;">MONTHLY EMI</div>
+                            <div class="fw-bold">₹ {{ loan.emi_amount|floatformat:0 }}</div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="bg-light p-2 rounded-3 text-center">
+                            <div class="small text-muted" style="font-size: 0.7rem;">INTEREST</div>
+                            <div class="fw-bold">{{ loan.interest_rate }}%</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-grid gap-2">
+                    <a href="{% url 'loan_detail' loan.id %}" class="btn btn-outline-danger btn-sm rounded-pill fw-bold">
+                        Tracking Details <i class="fas fa-arrow-right ms-1"></i>
+                    </a>
+                </div>
+                
+                {% if loan.next_emi_date %}
+                <div class="mt-3 text-center">
+                    <small class="text-muted">Next Due: <strong>{{ loan.next_emi_date|date:"d M Y" }}</strong></small>
+                </div>
+                {% endif %}
+                
+                {% if not loan.is_active %}
+                <div class="position-absolute top-0 end-0 m-3">
+                    <span class="badge bg-success rounded-pill">COMPLETED</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12 text-center py-5">
+            <img src="{% static 'img/empty_loans.svg' %}" alt="No Loans" style="width: 200px; opacity: 0.5;" class="mb-4">
+            <h4 class="text-muted">No active loans found</h4>
+            <p>Add your first loan to start tracking your liabilities.</p>
+            <a href="{% url 'add_loan' %}" class="btn btn-danger rounded-pill px-4 mt-2">Add New Loan</a>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
