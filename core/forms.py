@@ -37,13 +37,23 @@ class CustomUserCreationForm(UserCreationForm):
 class ProfileForm(forms.ModelForm):
     class Meta:
         model = Profile
-        fields = ['full_name', 'mobile_number', 'date_of_birth', 'gender', 'investor_type']
+        fields = [
+            'full_name', 'mobile_number', 'date_of_birth', 'gender', 
+            'investor_type', 'initial_investment_limit',
+            'equity_fixed_charge', 'equity_brokerage_pct',
+            'intraday_fixed_charge', 'intraday_brokerage_pct'
+        ]
         labels = {
-            'full_name': 'Name',
+            'full_name': 'Full Name',
             'mobile_number': 'Mobile Number',
             'date_of_birth': 'Date of Birth',
             'gender': 'Gender',
-            'investor_type': 'Investor Type: Initial investment per stock/ETF accordingly.',
+            'investor_type': 'Investor Type',
+            'initial_investment_limit': 'Maximum Investment per Stock/ETF',
+            'equity_fixed_charge': 'Delivery Fixed Charge (0.0)',
+            'equity_brokerage_pct': 'Delivery Brokerage Charge (%)',
+            'intraday_fixed_charge': 'Intraday Fixed Charge (0.0)',
+            'intraday_brokerage_pct': 'Intraday Brokerage Charge (%)',
         }
         widgets = {
             'full_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Enter your full name'}),
@@ -51,6 +61,11 @@ class ProfileForm(forms.ModelForm):
             'date_of_birth': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'gender': forms.Select(attrs={'class': 'form-control'}),
             'investor_type': forms.Select(attrs={'class': 'form-control'}),
+            'initial_investment_limit': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'equity_fixed_charge': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'equity_brokerage_pct': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.001'}),
+            'intraday_fixed_charge': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'intraday_brokerage_pct': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.001'}),
         }
 
 class EmailOrMobileAuthenticationForm(AuthenticationForm):
@@ -94,7 +109,7 @@ class ManualPortfolioForm(forms.Form):
         widget=forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Enter Quantity'})
     )
     avg_cost = forms.DecimalField(
-        label='AVERAGE COST (?)',
+        label='AVERAGE COST',
         max_digits=10, 
         decimal_places=2, 
         widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'placeholder': 'Enter Avg. Cost'})

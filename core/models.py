@@ -1,6 +1,7 @@
 from django.db import models
 from django.utils import timezone
 from datetime import timedelta
+from decimal import Decimal
 from django.contrib.auth.models import User
 
 class Instrument(models.Model):
@@ -74,6 +75,11 @@ class Profile(models.Model):
     date_of_birth = models.DateField(null=True, blank=True)
     gender = models.CharField(max_length=10, choices=[('M','Male'),('F','Female')], null=True, blank=True)
     investor_type = models.CharField(max_length=20, choices=[('conservative','Conservative'),('moderate','Moderate'),('growth','Growth'),('aggressive','Aggressive')], default='moderate')
+    initial_investment_limit = models.DecimalField(max_digits=15, decimal_places=2, default=15000.00)
+    equity_fixed_charge = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, null=True, blank=True)
+    equity_brokerage_pct = models.DecimalField(max_digits=10, decimal_places=4, default=0.00, null=True, blank=True) # Percentage (e.g., 0.02%)
+    intraday_fixed_charge = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, null=True, blank=True)
+    intraday_brokerage_pct = models.DecimalField(max_digits=10, decimal_places=4, default=0.00, null=True, blank=True) # Percentage (e.g., 0.2%)
 
     def __str__(self):
         return f"{self.user.username}'s Profile"
@@ -81,14 +87,17 @@ class Profile(models.Model):
     def get_max_investment(self, strategy_key):
         """Return maximum investment per stock/ETF for the given strategy based on investor_type.
         strategy_key corresponds to the keys used in STRATEGY_SHEET_TABS (flexi, quant, pyramid, growth).
+        Initial investment limit is used as the base (moderate) and scaled for other types.
         """
-        mapping = {
-            'conservative': {'flexi': 30000, 'pyramid': 15000, 'quant': 10000, 'growth': 5000},
-            'moderate': {'flexi': 15000, 'pyramid': 15000, 'quant': 15000, 'growth': 15000},
-            'growth': {'flexi': 10000, 'pyramid': 15000, 'quant': 20000, 'growth': 30000},
-            'aggressive': {'flexi': 5000, 'pyramid': 15000, 'quant': 30000, 'growth': 50000},
+        base = float(self.initial_investment_limit)
+        multipliers = {
+            'conservative': {'flexi': 2.0, 'pyramid': 1.0, 'quant': 0.67, 'growth': 0.33},
+            'moderate': {'flexi': 1.0, 'pyramid': 1.0, 'quant': 1.0, 'growth': 1.0},
+            'growth': {'flexi': 0.67, 'pyramid': 1.0, 'quant': 1.33, 'growth': 2.0},
+            'aggressive': {'flexi': 0.33, 'pyramid': 1.0, 'quant': 2.0, 'growth': 3.33},
         }
-        return mapping.get(self.investor_type, mapping['moderate']).get(strategy_key, 15000)
+        strategy_multiplier = multipliers.get(self.investor_type, multipliers['moderate']).get(strategy_key, 1.0)
+        return Decimal(str(round(base * strategy_multiplier, 2)))
 
 # Signals to automatically create/save Profile
 from django.db.models.signals import post_save
@@ -458,12 +467,26 @@ class NPSTransaction(models.Model):
         return self.units * self.price
 
 class FixedAsset(models.Model):
+    ASSET_TYPES = [
+        ('FD', 'Fixed Deposit'),
+        ('RD', 'Recurring Deposit'),
+        ('PPF', 'Public Provident Fund'),
+        ('EPF', 'Employee Provident Fund'),
+        ('Other', 'Other Fixed Asset')
+    ]
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='fixed_assets')
-    instrument_name = models.CharField(max_length=100) # FD, PPF, PF, Corporate Bond
+    instrument_name = models.CharField(max_length=100) # e.g. "HDFC FD 123"
+    asset_type = models.CharField(max_length=20, choices=ASSET_TYPES, default='FD')
     invested_amount = models.DecimalField(max_digits=20, decimal_places=2)
     interest_rate = models.DecimalField(max_digits=5, decimal_places=2) # Annual interest rate
     investment_date = models.DateField()
     maturity_date = models.DateField(null=True, blank=True)
+    
+    # RD specific fields
+    monthly_deposit = models.DecimalField(max_digits=20, decimal_places=2, default=0)
+    tenure_years = models.IntegerField(default=1)
+    next_deposit_date = models.DateField(null=True, blank=True)
+    
     created_at = models.DateTimeField(auto_now_add=True)
     
     @property
@@ -473,9 +496,40 @@ class FixedAsset(models.Model):
         # Interest compounding stops at the maturity date if it has passed
         calculation_date = min(today, self.maturity_date) if self.maturity_date else today
         
-        months = max(0, (calculation_date.year - self.investment_date.year) * 12 + (calculation_date.month - self.investment_date.month))
-        monthly_rate = float(self.interest_rate) / 100 / 12
-        return float(self.invested_amount) * ((1 + monthly_rate) ** months)
+        # Monthly interest rate
+        i = float(self.interest_rate) / 100 / 12
+        
+        if self.asset_type == 'RD':
+            # RD Compound Interest calculation:
+            # We assume installments were added on the same day each month starting from investment_date.
+            # Number of months passed so far
+            n = max(0, (calculation_date.year - self.investment_date.year) * 12 + (calculation_date.month - self.investment_date.month))
+            if n == 0: return float(self.invested_amount)
+            
+            # Simple summation logic for each installment
+            # installment_1 compounds for 'n' months, installment_2 for 'n-1' months...
+            total = 0
+            # Note: invested_amount is the SUM of all installments added so far.
+            # We assume monthly_deposit is the amount of each installment.
+            # However, if user manually edited invested_amount, we should be careful.
+            # For simplicity, we calculate based on the number of installments (n+1)
+            # but capped by the actual invested_amount / monthly_deposit.
+            
+            monthly_val = float(self.monthly_deposit)
+            if monthly_val <= 0: return float(self.invested_amount)
+            
+            for month in range(1, n + 2):
+                # How many months this specific installment has been earning interest
+                months_active = (n + 1) - month
+                # If we've reached the current date, stop
+                if months_active < 0: break
+                
+                total += monthly_val * ((1 + i) ** months_active)
+            return total
+        else:
+            # One-time investment (FD, etc)
+            months = max(0, (calculation_date.year - self.investment_date.year) * 12 + (calculation_date.month - self.investment_date.month))
+            return float(self.invested_amount) * ((1 + i) ** months)
         
     @property
     def is_matured(self):
@@ -610,3 +664,17 @@ class LoanPayment(models.Model):
 
     class Meta:
         ordering = ['date', 'created_at']
+
+class MFSIP(models.Model):
+    """Systematic Investment Plan (SIP) for Mutual Funds."""
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='mf_sips')
+    fund = models.ForeignKey(MutualFund, on_delete=models.CASCADE)
+    amount = models.DecimalField(max_digits=20, decimal_places=2)
+    sip_date = models.IntegerField(help_text="Day of the month (1-28)")
+    next_execution_date = models.DateField()
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    last_executed_at = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.user.username} - {self.fund.name} SIP (₹{self.amount})"

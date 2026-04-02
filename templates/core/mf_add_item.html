@@ -193,11 +193,43 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
                 </div>
 
-                <div class="mb-4">
-                    <label for="realized_profit" class="form-label">Realized Profit (Total so far)</label>
-                    <input type="number" step="0.01" name="realized_profit" id="realized_profit" class="form-control" placeholder="0.00" value="0.00">
-                    <div class="help-text">Enter any profit already booked for this scheme.</div>
+                <div class="mt-4 p-3 rounded-3 border bg-light" style="border-style: dashed !important;">
+                    <div class="form-check form-switch mb-3">
+                        <input class="form-check-input" type="checkbox" name="is_sip" id="is_sip">
+                        <label class="form-check-label fw-bold text-primary" for="is_sip">
+                            <i class="fas fa-calendar-alt me-2"></i>Enable Monthly SIP
+                        </label>
+                    </div>
+                    
+                    <div id="sip_fields" class="d-none">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="sip_amount" class="form-label">SIP Amount (₹)</label>
+                                <input type="number" step="0.01" name="sip_amount" id="sip_amount" class="form-control" placeholder="5000.00">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="sip_date" class="form-label">SIP Day (1-28)</label>
+                                <input type="number" name="sip_date" id="sip_date" class="form-control" placeholder="5" min="1" max="28">
+                                <div class="help-text">Day of the month the SIP will add automatically.</div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
+
+                <script>
+                    document.getElementById('is_sip').addEventListener('change', function() {
+                        const sipFields = document.getElementById('sip_fields');
+                        if (this.checked) {
+                            sipFields.classList.remove('d-none');
+                            document.getElementById('sip_amount').required = true;
+                            document.getElementById('sip_date').required = true;
+                        } else {
+                            sipFields.classList.add('d-none');
+                            document.getElementById('sip_amount').required = false;
+                            document.getElementById('sip_date').required = false;
+                        }
+                    });
+                </script>
                 
                 <button type="submit" class="btn btn-submit">
                     <i class="fas fa-plus-circle me-2"></i>Add to Portfolio

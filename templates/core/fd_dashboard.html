@@ -121,12 +121,18 @@
                     {% for item in fd_holdings %}
                     <tr {% if item.is_matured %}style="background-color: rgba(241, 245, 249, 0.5); opacity: 0.8;"{% endif %}>
                         <td class="ps-4">
-                            <div class="d-flex align-items-center gap-2">
+                            <div class="d-flex align-items-center gap-2 mb-1">
                                 <div class="fw-700 text-fd">{{ item.instrument_name }}</div>
+                                <span class="badge bg-light text-secondary border" style="font-size: 0.6rem; font-weight: 600;">{{ item.get_asset_type_display|upper }}</span>
                                 {% if item.is_matured %}
                                     <span class="badge bg-secondary" style="font-size: 0.6rem;">MATURED</span>
                                 {% endif %}
                             </div>
+                            {% if item.asset_type == 'RD' %}
+                            <div class="small text-muted" style="font-size: 0.7rem;">
+                                <i class="fas fa-redo me-1 text-primary"></i>₹{{ item.monthly_deposit|floatformat:0 }}/mo • {{ item.tenure_years }}y
+                            </div>
+                            {% endif %}
                         </td>
                         <td class="fw-600 text-muted">{{ item.investment_date|date:"d M, Y" }}</td>
                         <td class="fw-600 text-muted">

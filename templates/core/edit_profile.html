@@ -17,7 +17,31 @@
 
                 <form method="post">
                     {% csrf_token %}
-                    {{ form|crispy }}
+                    <h5 class="fw-bold mb-3 border-bottom pb-2"><i class="fas fa-info-circle me-2"></i>Basic Information</h5>
+                    <div class="row">
+                        <div class="col-md-6">{{ form.full_name|as_crispy_field }}</div>
+                        <div class="col-md-6">{{ form.mobile_number|as_crispy_field }}</div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">{{ form.date_of_birth|as_crispy_field }}</div>
+                        <div class="col-md-6">{{ form.gender|as_crispy_field }}</div>
+                    </div>
+                    {{ form.investor_type|as_crispy_field }}
+
+                    <h5 class="fw-bold mt-4 mb-3 border-bottom pb-2"><i class="fas fa-chart-line me-2"></i>Investment Settings</h5>
+                    {{ form.initial_investment_limit|as_crispy_field }}
+
+                    <h5 class="fw-bold mt-4 mb-3 border-bottom pb-2"><i class="fas fa-tag me-2"></i>Brokerage Settings (Delivery)</h5>
+                    <div class="row">
+                        <div class="col-md-6">{{ form.equity_fixed_charge|as_crispy_field }}</div>
+                        <div class="col-md-6">{{ form.equity_brokerage_pct|as_crispy_field }}</div>
+                    </div>
+
+                    <h5 class="fw-bold mt-4 mb-3 border-bottom pb-2"><i class="fas fa-bolt me-2"></i>Intraday Transaction Charges</h5>
+                    <div class="row">
+                        <div class="col-md-6">{{ form.intraday_fixed_charge|as_crispy_field }}</div>
+                        <div class="col-md-6">{{ form.intraday_brokerage_pct|as_crispy_field }}</div>
+                    </div>
                     <div class="d-grid gap-2 mt-4">
                         <button type="submit" class="btn btn-primary py-2 fw-bold shadow-sm">
                             Save Changes <i class="fas fa-check ms-2"></i>

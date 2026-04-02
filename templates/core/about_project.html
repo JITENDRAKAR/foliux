@@ -333,6 +333,8 @@
                 <li><a href="#backendmodels">16. Backend Data Models</a></li>
                 <li><a href="#backendviews">17. Backend Views & Logic</a></li>
                 <li><a href="#advanced">18. Advanced Features & Automated Workflows</a></li>
+                <li><a href="#sqlstats">19. Database SQL Structure & Queries</a></li>
+                <li><a href="#assetmodules">20. Extended Asset Class Modules</a></li>
             </ul>
         </nav>
 
@@ -343,7 +345,7 @@
                 <p class="lead">Net Profit Investment Tracking System</p>
                 <div class="mt-4">
                     <span class="badge bg-primary px-3 py-2">About Project Documentation</span>
-                    <span class="ms-2 text-muted">Version 1.3.1 | 2026</span>
+                    <span class="ms-2 text-muted">Version 1.5.0 | 2026</span>
                 </div>
             </div>
 
@@ -551,80 +553,79 @@ erDiagram
         int id
         string username
         string email
-        string password
     }
     PROFILE {
         string full_name
-        string mobile_number
-        date date_of_birth
-        string gender
-        string investor_type
+        decimal initial_investment_limit
+        decimal equity_fixed_charge
     }
     INSTRUMENT {
-        string name
         string symbol
-        string isin
-        boolean is_verified
         decimal last_price
     }
     PORTFOLIO {
         int quantity
         decimal avg_cost
-        decimal ltp
     }
-    TRANSACTION {
-        string transaction_type
-        int quantity
-        decimal price
-        date date
-    }
-    PNL_STATEMENT {
-        date exit_date
-        int quantity
-        decimal realized_profit
-    }
-    WATCHLIST {
-        datetime added_at
-        text notes
-    }
-    DIVIDEND {
-        decimal amount
-        date received_date
-    }
-    INVESTMENT_GOAL {
+    MUTUAL_FUND {
         string name
-        decimal target_amount
-        date target_date
-        decimal current_amount
+        string symbol
+        decimal nav
     }
-    CORPORATE_ACTION {
-        string action_type
-        int ratio_numerator
-        int ratio_denominator
-        date announcement_date
+    MF_PORTFOLIO {
+        decimal units
+        decimal avg_nav
     }
-    OTP {
-        string code
-        datetime created_at
+    MF_SIP {
+        decimal amount
+        int sip_date
+        date next_execution_date
+    }
+    NPS_FUND {
+        string name
+        decimal nav
+    }
+    FIXED_ASSET {
+        string instrument_name
+        string asset_type
+        decimal invested_amount
+        decimal interest_rate
+        date maturity_date
+        decimal monthly_deposit
+    }
+    LOAN {
+        string bank_name
+        decimal loan_amount
+        decimal emi_amount
+        decimal interest_rate
+        int tenure_months
+    }
+    LOAN_PAYMENT {
+        string payment_type
+        decimal amount
+        decimal principal_component
+        decimal interest_component
+    }
+    OTHER_ASSET {
+        string name
+        string asset_type
+        decimal purchase_price
+        decimal current_value
     }
 
     USER ||--o| PROFILE : "has"
     USER ||--o{ PORTFOLIO : "owns"
-    USER ||--o{ TRANSACTION : "executes"
-    USER ||--o{ PNL_STATEMENT : "has"
-    USER ||--o{ WATCHLIST : "tracks"
-    USER ||--o{ DIVIDEND : "receives"
-    USER ||--o{ INVESTMENT_GOAL : "sets"
-    USER ||--o{ OTP : "uses"
+    USER ||--o{ MF_PORTFOLIO : "invests"
+    USER ||--o{ MF_SIP : "automates"
+    USER ||--o{ NPS_FUND : "contributes"
+    USER ||--o{ FIXED_ASSET : "holds"
+    USER ||--o{ LOAN : "liable for"
+    USER ||--o{ OTHER_ASSET : "possesses"
 
-    INSTRUMENT ||--o{ PORTFOLIO : "contained in"
-    INSTRUMENT ||--o{ TRANSACTION : "referenced by"
-    INSTRUMENT ||--o{ PNL_STATEMENT : "referenced by"
-    INSTRUMENT ||--o{ WATCHLIST : "referenced by"
-    INSTRUMENT ||--o{ DIVIDEND : "referenced by"
-    INSTRUMENT ||--o{ CORPORATE_ACTION : "has events"
-
-    STRATEGY ||--o{ STRATEGY_STOCK : "contains"
+    MUTUAL_FUND ||--o{ MF_PORTFOLIO : "contains"
+    MUTUAL_FUND ||--o{ MF_SIP : "linked to"
+    LOAN ||--o{ LOAN_PAYMENT : "has history"
+    INSTRUMENT ||--o{ PORTFOLIO : "referenced by"
                     </div>
                     <small class="text-muted d-block mt-2">Figure 8.1: Detailed Entity Relationship Diagram</small>
                 </div>
@@ -1033,13 +1034,13 @@ CREATE INDEX "core_transaction_user_id" ON "core_transaction" ("user_id");
                 <h2>13. Future Scope & Enhancements <span class="page-number">P.90</span></h2>
                 <p>The NPITS project is envisioned as a long-term companion for retail investors. Potential improvements and expansions include:</p>
                 <ul>
-                    <li><strong>Integration with AI/ML Models</strong>: Integration of LLMs to analyze news sentiment for portfolio stocks and provide intelligent investment recommendations.</li>
+                    <li><strong>AI-Powered Portfolio Rebalancing</strong>: Integration of LLMs and quantitative models to suggest optimal asset allocation based on individual risk profiles and market sentiment.</li>
                     <li><strong>Mobile Application Development</strong>: Native mobile apps or enhanced PWA/TWA support for seamless mobile experience.</li>
-                    <li><strong>Cloud-Based Deployment</strong>: Migration to cloud infrastructure (AWS/GCP) for improved scalability and reliability.</li>
-                    <li><strong>Advanced Analytics & Dashboards</strong>: More sophisticated charting, sector-wise analysis, and predictive analytics.</li>
-                    <li><strong>Broker API Bridges</strong>: Direct polling of trade books from Zerodha/Kite/AngelOne for automated portfolio sync.</li>
-                    <li><strong>Taxation Reports</strong>: Automated generation of Capital Gains reports for IT-filing compliance.</li>
-                    <li><strong>Scalability for Larger Systems</strong>: Support for multi-asset classes (mutual funds, bonds, derivatives) and institutional-grade portfolio management.</li>
+                    <li><strong>Cloud-Based Deployment</strong>: Migration from on-premise Windows IIS to cloud-native infrastructure (AWS/Azure) for global scalability.</li>
+                    <li><strong>Advanced Analytics & Dashboards</strong>: More sophisticated charting, sector-wise analysis, and predictive analytics using Big Data tools.</li>
+                    <li><strong>Broker API Bridges</strong>: Direct polling of trade books from Zerodha/Kite/AngelOne for fully automated portfolio sync.</li>
+                    <li><strong>Taxation Reports</strong>: Automated generation of Capital Gains reports for IT-filing compliance across all asset classes.</li>
+                    <li><strong>Real-time Health Audit</strong>: Continuous monitoring of portfolio diversification and automated risk-buffer alerts.</li>
                 </ul>
             </section>
 
@@ -1269,9 +1270,53 @@ CREATE INDEX "core_transaction_user_id" ON "core_transaction" ("user_id");
     edit_count = models.IntegerField(default=0){% endverbatim %}
                 </div>
                 <p class="text-muted small"><strong>Use of this code:</strong> Stores historical financial snapshots. The `is_locked` boolean is checked in the view layer to prevent mutation of finalized financial records.</p>
-                </div>
-                <p class="text-muted small"><strong>Use of this code:</strong> The immutable ledger powering the FIFO engine. `remaining_quantity` tracks specific lots from buy orders. The `Meta.ordering` ensures lots are executed strictly by trade chronological order.</p>
 
+                <h3>16.5 Mutual Fund & SIP Models</h3>
+                <div class="code-block">
+{% verbatim %}class MutualFund(models.Model):
+    name = models.CharField(max_length=200)
+    symbol = models.CharField(max_length=50, unique=True)
+    nav = models.DecimalField(max_digits=20, decimal_places=4, default=0)
+
+class MFPortfolio(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    fund = models.ForeignKey(MutualFund, on_delete=models.CASCADE)
+    units = models.DecimalField(max_digits=20, decimal_places=4)
+    avg_nav = models.DecimalField(max_digits=20, decimal_places=4)
+
+class MFSIP(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    fund = models.ForeignKey(MutualFund, on_delete=models.CASCADE)
+    amount = models.DecimalField(max_digits=20, decimal_places=2)
+    sip_date = models.IntegerField()
+    next_execution_date = models.DateField(){% endverbatim %}
+                </div>
+                <p class="text-muted small"><strong>Use of this code:</strong> The foundational entities for unit-based investment tracking. `MFSIP` is processed by a specialized task that executes buy orders on the specified `sip_date` if the current date matches.</p>
+
+                <h3>16.6 Fixed Assets (FD/RD) Model</h3>
+                <div class="code-block">
+{% verbatim %}class FixedAsset(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    instrument_name = models.CharField(max_length=100)
+    asset_type = models.CharField(max_length=20, choices=ASSET_TYPES)
+    invested_amount = models.DecimalField(max_digits=20, decimal_places=2)
+    interest_rate = models.DecimalField(max_digits=5, decimal_places=2)
+    maturity_date = models.DateField(null=True, blank=True)
+    monthly_deposit = models.DecimalField(max_digits=20, decimal_places=2, default=0){% endverbatim %}
+                </div>
+                <p class="text-muted small"><strong>Use of this code:</strong> Manages non-market linked assets. The `RD` type utilizes the `monthly_deposit` and `interest_rate` to calculate future value with compounding.</p>
+
+                <h3>16.7 Loan & Liability Model</h3>
+                <div class="code-block">
+{% verbatim %}class Loan(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    bank_name = models.CharField(max_length=100)
+    loan_amount = models.DecimalField(max_digits=20, decimal_places=2)
+    emi_amount = models.DecimalField(max_digits=20, decimal_places=2)
+    interest_rate = models.DecimalField(max_digits=5, decimal_places=2)
+    tenure_months = models.IntegerField(){% endverbatim %}
+                </div>
+                <p class="text-muted small"><strong>Use of this code:</strong> Tracks financial liabilities. Integrates with the aggregate Net Worth calculator on the dashboard to provide an accurate representation of the user's current wealth.</p>
             </section>
 
             <!-- SECTION 17: BACKEND VIEWS & LOGIC -->
@@ -1353,7 +1398,89 @@ def upload_portfolio(request):
                 <ul>
                     <li><strong>PowerShell Backup (Scheduled)</strong>: A comprehensive backup script (<code>create_backup.ps1</code>) creates timestamped ZIP archives of the entire project, including the SQLite database and environment configurations, while excluding large log files and temporary caches.</li>
                     <li><strong>GitHub Version Synchronization</strong>: Automated workflows to stage, commit, and push the latest verified version to GitHub, ensuring that the production codebase is always synced with the latest enhancements.</li>
-                </ul>
+            </section>
+
+            <!-- SECTION 19: DATABASE SQL STRUCTURE & QUERIES -->
+            <section id="sqlstats" class="report-section">
+                <h2>19. Database SQL Structure & Queries <span class="page-number">P.108</span></h2>
+                <p>This section provides the low-level SQL definitions for the newly integrated asset modules, ensuring database-level transparency.</p>
+
+                <h3>19.1 Mutual Fund & SIP Tables</h3>
+                <div class="code-block">
+CREATE TABLE "core_mutualfund" (
+    "id" integer NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "name" varchar(200) NOT NULL,
+    "symbol" varchar(50) NOT NULL UNIQUE,
+    "nav" decimal NOT NULL,
+    "last_updated" datetime NOT NULL
+);
+
+CREATE TABLE "core_mfsip" (
+    "id" integer NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "amount" decimal NOT NULL,
+    "sip_date" integer NOT NULL,
+    "next_execution_date" date NOT NULL,
+    "is_active" bool NOT NULL,
+    "fund_id" bigint NOT NULL REFERENCES "core_mutualfund" ("id"),
+    "user_id" integer NOT NULL REFERENCES "auth_user" ("id")
+);
+                </div>
+
+                <h3>19.2 Fixed Assets (FD/RD) Table</h3>
+                <div class="code-block">
+CREATE TABLE "core_fixedasset" (
+    "id" integer NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "instrument_name" varchar(100) NOT NULL,
+    "asset_type" varchar(20) NOT NULL,
+    "invested_amount" decimal NOT NULL,
+    "interest_rate" decimal NOT NULL,
+    "maturity_date" date NULL,
+    "monthly_deposit" decimal NOT NULL DEFAULT 0,
+    "next_deposit_date" date NULL,
+    "user_id" integer NOT NULL REFERENCES "auth_user" ("id")
+);
+                </div>
+
+                <h3>19.3 Loan & Liability Tables</h3>
+                <div class="code-block">
+CREATE TABLE "core_loan" (
+    "id" integer NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "bank_name" varchar(100) NOT NULL,
+    "category" varchar(50) NOT NULL,
+    "loan_amount" decimal NOT NULL,
+    "emi_amount" decimal NOT NULL,
+    "interest_rate" decimal NOT NULL,
+    "tenure_months" integer NOT NULL,
+    "user_id" integer NOT NULL REFERENCES "auth_user" ("id")
+);
+
+CREATE TABLE "core_loanpayment" (
+    "id" integer NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "payment_type" varchar(20) NOT NULL,
+    "amount" decimal NOT NULL,
+    "principal_component" decimal NOT NULL,
+    "interest_component" decimal NOT NULL,
+    "loan_id" bigint NOT NULL REFERENCES "core_loan" ("id")
+);
+                </div>
+            </section>
+
+            <!-- SECTION 20: EXTENDED ASSET CLASS MODULES -->
+            <section id="assetmodules" class="report-section">
+                <h2>20. Extended Asset Class Modules <span class="page-number">P.112</span></h2>
+                <p>NPITS has evolved beyond simple equity tracking into a holistic wealth management platform.</p>
+
+                <h3>20.1 Mutual Funds & SIP Automation</h3>
+                <p>The Mutual Fund module uses real-time NAV syncing from specialized financial data providers. The **SIP Engine** runs as a daily background task, automatically checking the `next_execution_date` for each active SIP and generating 'BUY' transactions without user intervention.</p>
+
+                <h3>20.2 Fixed Assets & RD Compounding</h3>
+                <p>Unlike regular assets, Fixed Assets (FD/RD) implement a specialized **Interest Compounding Engine**. It calculates the current value dynamically using the formula: <code>A = P(1 + r/n)^(nt)</code>, adapted for monthly RD installments. The system also supports maturity tracking to ensure assets aren't over-counted beyond their term.</p>
+
+                <h3>20.3 Multi-Liability Loan Tracker</h3>
+                <p>The Loan module tracks liabilities using both **Flat** and **Reducing** interest methodologies. It provides a granular breakdown of each EMI payment into Principal and Interest components, giving users clear visibility into their actual depth of debt and remaining tenure.</p>
+
+                <h3>20.4 Unified Net-Worth Dashboard</h3>
+                <p>All assets and liabilities are aggregated into a single **Portfolio Dashboard**, which presents a real-time 'True Net Worth' by subtracting total liabilities (Loans) from total assets (Equity, MF, NPS, Crypto, Fixed, Other). This provides the ultimate financial health metric for the user.</p>
             </section>
 
             <!-- ERM Enlarge Modal -->

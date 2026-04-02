@@ -508,9 +508,63 @@ def mf_guide(request):
         return redirect('mf_dashboard')
     return render(request, 'core/mf_guide.html')
 
+def _process_auto_mf_sips(user):
+    """Automatically record Mutual Fund SIPs that have passed since the last execution."""
+    from .models import MFSIP, MFTransaction, MFPortfolio
+    from dateutil.relativedelta import relativedelta
+    from decimal import Decimal
+    from datetime import date
+    from django.utils import timezone
+    
+    today = timezone.now().date()
+    active_sips = MFSIP.objects.filter(user=user, is_active=True, next_execution_date__lte=today)
+    
+    for sip in active_sips:
+        # Limit iterations to avoid infinite loops if it's been many months
+        iterations = 0
+        while sip.next_execution_date and today >= sip.next_execution_date and iterations < 120:
+            iterations += 1
+            
+            # Fetch current NAV or fallback to last known
+            nav = sip.fund.nav or Decimal('0')
+            if nav <= 0:
+                # If NAV is 0, we can't reliably buy. Skip for now.
+                break
+                
+            units_to_buy = sip.amount / nav
+            
+            # Record Transaction
+            MFTransaction.objects.create(
+                user=user,
+                fund=sip.fund,
+                transaction_type='BUY',
+                units=units_to_buy,
+                remaining_units=units_to_buy,
+                price=nav,
+                date=sip.next_execution_date
+            )
+            
+            # Update Portfolio
+            portfolio, created = MFPortfolio.objects.get_or_create(
+                user=user, fund=sip.fund,
+                defaults={'units': 0, 'avg_nav': 0}
+            )
+            
+            total_units = portfolio.units + units_to_buy
+            new_avg_nav = ((portfolio.units * portfolio.avg_nav) + (units_to_buy * nav)) / total_units
+            portfolio.units = total_units
+            portfolio.avg_nav = new_avg_nav
+            portfolio.save()
+            
+            # Update next execution date
+            sip.last_executed_at = timezone.now()
+            sip.next_execution_date = sip.next_execution_date + relativedelta(months=1)
+            sip.save()
+
 @login_required
 def mf_dashboard(request):
-    """Isolated dashboard for Mutual Funds."""
+    """Isolated dashboard for Mutual Funds with SIP processing."""
+    _process_auto_mf_sips(request.user)
     all_holdings = MFPortfolio.objects.filter(user=request.user).select_related('fund')
     
     total_invested = sum(h.invested_amount for h in all_holdings)
@@ -526,8 +580,13 @@ def mf_dashboard(request):
     # Only display holdings with units > 0
     mf_holdings = [h for h in all_holdings if h.units > 0]
     
-    # Process advice for each holding
+    # Fetch active SIPs for this user
+    from .models import MFSIP
+    active_sips = {sip.fund_id: sip for sip in MFSIP.objects.filter(user=request.user, is_active=True)}
+    
+    # Process advice and attach SIP data for each holding
     for h in mf_holdings:
+        h.active_sip = active_sips.get(h.fund_id)
         h.advice = []
         if h.pnl_percentage >= 22:
             h.advice.append({'type': 'SELL', 'reason': f'Target 22% reached ({float(h.pnl_percentage):.2f}%)'})
@@ -620,6 +679,41 @@ def add_mf_portfolio(request):
                 date=timezone.now().date()
             )
             
+        # If SIP is enabled, create MFSIP record
+        is_sip = request.POST.get('is_sip') == 'on'
+        if is_sip:
+            sip_amount = Decimal(request.POST.get('sip_amount', '0'))
+            sip_date_day = int(request.POST.get('sip_date', '5'))
+            
+            # Calculate first next execution date
+            from datetime import date
+            from dateutil.relativedelta import relativedelta
+            today = date.today()
+            
+            # If today's day is already past the SIP day, start from next month
+            # Otherwise, use this month's date
+            try:
+                next_date = date(today.year, today.month, sip_date_day)
+                if next_date <= today:
+                    next_date = next_date + relativedelta(months=1)
+            except ValueError:
+                # Handle cases like 31st on a 30-day month
+                next_date = date(today.year, today.month, 28) + relativedelta(months=1)
+                next_date = date(next_date.year, next_date.month, min(sip_date_day, 28))
+
+            from .models import MFSIP
+            MFSIP.objects.get_or_create(
+                user=request.user,
+                fund=fund,
+                defaults={
+                    'amount': sip_amount,
+                    'sip_date': sip_date_day,
+                    'next_execution_date': next_date,
+                    'is_active': True
+                }
+            )
+            messages.info(request, f"Monthly SIP of ₹{sip_amount} scheduled on {sip_date_day}th of every month.")
+
         messages.success(request, f"Successfully added {fund.name} to your Mutual Fund portfolio.")
         return redirect('mf_dashboard')
         
@@ -1024,7 +1118,9 @@ def refresh_coin_prices(request):
 
 @login_required
 def portfolio(request):
-    """Unified Portfolio Dashboard."""
+    """Unified Portfolio Dashboard with SIP/EMI processing."""
+    # Process any background tasks
+    _process_auto_mf_sips(request.user)
     # 1. Stocks/ETF
     recommendations, realized_profits, _ = get_recommendations(request.user)
     stocks_recs = [r for r in recommendations if r.get('in_portfolio', False)]
@@ -1079,6 +1175,10 @@ def portfolio(request):
         pass
 
     # 7. Loans
+    # Process any background tasks for loans and RDs
+    _process_auto_mf_sips(request.user)
+    _process_auto_rd_deposits(request.user)
+    
     loans = Loan.objects.filter(user=request.user, is_active=True)
     for l in loans:
         _process_auto_emis(l)
@@ -1761,6 +1861,15 @@ def buy_stock(request):
             # Fallback for manual addition if not found or not verified
             inst, _ = Instrument.objects.get_or_create(symbol=symbol, defaults={'name': symbol, 'is_verified': True})
         
+        # Calculate Brokerage for BUY
+        profile, _ = Profile.objects.get_or_create(user=request.user)
+        fixed_charge = profile.equity_fixed_charge or Decimal('0')
+        pct_charge = profile.equity_brokerage_pct or Decimal('0')
+        
+        # Note: We apply Delivery charges on Buy by default as we don't know yet if it's Intraday.
+        total_brokerage = Decimal(str(fixed_charge)) + (price * Decimal(str(quantity)) * Decimal(str(pct_charge)) / 100)
+        price_with_brokerage = ( (price * Decimal(str(quantity))) + total_brokerage ) / Decimal(str(quantity))
+
         # Create Transaction record
         Transaction.objects.create(
             user=request.user,
@@ -1768,7 +1877,7 @@ def buy_stock(request):
             transaction_type='BUY',
             quantity=quantity,
             remaining_quantity=quantity,
-            price=price,
+            price=price_with_brokerage,
             date=transaction_date
         )
         
@@ -1780,7 +1889,7 @@ def buy_stock(request):
         
         # Update Weighted Average Cost for Portfolio summary
         current_total_cost = Decimal(str(portfolio.quantity)) * portfolio.avg_cost
-        new_total_cost = Decimal(str(quantity)) * price
+        new_total_cost = Decimal(str(quantity)) * price_with_brokerage
         total_quantity = portfolio.quantity + quantity
         
         new_avg_cost = (current_total_cost + new_total_cost) / Decimal(str(total_quantity))
@@ -1855,8 +1964,20 @@ def sell_stock(request):
                 tx.save()
                 remaining_to_deduct -= deduct
             
-        sell_value = Decimal(str(quantity_to_sell)) * price
-        profit = sell_value - total_buy_value
+        # Calculate Brokerage for SELL
+        profile, _ = Profile.objects.get_or_create(user=request.user)
+        if intraday_buy:
+            fixed_charge = profile.intraday_fixed_charge or Decimal('0')
+            pct_charge = profile.intraday_brokerage_pct or Decimal('0')
+        else:
+            fixed_charge = profile.equity_fixed_charge or Decimal('0')
+            pct_charge = profile.equity_brokerage_pct or Decimal('0')
+            
+        sell_brokerage = Decimal(str(fixed_charge)) + (price * Decimal(str(quantity_to_sell)) * Decimal(str(pct_charge)) / 100)
+        sell_value_gross = Decimal(str(quantity_to_sell)) * price
+        sell_value_net = sell_value_gross - sell_brokerage
+        
+        profit = sell_value_net - total_buy_value
         
         # Record Sell Transaction
         Transaction.objects.create(
@@ -1875,7 +1996,7 @@ def sell_stock(request):
             entry_date=first_entry_date,
             quantity=quantity_to_sell,
             buy_value=total_buy_value,
-            sell_value=sell_value,
+            sell_value=sell_value_net,
             realized_profit=profit,
             exit_date=exit_date
         )
@@ -2010,11 +2131,25 @@ def save_fy_data(request):
 def toggle_fy_lock(request):
     if request.method == 'POST':
         import json
+        from decimal import Decimal
         try:
             data = json.loads(request.body)
             fy = data.get('year')
             from .models import FinancialYearData
             obj = get_object_or_404(FinancialYearData, user=request.user, financial_year=fy)
+            
+            # If data is provided, save it before toggling (only if currently unlocked)
+            if not obj.is_locked:
+                invested = data.get('invested')
+                current = data.get('current')
+                unrealized = data.get('unrealized')
+                realized = data.get('realized')
+                
+                if invested is not None: obj.invested_amount = Decimal(str(invested))
+                if current is not None: obj.current_value = Decimal(str(current))
+                if unrealized is not None: obj.unrealized_pnl = Decimal(str(unrealized))
+                if realized is not None: obj.realized_profit = Decimal(str(realized))
+            
             obj.is_locked = not obj.is_locked
             obj.save()
             return JsonResponse({'status': 'success', 'is_locked': obj.is_locked})
@@ -2825,9 +2960,39 @@ def refresh_nps_navs(request):
 
 # --- FIXED ASSETS (FD) Module ---
 
+def _process_auto_rd_deposits(user):
+    """Automatically record RD deposits that have passed since the last execution."""
+    from .models import FixedAsset
+    from dateutil.relativedelta import relativedelta
+    from decimal import Decimal
+    from datetime import date
+    from django.utils import timezone
+    
+    today = timezone.now().date()
+    active_rds = FixedAsset.objects.filter(user=user, asset_type='RD', next_deposit_date__lte=today)
+    
+    for rd in active_rds:
+        # Limit iterations
+        iterations = 0
+        while rd.next_deposit_date and today >= rd.next_deposit_date and iterations < 120:
+            iterations += 1
+            
+            # Increase invested amount
+            rd.invested_amount += rd.monthly_deposit
+            
+            # Update next deposit date
+            rd.next_deposit_date = rd.next_deposit_date + relativedelta(months=1)
+            
+            # Check for maturity
+            if rd.maturity_date and rd.next_deposit_date > rd.maturity_date:
+                rd.next_deposit_date = None
+                break
+        rd.save()
+
 @login_required
 def fd_dashboard(request):
-    """Dashboard for Fixed Assets (FD, PPF, etc)."""
+    """Dashboard for Fixed Assets (FD, RD, PPF, etc) with automation."""
+    _process_auto_rd_deposits(request.user)
     fd_holdings = FixedAsset.objects.filter(user=request.user).order_by('-investment_date')
     
     total_invested = sum(h.invested_amount for h in fd_holdings)
@@ -2869,15 +3034,37 @@ def add_fd(request):
             messages.error(request, "Please provide valid instrument name, amount, and rate.")
             return redirect('add_fd')
             
+        asset_type = request.POST.get('asset_type', 'FD')
+        monthly_deposit = Decimal(request.POST.get('monthly_deposit', '0') or '0')
+        tenure_years = int(request.POST.get('tenure_years', '0') or '0')
+        
+        if asset_type == 'RD':
+            # For RD, invested_amount starts with 1st deposit
+            invested_amount = monthly_deposit
+            # Calculate maturity date based on tenure
+            if tenure_years > 0:
+                from dateutil.relativedelta import relativedelta
+                maturity_date = investment_date + relativedelta(years=tenure_years)
+            
+            # Set next deposit date to 1 month from now
+            from dateutil.relativedelta import relativedelta
+            next_deposit_date = investment_date + relativedelta(months=1)
+        else:
+            next_deposit_date = None
+
         FixedAsset.objects.create(
             user=request.user,
             instrument_name=instrument_name,
+            asset_type=asset_type,
             invested_amount=invested_amount,
             interest_rate=interest_rate,
             investment_date=investment_date,
-            maturity_date=maturity_date
+            maturity_date=maturity_date,
+            monthly_deposit=monthly_deposit,
+            tenure_years=tenure_years,
+            next_deposit_date=next_deposit_date
         )
-        messages.success(request, f"Added Fixed Asset: {instrument_name}.")
+        messages.success(request, f"Added {asset_type}: {instrument_name}.")
         return redirect('fd_dashboard')
         
     return render(request, 'core/fd_add_item.html')
