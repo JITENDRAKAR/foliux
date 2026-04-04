@@ -87,25 +87,12 @@ def _auto_update_coin():
         from django.utils import timezone
         from datetime import timedelta
         from .models import Coin
-        from decimal import Decimal
-        import requests
+        from .utils import sync_coins_from_sheet
         
         ten_mins_ago = timezone.now() - timedelta(minutes=10)
         stale_coins = Coin.objects.filter(last_updated__lt=ten_mins_ago)
-        if not stale_coins.exists(): return
-        
-        headers = {'User-Agent': 'Mozilla/5.0'}
-        for symbol in set([c.symbol for c in stale_coins if c.symbol]):
-            try:
-                url = f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}"
-                response = requests.get(url, headers=headers, timeout=5)
-                price_val = response.json()['chart']['result'][0]['meta']['regularMarketPrice']
-                for c in stale_coins:
-                    if c.symbol == symbol and price_val:
-                        c.prev_price = c.price
-                        c.price = Decimal(str(price_val))
-                        c.save()
-            except Exception: pass
+        if stale_coins.exists():
+            sync_coins_from_sheet()
     except Exception as e:
         logger.error(f"Auto update Coin failed: {e}")
 
@@ -333,6 +320,7 @@ def fetch_market_data():
             'name': t.name,
             'price': t.price,
             'change': t.change,
+            'percent_change': t.percent_change,
             'symbol': t.name.upper().split(' ')[0] # Heuristic: use first word of name as symbol
         })
     return market_list
@@ -499,6 +487,7 @@ def strategy(request):
         'chart_labels': chart_labels,
         'chart_values': chart_values,
         'has_investments': has_investments,
+        'default_backtest_date': (timezone.now() - relativedelta(years=5)).strftime('%Y-%m-%d'),
     }
     return render(request, 'core/strategy.html', context)
 
@@ -913,39 +902,23 @@ def add_coin(request):
             messages.error(request, "Please provide valid symbol, units, and average price.")
             return redirect('coin_dashboard')
             
-        coin, created = Coin.objects.get_or_create(symbol=symbol)
-        if created or coin.price == 0:
-            try:
-                import requests
-                headers = {'User-Agent': 'Mozilla/5.0'}
-                url = f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}"
-                response = requests.get(url, headers=headers, timeout=5)
-                data = response.json()
-                price_val = data['chart']['result'][0]['meta']['regularMarketPrice']
-                
-                if price_val:
-                    coin.price = Decimal(str(price_val))
-                else:
-                    coin.price = avg_price
-                    
-                # Try to get a nicer name, fallback to symbol
-                try:
-                    import yfinance as yf
-                    ticker = yf.Ticker(symbol)
-                    info = ticker.info
-                    coin.name = info.get('shortName') or info.get('longName') or symbol
-                except Exception:
-                    coin.name = symbol
-                    
-                coin.save()
-            except Exception as e:
-                import logging
-                logger = logging.getLogger(__name__)
-                logger.error(f"Error fetching price for {symbol}: {e}")
-                if created: 
-                    coin.name = symbol
-                    coin.price = avg_price
-                    coin.save()
+        # Sync first to ensure we have latest from sheet
+        from .utils import sync_coins_from_sheet
+        sync_coins_from_sheet()
+        
+        # Now try to find the coin
+        coin = Coin.objects.filter(symbol__iexact=symbol).first()
+        if not coin:
+            # Try plain symbol if symbol-INR was used
+            plain_symbol = symbol.split('-')[0]
+            coin = Coin.objects.filter(symbol__iexact=plain_symbol).first()
+        
+        if not coin:
+            # Fallback: create even if not in sheet (though it won't get price updates)
+            coin, _ = Coin.objects.get_or_create(
+                symbol=symbol,
+                defaults={'name': symbol, 'price': avg_price}
+            )
 
         holding, h_created = CoinPortfolio.objects.get_or_create(
             user=request.user, 
@@ -1073,46 +1046,16 @@ def coin_transaction_history(request):
 
 @login_required
 def refresh_coin_prices(request):
-    """Fetch latest prices for all crypto coins in the user's portfolio."""
-    coin_holdings = CoinPortfolio.objects.filter(user=request.user).select_related('coin')
-    if not coin_holdings:
-        return redirect('coin_dashboard')
-    
-    import requests
-    headers = {'User-Agent': 'Mozilla/5.0'}
-    
-    success_count = 0
-    symbols = list(set([h.coin.symbol for h in coin_holdings]))
-    
+    """Fetch latest prices for all crypto coins using the Google Spreadsheet sync."""
+    from .utils import sync_coins_from_sheet
     try:
-        for symbol in symbols:
-            url = f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}"
-            try:
-                response = requests.get(url, headers=headers, timeout=5)
-                data = response.json()
-                price_val = data['chart']['result'][0]['meta']['regularMarketPrice']
-                
-                if price_val:
-                    for h in coin_holdings:
-                        if h.coin.symbol == symbol:
-                            h.coin.prev_price = h.coin.price
-                            h.coin.price = Decimal(str(price_val))
-                            h.coin.save()
-                            success_count += 1
-            except Exception as e:
-                import logging
-                logger = logging.getLogger(__name__)
-                logger.error(f"Direct request failed for {symbol}: {e}")
-                
-        if success_count > 0:
-            messages.success(request, "Coin prices refreshed successfully.")
+        count = sync_coins_from_sheet()
+        if count > 0:
+            messages.success(request, f"Coin prices refreshed from spreadsheet ({count} updated).")
         else:
-            messages.error(request, "Failed to refresh some prices.")
+            messages.warning(request, "Spreadsheet sync completed, no updates found.")
     except Exception as e:
-        import logging
-        logger = logging.getLogger(__name__)
-        logger.error(f"Coin Price Refresh failed: {e}")
-        messages.error(request, "Failed to refresh some prices.")
+        messages.error(request, f"Failed to refresh prices: {e}")
         
     return redirect('coin_dashboard')
 
@@ -1246,6 +1189,20 @@ def portfolio(request):
         'coin_buy_count': 0,
         'coin_sell_count': 0,
     }
+    
+    # Get Portfolio Value History (Total Initial Capital vs Net Worth)
+    from .models import PortfolioValueHistory
+    import json
+    history = PortfolioValueHistory.objects.filter(user=request.user, date__gte='2026-04-03').order_by('date')
+    history_data = {
+        'dates': [h.date.strftime('%Y-%m-%d') for h in history],
+        'invested': [float(h.invested_value) for h in history],
+        'current': [float(h.current_value) for h in history],
+        'net_worth': [float(h.net_worth) for h in history],
+        'nifty': [float(h.nifty_price) if h.nifty_price else None for h in history]
+    }
+    context['history_data_json'] = json.dumps(history_data)
+    
     return render(request, 'core/portfolio.html', context)
 def etf_guide(request):
     """ETF Guide page."""
@@ -1368,6 +1325,11 @@ def dashboard(request):
         'last_updated': last_updated,
         'current_strategy': current_strategy,
     }
+
+    # Record current value history for users
+    from .utils import record_portfolio_value_history
+    record_portfolio_value_history(request.user)
+    
     return render(request, 'core/dashboard.html', context)
 
 def search_instruments(request):
@@ -2072,10 +2034,28 @@ def transaction_history(request):
     current_fy_data = [fd for fd in fy_data if fd.financial_year == current_fy_str]
     past_fy_data = [fd for fd in fy_data if fd.financial_year != current_fy_str]
     
+    # Record current value history
+    from .utils import record_portfolio_value_history
+    record_portfolio_value_history(request.user)
+
+    # Get Portfolio Performance History (Same as Portfolio Dashboard)
+    from .models import PortfolioValueHistory
+    # Increase history range for a better chart
+    history = PortfolioValueHistory.objects.filter(user=request.user, date__gte=timezone.now().date() - timedelta(days=180)).order_by('date')
+    history_data = {
+        'dates': [h.date.strftime('%b %d') for h in history],
+        'invested': [float(h.stock_invested) for h in history],
+        'current': [float(h.stock_current) for h in history],
+        'net_worth': [float(h.stock_current) for h in history],
+        'nifty': [float(h.nifty_price) if h.nifty_price else None for h in history]
+    }
+    
     return render(request, 'core/transactions.html', {
         'transactions': transactions,
         'current_fy_data': current_fy_data[0] if current_fy_data else None,
-        'past_fy_data': past_fy_data
+        'past_fy_data': past_fy_data,
+        'history_data_json': json.dumps(history_data),
+        'portfolio_history': history.order_by('-date')
     })
 
 @login_required
@@ -2812,38 +2792,60 @@ def mf_suggestions_api(request):
 
 @csrf_exempt
 def coin_price_api(request):
-    """API to fetch live price for a coin symbol via yfinance."""
+    """API to fetch live price for a coin from the database (synced from spreadsheet)."""
     symbol = request.GET.get('symbol', '').strip().upper()
     if not symbol:
         return JsonResponse({'status': 'error', 'message': 'Symbol required'}, status=400)
     
-    # Handle crypto symbols (BTC -> BTC-INR)
-    if '-' not in symbol and not symbol.endswith('.NS') and not symbol.endswith('.BO'):
-        symbol = f"{symbol}-INR"
+    # Optional: trigger sync on demand, but maybe it's too slow for live UI?
+    # Better to just return what's in the DB if it's recent. 
+    # For now, let's just return DB data.
+    
+    # Try a few variations
+    coin = Coin.objects.filter(symbol__iexact=symbol).first()
+    if not coin and '-' not in symbol:
+        coin = Coin.objects.filter(symbol__iexact=f"{symbol}-INR").first()
+    
+    if coin:
+        return JsonResponse({
+            'status': 'success',
+            'symbol': coin.symbol,
+            'name': coin.name,
+            'price': float(coin.price)
+        })
+    else:
+        # If not found, maybe it's new. Try a quick sync?
+        from .utils import sync_coins_from_sheet
+        sync_coins_from_sheet()
         
-    try:
-        ticker = yf.Ticker(symbol)
-        # Fetch price reliably via history
-        hist = ticker.history(period="1d")
-        if not hist.empty:
-            price = hist['Close'].iloc[-1]
-            try:
-                # Provide a graceful fallback for name if info fails due to YF limits
-                info = ticker.info
-                name = info.get('shortName') or info.get('longName') or symbol
-            except Exception:
-                name = symbol
+        coin = Coin.objects.filter(symbol__iexact=symbol).first()
+        if not coin and '-' not in symbol:
+            coin = Coin.objects.filter(symbol__iexact=f"{symbol}-INR").first()
             
+        if coin:
             return JsonResponse({
                 'status': 'success',
-                'symbol': symbol,
-                'name': name,
-                'price': float(price)
+                'symbol': coin.symbol,
+                'name': coin.name,
+                'price': float(coin.price)
             })
-        else:
-            return JsonResponse({'status': 'error', 'message': 'Price not found in history'}, status=404)
-    except Exception as e:
-        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+            
+        return JsonResponse({'status': 'error', 'message': 'Price not found in database or spreadsheet'}, status=404)
+
+@csrf_exempt
+def coin_suggestions_api(request):
+    """Provide real-time suggestions based on coin symbol or name from our DB."""
+    q = request.GET.get('q', '').strip()
+    if len(q) < 2:
+        return JsonResponse({'status': 'success', 'results': []})
+
+    from core.models import Coin
+    # Search in both symbol and name
+    results = Coin.objects.filter(
+        models.Q(symbol__icontains=q) | models.Q(name__icontains=q)
+    ).values('symbol', 'name', 'price')[:10]
+
+    return JsonResponse({'status': 'success', 'results': list(results)})
 
 @login_required
 def nps_dashboard(request):
@@ -3368,4 +3370,141 @@ def add_loan_payment(request, pk):
         return redirect('loan_detail', pk=pk)
         
     return render(request, 'core/loan_payment_form.html', {'loan': loan})
+
+@ensure_csrf_cookie
+def backtest_strategy_api(request):
+    """API for historical backtesting of the investment strategy."""
+    symbol = request.GET.get('symbol', '').strip().upper()
+    start_date_str = request.GET.get('start_date', '2023-01-01')
+    max_inv = float(request.GET.get('max_inv', '15000'))
+    
+    if not symbol:
+        return JsonResponse({'error': 'Symbol is required'}, status=400)
+    
+    try:
+        # Determine yfinance symbol
+        yf_symbol = symbol
+        if not any(x in symbol for x in ['^', '.', '=F']):
+            yf_symbol = f"{symbol}.NS"
+            
+        t = yf.Ticker(yf_symbol)
+        # Fetch 1y extra for 52W high baseline
+        start_dt = pd.to_datetime(start_date_str)
+        hist = t.history(start=start_dt - timedelta(days=365))
+        if hist.empty:
+            return JsonResponse({'error': f'No data found for symbol {symbol}'}, status=400)
+            
+        # Fix: Ensure start_dt has same timezone as hist.index to avoid comparison errors
+        if hist.index.tz is not None and start_dt.tzinfo is None:
+            start_dt = start_dt.tz_localize(hist.index.tz)
+            
+        sim_data = hist[hist.index >= start_dt]
+        if sim_data.empty:
+            return JsonResponse({'error': 'Start date is too recent for simulation data'}, status=400)
+
+        # Simulation
+        def get_factor_j_val(price, h52):
+            if not h52 or h52 == 0: return 1.0
+            diff = ((h52 - price) / h52) * 100
+            if diff <= 2: return 0.5
+            if diff <= 5: return 0.55
+            if diff <= 8: return 0.6
+            if diff <= 12: return 0.68
+            if diff <= 18: return 0.75
+            if diff <= 25: return 0.85
+            if diff <= 35: return 0.92
+            return 0.97
+
+        realized_profit = 0
+        quantity = 0
+        avg_cost = 0
+        
+        # Financial tracking
+        gross_total_buys = 0 # Cumulative sum of all buy transactions
+        capital_injected = 0 # Fresh money brought in from outside
+        cash_balance = 0     # Liquidity from sells
+        
+        results = []
+        
+        for i, (dt, row) in enumerate(sim_data.iterrows()):
+            price = float(row['Close'])
+            
+            # Apply 5% annual interest on cash balance for the number of days since the last data point
+            if i > 0 and cash_balance > 0:
+                prev_dt = sim_data.index[i-1]
+                # Calculate literal days passed (handles weekends/holidays)
+                days_passed = (dt - prev_dt).days
+                if days_passed > 0:
+                    interest_rate = 0.05 / 365
+                    interest_earned = cash_balance * interest_rate * days_passed
+                    cash_balance += interest_earned
+            # Calculate 52W High up to this day by looking back from the base history
+            lookback = hist[hist.index < dt].tail(252)
+            h52 = float(lookback['High'].max()) if not lookback.empty else price
+            
+            # Check for Sell Signal (22% Target)
+            if quantity > 0:
+                invested_val = quantity * avg_cost
+                current_val = quantity * price
+                unrealized_pct = ((current_val - invested_val) / invested_val) * 100
+                
+                if unrealized_pct >= 22.0:
+                    sell_proceeds = current_val
+                    profit = sell_proceeds - invested_val
+                    
+                    # From profit booking, 7% of profit is deducted as expenses
+                    realized_profit += profit * 0.93
+                    cash_balance += sell_proceeds - (profit * 0.07)
+                    
+                    quantity = 0
+                    avg_cost = 0
+
+            # Calculate Buy Gap based on Strategy rules
+            current_invested = quantity * avg_cost
+            target_investment = (max_inv * get_factor_j_val(price, h52)) + realized_profit
+            buy_gap = target_investment - current_invested
+            
+            if buy_gap > 3000:
+                buy_qty = int(buy_gap // price)
+                if buy_qty > 0:
+                    buy_cost = buy_qty * price
+                    gross_total_buys += buy_cost
+                    
+                    # Funding the buy: use cash first, then inject capital
+                    if cash_balance >= buy_cost:
+                        cash_balance -= buy_cost
+                    else:
+                        additional_needed = buy_cost - cash_balance
+                        capital_injected += additional_needed
+                        cash_balance = 0
+
+                    total_qty = quantity + buy_qty
+                    avg_cost = float((quantity * avg_cost + buy_cost) / total_qty)
+                    quantity = total_qty
+
+            results.append({
+                'date': dt.strftime('%Y-%m-%d'),
+                'price': round(price, 2),
+                'invested': round(quantity * avg_cost, 2),
+                'current_value': round(quantity * price, 2),
+                'realized_profit': round(realized_profit, 2),
+                'cash_balance': round(cash_balance, 2),
+                'total_wealth': round(quantity * price + cash_balance, 2),
+            })
+
+        # Summary Metrics
+        last_wealth = results[-1]['total_wealth']
+        summary = {
+            'total_invested': round(capital_injected, 2), # Correct: Basis is net capital put in
+            'realized_profit': round(realized_profit, 2),
+            'current_holdings_value': round(results[-1]['current_value'], 2),
+            'total_wealth': round(last_wealth, 2),
+            'net_profit': round(last_wealth - capital_injected, 2),
+            'returns_pct': round(((last_wealth - capital_injected) / capital_injected * 100) if capital_injected > 0 else 0, 2)
+        }
+        
+        return JsonResponse({'summary': summary, 'results': results})
+    except Exception as e:
+        logger.error(f"Backtest failed: {e}")
+        return JsonResponse({'error': str(e)}, status=500)
 

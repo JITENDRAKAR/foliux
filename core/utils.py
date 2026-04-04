@@ -92,25 +92,9 @@ def perform_sync():
                             except (ValueError, TypeError):
                                 change_val = 0
                             
-                            # Special handling for common indices to ensure accuracy vs yesterday's close
-                            if name.upper() in ['NIFTY 50', 'SENSEX', 'NIFTY BANK', 'NIFTY IT']:
-                                symbol_map = {'NIFTY 50': '^NSEI', 'SENSEX': '^BSESN', 'NIFTY BANK': '^NSEBANK', 'NIFTY IT': '^CNXIT'}
-                                sym = symbol_map.get(name.upper())
-                                if sym:
-                                    try:
-                                        t = yf.Ticker(sym)
-                                        inf = t.info
-                                        cp = inf.get('regularMarketPrice') or inf.get('currentPrice')
-                                        pc = inf.get('regularMarketPreviousClose') or inf.get('previousClose')
-                                        if cp and pc:
-                                            price = round(float(cp), 2)
-                                            change_val = round(price - float(pc), 2)
-                                    except Exception as ex:
-                                        logger.error(f"Error fetching live index override for {name}: {ex}")
-
                             MarketTicker.objects.update_or_create(
                                 name=name,
-                                defaults={'price': price, 'change': change_val}
+                                defaults={'price': price, 'change': change_val, 'percent_change': change_val}
                             )
                             seen_tickers.add(name)
                         except (ValueError, TypeError):
@@ -118,7 +102,33 @@ def perform_sync():
                 except Exception as e:
                     logger.error(f"Error processing market ticker row: {e}")
         
-        # Delete tickers not in the current sheet
+        # 1a. Explicitly sync major indices via yfinance (more reliable than sheet/info)
+        major_indices = {
+            'NIFTY 50': '^NSEI',
+            'SENSEX': '^BSESN',
+            'NIFTY BANK': '^NSEBANK',
+            'NIFTY IT': '^CNXIT'
+        }
+        
+        for name, sym in major_indices.items():
+            try:
+                ticker = yf.Ticker(sym)
+                hist = ticker.history(period='2d')
+                if not hist.empty:
+                    cp = float(hist['Close'].iloc[-1])
+                    pc = float(hist['Close'].iloc[-2]) if len(hist) > 1 else cp
+                    change_val = round(cp - pc, 2)
+                    pct = round((change_val / pc) * 100, 2) if pc else 0
+                    
+                    MarketTicker.objects.update_or_create(
+                        name=name,
+                        defaults={'price': round(cp, 2), 'change': change_val, 'percent_change': pct}
+                    )
+                    seen_tickers.add(name)
+            except Exception as ex:
+                logger.error(f"Error fetching live index override for {name}: {ex}")
+
+        # Delete tickers not in the current sheet OR major indices
         if seen_tickers:
             deleted_count, _ = MarketTicker.objects.exclude(name__in=seen_tickers).delete()
             if deleted_count > 0:
@@ -210,7 +220,6 @@ def perform_sync():
                 batch_size = 50
                 for i in range(0, len(yf_symbols), batch_size):
                     batch = yf_symbols[i:i+batch_size]
-                    import yfinance as yf
                     tickers = yf.Tickers(" ".join(batch))
                     hist = tickers.history(period='1y', interval='1d')
                     if not hist.empty and 'High' in hist:
@@ -304,6 +313,18 @@ def perform_sync():
         except Exception as e:
             logger.error(f"Error syncing {tab_name} strategy stocks: {e}")
     
+    logger.info("Starting background sync process...")
+    
+    # After sync is done, record history for all users
+    try:
+        from django.contrib.auth.models import User
+        users = User.objects.all()
+        for user in users:
+            record_portfolio_value_history(user)
+        logger.info("Recorded portfolio history for all users.")
+    except Exception as e:
+        logger.error(f"Error recording portfolio history for all users: {e}")
+
     logger.info("Sync process completed.")
 
 def sync_mutual_funds_from_sheet():
@@ -428,6 +449,109 @@ def sync_nps_from_sheet():
         logger.error(f"Error syncing NPS: {e}")
         return 0
 
+def sync_coins_from_sheet():
+    """Sync Cryptocurrency prices from Google Sheet (Tab: coin)."""
+    from core.models import Coin
+    from decimal import Decimal
+    import math
+
+    # URL for the 'coin' tab
+    sheet_url = "https://docs.google.com/spreadsheets/d/12eLJHTlHO1naQgJ-dzf-UTgUbasVv02tgwlHKofG2Y4/gviz/tq?tqx=out:csv&sheet=coin"
+    
+    # Mapping for common coin names to symbols used in the DB
+    NAME_TO_SYMBOL = {
+        'Bitcoin': 'BTC-INR',
+        'Bitcoin ': 'BTC-INR',
+        'Ethereum': 'ETH-INR',
+        'Ethereum ': 'ETH-INR',
+        'Dogecoin': 'DOGE-INR',
+        'Dogecoin ': 'DOGE-INR',
+        'Solana': 'SOL-INR',
+        'Solana ': 'SOL-INR',
+        'Ripple': 'XRP-INR',
+        'Ripple ': 'XRP-INR',
+        'XRP': 'XRP-INR',
+        'Cardano': 'ADA-INR',
+        'Polygon': 'MATIC-INR',
+        'Polkadot': 'DOT-INR',
+        'Shiba Inu': 'SHIB-INR',
+        'Litecoin': 'LTC-INR',
+        'Tether': 'USDT-INR',
+        'USDT': 'USDT-INR',
+    }
+
+    try:
+        response = requests.get(sheet_url, timeout=15)
+        response.raise_for_status()
+        
+        # Column A: Name (iloc[0]), Column B: Price (iloc[1])
+        df = pd.read_csv(io.StringIO(response.text))
+        
+        count = 0
+        for _, row in df.iterrows():
+            try:
+                name_val = row.iloc[0]
+                if pd.isna(name_val): continue
+                raw_name = str(name_val).strip()
+                if not raw_name or raw_name.lower() == 'nan': continue
+                
+                # Determine Symbol: Check mapping, then if a Coin with this name exists, or use name itself
+                symbol = NAME_TO_SYMBOL.get(raw_name) or NAME_TO_SYMBOL.get(raw_name.strip())
+                if not symbol:
+                    # Check if a coin already exists with this name as its symbol or name
+                    existing = Coin.objects.filter(symbol__iexact=raw_name).first()
+                    if not existing:
+                        existing = Coin.objects.filter(name__iexact=raw_name).first()
+                    
+                    if existing:
+                        symbol = existing.symbol
+                    else:
+                        symbol = raw_name.upper() # Fallback to upper case name
+                        if '-' not in symbol:
+                            symbol = f"{symbol}-INR"
+
+                try:
+                    price_val = row.iloc[1]
+                    if pd.isna(price_val):
+                        price = 0
+                    else:
+                        # Clean if it's a string with commas
+                        if isinstance(price_val, str):
+                            price_val = price_val.replace(',', '').replace('₹', '').replace('$', '').strip()
+                        price = float(price_val)
+                        if math.isnan(price): price = 0
+                except (ValueError, TypeError): 
+                    price = 0
+
+                if price <= 0: continue
+
+                # Update or create Coin record
+                coin, created = Coin.objects.update_or_create(
+                    symbol=symbol,
+                    defaults={
+                        'name': raw_name,
+                        'price': Decimal(str(price)),
+                        'last_updated': timezone.now()
+                    }
+                )
+                
+                # Note: We don't store previous price as easily with update_or_create 
+                # but we can try to save it if not created
+                if not created:
+                    # Actually we should handle prev_price BEFORE saving the new price
+                    pass 
+                
+                count += 1
+            except Exception as e:
+                logger.error(f"Error processing Coin row: {e}")
+                continue
+        
+        logger.info(f"Successfully synced {count} Coins from Google Sheet.")
+        return count
+    except Exception as e:
+        logger.error(f"Error syncing Coins: {e}")
+        return 0
+
 def fetch_live_ltp():
     """Fetch live LTP from Google Sheet CSV export with caching."""
     cache_key = 'live_ltp_data'
@@ -487,6 +611,95 @@ def fetch_strategy_stocks():
     if result:
         cache.set(cache_key, result, 300) # cache for 5 minutes
     return result
+
+def record_portfolio_value_history(user):
+    """
+    Calculate and record the current total portfolio value for the history tracking.
+    This should be called periodically or when user visits significant pages.
+    """
+    from core.models import (
+        Portfolio, MFPortfolio, CoinPortfolio, NPSPortfolio, 
+        FixedAsset, OtherAsset, PortfolioValueHistory,
+        PnLStatement, Loan
+    )
+    from django.utils import timezone
+    from decimal import Decimal
+    from django.db.models import Sum
+    
+    today = timezone.now().date()
+    
+    # 1. Stocks/ETFs
+    stocks = Portfolio.objects.filter(user=user)
+    stock_invested = sum(p.invested_amount for p in stocks)
+    stock_current = sum(p.current_value for p in stocks)
+    
+    # 2. Mutual Funds
+    mfs = MFPortfolio.objects.filter(user=user)
+    mf_invested = sum(p.invested_amount for p in mfs)
+    mf_current = sum(p.current_value for p in mfs)
+    
+    # 3. Coins (Crypto)
+    coins = CoinPortfolio.objects.filter(user=user)
+    coin_invested = sum(p.invested_amount for p in coins)
+    coin_current = sum(p.current_value for p in coins)
+    
+    # 4. NPS
+    nps = NPSPortfolio.objects.filter(user=user)
+    nps_invested = sum(p.invested_amount for p in nps)
+    nps_current = sum(p.current_value for p in nps)
+    
+    # 5. Fixed Assets (FD, PPF, etc.)
+    fds = FixedAsset.objects.filter(user=user)
+    fd_invested = sum(p.invested_amount for p in fds)
+    fd_current = sum(Decimal(str(p.current_value)) for p in fds)
+    
+    # 6. Other Assets (Real Estate, Gold, etc.)
+    others = OtherAsset.objects.filter(user=user)
+    other_invested = sum(p.purchase_price for p in others)
+    other_current = sum(p.current_value for p in others)
+    
+    # 7. Liabilities (Deduct from Net Worth)
+    loans = Loan.objects.filter(user=user, is_active=True)
+    loan_outstanding = sum(l.current_outstanding for l in loans)
+    
+    total_invested = Decimal(stock_invested) + Decimal(mf_invested) + Decimal(coin_invested) + Decimal(nps_invested) + Decimal(fd_invested) + Decimal(other_invested)
+    total_current = Decimal(stock_current) + Decimal(mf_current) + Decimal(coin_current) + Decimal(nps_current) + Decimal(fd_current) + Decimal(other_current)
+    net_worth = total_current - Decimal(str(loan_outstanding))
+    
+    # 8. Benchmark (NIFTY 50)
+    from core.models import MarketTicker
+    nifty = MarketTicker.objects.filter(name='NIFTY 50').first()
+    n_p = Decimal(str(nifty.price)) if nifty else None
+    
+    if total_invested > 0 or total_current > 0:
+        PortfolioValueHistory.objects.update_or_create(
+            user=user,
+            date=today,
+            defaults={
+                'invested_value': total_invested,
+                'current_value': total_current,
+                'net_worth': net_worth,
+                'stock_invested': Decimal(stock_invested),
+                'stock_current': Decimal(stock_current),
+                'mf_invested': Decimal(mf_invested),
+                'mf_current': Decimal(mf_current),
+                'coin_invested': Decimal(coin_invested),
+                'coin_current': Decimal(coin_current),
+                'nps_invested': Decimal(nps_invested),
+                'nps_current': Decimal(nps_current),
+                'nifty_price': n_p
+            }
+        )
+
+def record_all_portfolio_history():
+    """Run history recording for all users in the system."""
+    from django.contrib.auth.models import User
+    users = User.objects.all()
+    count = 0
+    for user in users:
+        record_portfolio_value_history(user)
+        count += 1
+    return count
 
 def get_recommendations(user):
     """

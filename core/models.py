@@ -194,6 +194,7 @@ class MarketTicker(models.Model):
     name = models.CharField(max_length=100, unique=True)
     price = models.DecimalField(max_digits=20, decimal_places=2)
     change = models.DecimalField(max_digits=20, decimal_places=2, default=0)
+    percent_change = models.DecimalField(max_digits=20, decimal_places=2, default=0)
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
@@ -678,3 +679,28 @@ class MFSIP(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - {self.fund.name} SIP (₹{self.amount})"
+
+class PortfolioValueHistory(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='portfolio_history')
+    date = models.DateField(default=timezone.now)
+    invested_value = models.DecimalField(max_digits=20, decimal_places=2)
+    current_value = models.DecimalField(max_digits=20, decimal_places=2)
+    
+    # Separated Valuations
+    stock_invested = models.DecimalField(max_digits=20, decimal_places=2, default=0)
+    stock_current = models.DecimalField(max_digits=20, decimal_places=2, default=0)
+    mf_invested = models.DecimalField(max_digits=20, decimal_places=2, default=0)
+    mf_current = models.DecimalField(max_digits=20, decimal_places=2, default=0)
+    coin_invested = models.DecimalField(max_digits=20, decimal_places=2, default=0)
+    coin_current = models.DecimalField(max_digits=20, decimal_places=2, default=0)
+    nps_invested = models.DecimalField(max_digits=20, decimal_places=2, default=0)
+    nps_current = models.DecimalField(max_digits=20, decimal_places=2, default=0)
+    net_worth = models.DecimalField(max_digits=20, decimal_places=2, default=0)
+    nifty_price = models.DecimalField(max_digits=20, decimal_places=2, null=True, blank=True)
+
+    class Meta:
+        unique_together = ('user', 'date')
+        ordering = ['date']
+
+    def __str__(self):
+        return f"{self.user.username} - {self.date} - {self.current_value}"

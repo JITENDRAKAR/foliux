@@ -101,6 +101,8 @@ urlpatterns = [
     path('api/stock-suggestions/', views.stock_suggestions_api, name='stock_suggestions_api'),
     path('api/stock-history/', views.stock_history_api, name='stock_history_api'),
     path('api/coin-price/', views.coin_price_api, name='coin_price_api'),
+    path('api/coin-suggestions/', views.coin_suggestions_api, name='coin_suggestions_api'),
+    path('api/backtest-strategy/', views.backtest_strategy_api, name='backtest_strategy_api'),
     
     # Mobile App API
     path('api/login/', api_views.api_login, name='api_login'),

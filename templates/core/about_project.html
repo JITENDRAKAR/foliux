@@ -299,6 +299,63 @@
         .report-content { padding: 0; }
         .report-container { box-shadow: none; border-radius: 0; }
     }
+
+    /* Mobile Responsiveness Updates */
+    @media (max-width: 991px) {
+        .report-content {
+            padding: 2.5rem 1.25rem;
+        }
+        .report-section {
+            margin-bottom: 4rem;
+        }
+        .report-section h2 {
+            font-size: 1.75rem;
+            margin-bottom: 1.5rem;
+        }
+        .report-section h3 {
+            font-size: 1.3rem;
+            margin-top: 2rem;
+        }
+        .report-header {
+            padding: 2rem 0;
+        }
+        .display-3 {
+            font-size: 2.5rem !important;
+        }
+        .report-container {
+            border-radius: 0;
+            box-shadow: none;
+        }
+        .test-case-table {
+            display: block;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        .dfd-container {
+            width: 100%;
+            overflow-x: auto;
+            align-items: flex-start;
+            padding: 10px;
+        }
+        .dfd-row {
+            min-width: 600px; /* Force minimum width for diagram readability */
+        }
+        .mermaid {
+            width: 100%;
+            overflow-x: auto;
+        }
+        .diagram-box {
+            padding: 1rem;
+            margin: 1.5rem 0;
+        }
+        .page-number {
+            display: none; /* Hide page numbers on small screens to save space */
+        }
+        .code-block {
+            padding: 1rem;
+            font-size: 0.75rem;
+        }
+    }
 </style>
 {% endblock %}
 
@@ -332,9 +389,21 @@
                 <li><a href="#uicode">15. UI Documentation & Code</a></li>
                 <li><a href="#backendmodels">16. Backend Data Models</a></li>
                 <li><a href="#backendviews">17. Backend Views & Logic</a></li>
-                <li><a href="#advanced">18. Advanced Features & Automated Workflows</a></li>
+                <li><a href="#advanced">18. Advanced Features & Automated Workflows</a>
+                    <ul class="ms-3 list-unstyled" style="font-size: 0.75rem;">
+                        <li><a href="#backtester">18.5 Strategic Simulation Lab</a></li>
+                        <li><a href="#frameworks">18.6 Multi-Framework Strategy Index</a></li>
+                        <li><a href="#ui-premium">18.7 Institutional-Grade UI Overhaul</a></li>
+                    </ul>
+                </li>
                 <li><a href="#sqlstats">19. Database SQL Structure & Queries</a></li>
-                <li><a href="#assetmodules">20. Extended Asset Class Modules</a></li>
+                <li><a href="#assetmodules">20. Extended Asset Class Modules</a>
+                    <ul class="ms-3 list-unstyled" style="font-size: 0.75rem;">
+                        <li><a href="#ipo-module">20.7 IPO Activity Tracker</a></li>
+                    </ul>
+                </li>
+                <li><a href="#journey">21. How it Works: The User Journey</a></li>
+                <li><a href="#benefits">22. Key Strategic Benefits</a></li>
             </ul>
         </nav>
 
@@ -345,7 +414,7 @@
                 <p class="lead">Net Profit Investment Tracking System</p>
                 <div class="mt-4">
                     <span class="badge bg-primary px-3 py-2">About Project Documentation</span>
-                    <span class="ms-2 text-muted">Version 1.5.0 | 2026</span>
+                    <span class="ms-2 text-muted">Version 1.7.0 | April 2026</span>
                 </div>
             </div>
 
@@ -911,6 +980,8 @@ CREATE INDEX "core_transaction_user_id" ON "core_transaction" ("user_id");
                     <li><strong>Sync Controller</strong>: A specialized service that handles multi-source data ingestion (Google Sheets via URL, CSV Uploads) with data cleaning and validation.</li>
                     <li><strong>Advisory Engine</strong>: Generates Buy/Sell/Reduce signals based on user-defined strategy rules and real-time LTP data.</li>
                     <li><strong>Dashboard UI</strong>: A dynamic reporting layer using Chart.js for visualization and modern CSS for responsiveness.</li>
+                    <li><strong>Asset Class Extension</strong>: Specialized modules for Mutual Funds (SIP automation), Cryptocurrencies (24/7 price sync), and NPS (Retirement tracking).</li>
+                    <li><strong>Wealth Analytics</strong>: Captures daily snapshots of user wealth across all asset categories to generate long-term performance growth charts.</li>
                 </ul>
 
                 <h3>10.2 Procedural Logic (FIFO Engine)</h3>
@@ -1398,6 +1469,36 @@ def upload_portfolio(request):
                 <ul>
                     <li><strong>PowerShell Backup (Scheduled)</strong>: A comprehensive backup script (<code>create_backup.ps1</code>) creates timestamped ZIP archives of the entire project, including the SQLite database and environment configurations, while excluding large log files and temporary caches.</li>
                     <li><strong>GitHub Version Synchronization</strong>: Automated workflows to stage, commit, and push the latest verified version to GitHub, ensuring that the production codebase is always synced with the latest enhancements.</li>
+                </ul>
+
+                <h3>18.4 Multi-Asset Portfolio History & Net Worth Analytics</h3>
+                <p>A significant leap in v1.6.0 was the <strong>Portfolio Value History</strong> engine. It captures daily snapshots of the user's entire financial footprint across Stocks, Mutual Funds, NPS, and Crypto. This data is visualized through interactive "Invested vs. Current" growth charts, allowing investors to see the absolute trajectory of their wealth and the impact of compounding over time. The <strong>Net Worth Indicator</strong> dynamically subtracts all outstanding Loan principals from the total asset valuation to give a true "Financial Freedom" metric.</p>
+
+                <h3 id="backtester">18.5 Strategic Simulation Lab (Backtester)</h3>
+                <p>The **Simulation Lab** introduced in v1.7.0 is a professional-grade backtesting engine that allows users to stress-test their investment discipline against historical market data. It uses a refined algorithm that simulates fractional buying and averaging based on the user's defined "Buy Gap" (e.g., 5% drop from previous buy) and "Max Allocation."</p>
+                <ul>
+                    <li><strong>Idle Cash Compounding</strong>: To ensure return accuracy, the simulator applies a **5% annual interest rate** on any cash reserves not yet deployed into stocks during the test period.</li>
+                    <li><strong>Reinvestment & Expense Logic</strong>: Incorporates reality-checks by deducting a **7% fee/reinvestment amount** on every profit-booking signal, simulating the cost of churn and diversification into new opportunities.</li>
+                    <li><strong>Interactive Visualizer</strong>: Uses a dual-line Chart.js projection to compare **Compounded Wealth** against **Invested Capital**, providing a clear picture of alpha generation.</li>
+                </ul>
+
+                <h3 id="frameworks">18.6 Multi-Framework Strategy Index</h3>
+                <p>To navigate the complexity of diverse market cycles, NPITS v1.7.0 adds a centralized **Strategy Framework Bar**. This single-line navigation index categorizes investments into institutional buckets:</p>
+                <ul>
+                    <li><strong>PASSIVE ALPHA</strong>: Index-beating rules for stable blue-chip holdings.</li>
+                    <li><strong>QUANTITATIVE</strong>: Math-driven signals optimized for rapid volatility capture.</li>
+                    <li><strong>AGGRESSIVE SCALING</strong>: High-growth scripts utilizing pyramiding buy rules.</li>
+                    <li><strong>REINVESTX</strong>: Specialized frameworks for profit-reinvestment compounding.</li>
+                    <li><strong>UNTRACKED</strong>: Custom scripts and experimental holdings with baseline monitoring.</li>
+                </ul>
+
+                <h3 id="ui-premium">18.7 Institutional-Grade UI Overhaul</h3>
+                <p>The visual identity of NPITS has been elevated to an **Institutional-Grade Slate/Navy aesthetic**. This includes:</p>
+                <ul>
+                    <li><strong>Glassmorphic Dashboards</strong>: High-transparency metric tiles with backdrop-blur for a premium, clean feel.</li>
+                    <li><strong>Absolute Overlays</strong>: Search suggestions and UI components now utilize z-index layering to prevent layout shifting during interaction.</li>
+                    <li><strong>Dynamic Dark Modes</strong>: The Simulation Lab and high-impact analytics sections use a darker, focus-oriented color palette (`#0F172A`) to reduce visual fatigue during deep data analysis.</li>
+                </ul>
             </section>
 
             <!-- SECTION 19: DATABASE SQL STRUCTURE & QUERIES -->
@@ -1481,6 +1582,43 @@ CREATE TABLE "core_loanpayment" (
 
                 <h3>20.4 Unified Net-Worth Dashboard</h3>
                 <p>All assets and liabilities are aggregated into a single **Portfolio Dashboard**, which presents a real-time 'True Net Worth' by subtracting total liabilities (Loans) from total assets (Equity, MF, NPS, Crypto, Fixed, Other). This provides the ultimate financial health metric for the user.</p>
+
+                <h3>20.5 Cryptocurrency Dashboard & Global Price Sync</h3>
+                <p>The Cryptocurrency module provides real-time tracking of digital assets. Unlike traditional markets, crypto operates 24/7. NPITS uses a specialized <strong>global price synchronization engine</strong> that pulls latest BTC, ETH, and other coin valuations from high-reliability financial data sources. It implements high-precision <code>Decimal(20, 8)</code> arithmetic to handle fractional units common in crypto transactions and calculates both realized and unrealized P&L using the standard FIFO methodology.</p>
+
+                <h3>20.6 National Pension System (NPS) Tier-I/II Tracking</h3>
+                <p>NPITS allows users to track their retirement corpus through the NPS module. It supports unit-based accounting for various Pension Fund Managers (PFMs). The system calculates the current valuation based on the latest available NAVs and provides a clear breakdown of Tier-I and Tier-II contributions, maturity projections, and historical growth.</p>
+
+                <h3 id="ipo-module">20.7 IPO Activity Tracker</h3>
+                <p>The **IPO Module** (formerly Donation) is being re-engineered to track Initial Public Offerings. While currently acting as a strategic placeholder in the navigation bar, its future roadmap includes automated subscription alerts, listing-gain analytics, and post-listing performance tracking for new entries in the Indian market.</p>
+            </section>
+
+            <!-- SECTION 21: HOW IT WORKS: THE USER JOURNEY -->
+            <section id="journey" class="report-section">
+                <h2>21. How it Works: The User Journey <span class="page-number">P.115</span></h2>
+                <p>Understanding the flow of data within NPITS helps users maximize the system's rule-based advisory potential.</p>
+                <ol>
+                    <li><strong>Registration & Profile</strong>: User registers through OTP verification and optionally links social accounts. They define their "Investor Type" (Conservative to Aggressive) which sets the baseline for the Strategy Engine.</li>
+                    <li><strong>Data Ingestion</strong>: Users can manually add transactions or use the <strong>Bulk Upload</strong> feature for Stocks and Mutual Funds. The <strong>Auto-Sync</strong> feature allows connecting a Google Sheet for seamless, zero-touch portfolio updates.</li>
+                    <li><strong>FIFO Processing</strong>: As transactions are added, the backend sorts them chronologically. Sell orders are automatically mapped to the oldest "BUY" lots, calculating the exact realized profit for every share sold.</li>
+                    <li><strong>Real-Time Sync</strong>: At regular intervals, the system's sync job checks for LTP/NAV updates for all instruments in the user's portfolio.</li>
+                    <li><strong>Signal Generation</strong>: The <strong>Rule-Engine</strong> compares the LTP with the User's Average Cost and Strategy targets. If a stock hits a gain/loss threshold, a Signal is generated (e.g., "Buy at 30% gap", "Sell at 22% target").</li>
+                    <li><strong>Actionable Insights</strong>: The user views their Dashboard, sees the Signal Badge count, and uses the "Buy/Sell" insights to rebalance their portfolio per their chosen strategy.</li>
+                </ol>
+            </section>
+
+            <!-- SECTION 22: KEY STRATEGIC BENEFITS -->
+            <section id="benefits" class="report-section">
+                <h2>22. Key Strategic Benefits <span class="page-number">P.120</span></h2>
+                <p>NPITS is engineered to provide professional-grade portfolio management tools to retail investors.</p>
+                <ul>
+                    <li><strong>Lot-Level Precision</strong>: Avoid the "Aggregation Paradox" by seeing exactly which purchase lot is profitable, optimizing tax liabilities and exit points.</li>
+                    <li><strong>Rule-Based Discipline</strong>: Remove emotional bias from trading by following mathematically generated Buy/Sell signals tailored to your specific investment profile.</li>
+                    <li><strong>Automated Wealth Tracking</strong>: Streamline your finances by automating SIP recordings, interest compounding for FD/RDs, and EMI principal/interest breakdowns.</li>
+                    <li><strong>Unified Portfolio View</strong>: Experience total transparency by seeing Stocks, MFs, Crypto, NPS, and Loans in one single dashboard with a real-time Net Worth calculation.</li>
+                    <li><strong>Historical Performance Analytics</strong>: Monitor the growth of your wealth over time with daily snapshots and historical P&L locking for tax and audit compliance.</li>
+                    <li><strong>Strategy Silos</strong>: Diversify your risk by segregating investments into strategies (Quant, Flexi, Pyramid), each with dedicated health metrics and performance indicators.</li>
+                </ul>
             </section>
 
             <!-- ERM Enlarge Modal -->

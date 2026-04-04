@@ -86,23 +86,32 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        // Debounce or just fetch if it looks like a symbol
         clearTimeout(window.coinTimeout);
         window.coinTimeout = setTimeout(() => {
-            fetch(`/api/coin-price/?symbol=${encodeURIComponent(query)}`)
+            fetch(`/api/coin-suggestions/?q=${encodeURIComponent(query)}`)
                 .then(response => response.json())
                 .then(data => {
-                    if (data.status === 'success') {
-                        const priceInput = document.getElementById('avg_price');
-                        if (priceInput && (!priceInput.value || priceInput.value == "0")) {
-                            priceInput.value = data.price;
-                            // Trigger calculation
-                            priceInput.dispatchEvent(new Event('input', { bubbles: true }));
-                        }
-                        
-                        // Show a small success indicator or name
-                        resultsDiv.innerHTML = `<div class="autocomplete-item"><span class="autocomplete-name">${data.name}</span><span class="autocomplete-symbol">Live Price: ₹${data.price}</span></div>`;
+                    if (data.status === 'success' && data.results.length > 0) {
+                        resultsDiv.innerHTML = data.results.map(item => `
+                            <div class="autocomplete-item coin-suggestion" data-symbol="${item.symbol}" data-price="${item.price}" data-name="${item.name}">
+                                <span class="autocomplete-name">${item.name}</span>
+                                <span class="autocomplete-symbol">${item.symbol} | Live Price: ₹${item.price}</span>
+                            </div>
+                        `).join('');
                         resultsDiv.classList.remove('d-none');
+                        
+                        // Add click listeners
+                        document.querySelectorAll('.coin-suggestion').forEach(el => {
+                            el.addEventListener('click', function() {
+                                symbolInput.value = this.dataset.symbol;
+                                const priceInput = document.getElementById('avg_price');
+                                if (priceInput) {
+                                    priceInput.value = this.dataset.price;
+                                    priceInput.dispatchEvent(new Event('input', { bubbles: true }));
+                                }
+                                resultsDiv.classList.add('d-none');
+                            });
+                        });
                     } else {
                         resultsDiv.classList.add('d-none');
                     }
@@ -111,7 +120,14 @@ document.addEventListener('DOMContentLoaded', function() {
                     console.error('Fetch error:', err);
                     resultsDiv.classList.add('d-none');
                 });
-        }, 500);
+        }, 300);
+    });
+
+    // Close results when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!symbolInput.contains(e.target) && !resultsDiv.contains(e.target)) {
+            resultsDiv.classList.add('d-none');
+        }
     });
 
     // Auto-calculation logic
@@ -162,7 +178,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     <input type="text" name="symbol" id="symbol" class="form-control" placeholder="BTC" required value="{{ prefill_symbol|default:'' }}" style="text-transform: uppercase;">
                     <div id="coin-autocomplete-results" class="autocomplete-results d-none"></div>
                     <div class="help-text">
-                        Tip: Just enter the coin symbol like <b>BTC</b>. We'll fetch <b>BTC-INR</b> from yfinance.
+                        Tip: Just enter the coin symbol like <b>BTC</b>. We will fetch the price automatically.
                     </div>
                 </div>
                 

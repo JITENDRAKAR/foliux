@@ -66,6 +66,168 @@
                     </div>
                 </div>
 
+                <!-- Portfolio Value History Graph -->
+                <div class="mb-5 animate__animated animate__fadeIn">
+                    <h6 class="mb-3 fw-bold"><i class="fas fa-chart-line me-2 text-primary"></i>Portfolio Performance History</h6>
+                    <div class="card p-3 border shadow-sm rounded-4 bg-white mb-3" style="background: linear-gradient(to bottom right, #ffffff, #f8fafc);">
+                        <div style="height: 350px; width: 100%;">
+                            <canvas id="portfolioHistoryChart"></canvas>
+                        </div>
+                    </div>
+                    
+                    <div class="table-responsive">
+                        <table class="table table-sm table-bordered align-middle bg-white" id="historyTable" style="font-size: 0.85rem;">
+                            <thead class="bg-light">
+                                <tr>
+                                    <th class="text-uppercase small fw-bold text-muted">Date</th>
+                                    <th class="text-uppercase small fw-bold text-muted text-end">Initial Capital (₹)</th>
+                                    <th class="text-uppercase small fw-bold text-muted text-end">Current Value (₹)</th>
+                                    <th class="text-uppercase small fw-bold text-muted text-end">Profit/Loss (₹)</th>
+                                    <th class="text-uppercase small fw-bold text-muted text-end">Growth %</th>
+                                    <th class="text-uppercase small fw-bold text-muted text-end">NIFTY Price</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <script>
+                                    // Populate table via JS from the same data source to ensure consistency
+                                    window.addEventListener('DOMContentLoaded', () => {
+                                        const rawData = '{{ history_data_json|safe }}';
+                                        if (rawData) {
+                                            const historyData = JSON.parse(rawData);
+                                            const tbody = document.querySelector('#historyTable tbody');
+                                            if (historyData.dates && historyData.dates.length > 0) {
+                                                // Sort dates descending
+                                                const items = historyData.dates.map((date, i) => ({
+                                                    date: date,
+                                                    invested: historyData.invested[i],
+                                                    current: historyData.current[i],
+                                                    net_worth: historyData.net_worth[i],
+                                                    nifty: historyData.nifty ? historyData.nifty[i] : null
+                                                })).reverse();
+                                                
+                                                items.forEach(item => {
+                                                    const pnl = (item.current || item.net_worth) - item.invested;
+                                                    const pct = item.invested > 0 ? (pnl / item.invested * 100) : 0;
+                                                    const tr = document.createElement('tr');
+                                                    tr.innerHTML = `
+                                                        <td>${item.date}</td>
+                                                        <td class="text-end">₹${item.invested.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                                                        <td class="text-end fw-bold text-primary">₹${item.net_worth.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                                                        <td class="text-end fw-bold ${pnl >= 0 ? 'text-success' : 'text-danger'}">₹${pnl.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                                                        <td class="text-end fw-bold ${pnl >= 0 ? 'text-success' : 'text-danger'}">${pct.toFixed(2)}%</td>
+                                                        <td class="text-end text-muted small">${item.nifty ? '₹' + item.nifty.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '-'}</td>
+                                                    `;
+                                                    tbody.appendChild(tr);
+                                                });
+
+                                                // Setup the Chart
+                                                try {
+                                                    const ctx = document.getElementById('portfolioHistoryChart').getContext('2d');
+                                                    
+                                                    // Scaling Nifty for comparison: Match first net worth point
+                                                    let scaledNifty = [];
+                                                    if (historyData.nifty && historyData.nifty.length > 0 && historyData.net_worth.length > 0) {
+                                                        const firstNW = historyData.net_worth[0];
+                                                        const firstNifty = historyData.nifty[0];
+                                                        if (firstNifty && firstNW) {
+                                                            const ratio = firstNW / firstNifty;
+                                                            scaledNifty = historyData.nifty.map(n => n ? n * ratio : null);
+                                                        }
+                                                    }
+
+                                                    // Gradients
+                                                    const netWorthGradient = ctx.createLinearGradient(0, 0, 0, 350);
+                                                    netWorthGradient.addColorStop(0, 'rgba(34, 197, 94, 0.2)');
+                                                    netWorthGradient.addColorStop(1, 'rgba(34, 197, 94, 0)');
+                                                    
+                                                    const capitalGradient = ctx.createLinearGradient(0, 0, 0, 350);
+                                                    capitalGradient.addColorStop(0, 'rgba(37, 99, 235, 0.15)');
+                                                    capitalGradient.addColorStop(1, 'rgba(37, 99, 235, 0)');
+
+                                                    new Chart(ctx, {
+                                                        type: 'line',
+                                                        data: {
+                                                            labels: historyData.dates,
+                                                            datasets: [
+                                                                {
+                                                                    label: 'Current Value',
+                                                                    data: historyData.net_worth,
+                                                                    borderColor: '#22c55e',
+                                                                    backgroundColor: netWorthGradient,
+                                                                    fill: true,
+                                                                    tension: 0.3,
+                                                                    pointRadius: 2,
+                                                                    borderWidth: 3
+                                                                },
+                                                                {
+                                                                    label: 'Initial Capital',
+                                                                    data: historyData.invested,
+                                                                    borderColor: '#2563eb',
+                                                                    backgroundColor: capitalGradient,
+                                                                    fill: true,
+                                                                    tension: 0.3,
+                                                                    pointRadius: 2,
+                                                                    borderWidth: 2
+                                                                },
+                                                                {
+                                                                    label: 'NIFTY (Benchmark)',
+                                                                    data: scaledNifty,
+                                                                    borderColor: '#eab308',
+                                                                    borderDash: [5, 5],
+                                                                    pointRadius: 0,
+                                                                    fill: false,
+                                                                    tension: 0.3,
+                                                                    borderWidth: 2
+                                                                }
+                                                            ]
+                                                        },
+                                                        options: {
+                                                            responsive: true,
+                                                            maintainAspectRatio: false,
+                                                            interaction: { mode: 'index', intersect: false },
+                                                            plugins: {
+                                                                legend: { position: 'top', labels: { usePointStyle: true, padding: 20 } },
+                                                                tooltip: {
+                                                                    padding: 12,
+                                                                    backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                                                                    callbacks: {
+                                                                        label: (ctx) => {
+                                                                            if (ctx.dataset.label.includes('NIFTY')) {
+                                                                                const originalPrice = historyData.nifty[ctx.dataIndex];
+                                                                                return `NIFTY Price: ₹${originalPrice ? originalPrice.toLocaleString('en-IN') : '-'}`;
+                                                                            }
+                                                                            return `${ctx.dataset.label}: ₹${ctx.raw.toLocaleString('en-IN')}`;
+                                                                        }
+                                                                    }
+                                                                }
+                                                            },
+                                                            scales: {
+                                                                y: {
+                                                                    beginAtZero: false,
+                                                                    grid: { color: 'rgba(0,0,0,0.05)' },
+                                                                    ticks: { 
+                                                                        callback: (val) => '₹' + (val/1000).toFixed(0) + 'K', 
+                                                                        font: { weight: '500' } 
+                                                                    }
+                                                                },
+                                                                x: { grid: { display: false } }
+                                                            }
+                                                        }
+                                                    });
+                                                } catch (e) {
+                                                    console.error("Error drawing history chart:", e);
+                                                }
+                                            } else {
+                                                tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-muted">No history data available. Snapshot is recorded automatically daily and during sync.</td></tr>';
+                                            }
+                                        }
+                                    });
+                                </script>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
                 <div class="mb-4">
                     <h5 class="mb-0 fw-bold"><i class="fas fa-history me-2 text-primary"></i>Transaction History</h5>
                     <p class="text-muted small mb-0">Complete record of your buy and sell activities</p>
@@ -489,19 +651,19 @@ function deleteFYRow(fy) {
     });
 }
 
-window.addEventListener('DOMContentLoaded', () => {
-    let fySelect = document.getElementById('fyCountSelect');
-    let maxOffset = 0;
-    if (currentFYStr) {
-        for (let yearStr in pastData) {
-            let diff = parseInt(currentFYStr.split('-')[0]) - parseInt(yearStr.split('-')[0]);
-            if (diff > maxOffset) maxOffset = diff;
+    window.addEventListener('DOMContentLoaded', () => {
+        let fySelect = document.getElementById('fyCountSelect');
+        let maxOffset = 0;
+        if (currentFYStr) {
+            for (let yearStr in pastData) {
+                let diff = parseInt(currentFYStr.split('-')[0]) - parseInt(yearStr.split('-')[0]);
+                if (diff > maxOffset) maxOffset = diff;
+            }
+            if (maxOffset > 0 && maxOffset <= 10) {
+                fySelect.value = maxOffset;
+            }
         }
-        if (maxOffset > 0 && maxOffset <= 10) {
-            fySelect.value = maxOffset;
-        }
-    }
-    renderFYTable();
-});
+        renderFYTable();
+    });
 </script>
 {% endblock %}

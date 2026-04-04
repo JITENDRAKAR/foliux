@@ -555,6 +555,145 @@
         </div>
     </div>
 
+    <!-- Portfolio Performance History -->
+    <div class="mt-5 animate__animated animate__fadeInUp">
+        <h4 class="fw-bold mb-4" style="color: #334155;">
+            <i class="fas fa-chart-line text-primary me-2"></i> Portfolio Performance History
+        </h4>
+        
+        <div class="card p-3 border shadow-sm rounded-4 bg-white mb-4" style="background: linear-gradient(to bottom right, #ffffff, #f8fafc);">
+            <div style="height: 400px; width: 100%;">
+                <canvas id="portfolioHistoryChart"></canvas>
+            </div>
+        </div>
+
+        <div class="table-responsive bg-white rounded-4 shadow-sm border overflow-hidden">
+            <table class="table table-hover align-middle mb-0" id="historyTable">
+                <thead class="bg-light">
+                    <tr>
+                        <th class="ps-4 py-3 border-0 text-muted" style="font-size: 0.85rem; font-weight: 700;">DATE</th>
+                        <th class="py-3 border-0 text-muted text-end" style="font-size: 0.85rem; font-weight: 700;">INITIAL CAPITAL</th>
+                        <th class="py-3 border-0 text-muted text-end" style="font-size: 0.85rem; font-weight: 700;">NET WORTH</th>
+                        <th class="py-3 border-0 text-muted text-end" style="font-size: 0.85rem; font-weight: 700;">GROWTH (₹)</th>
+                        <th class="py-3 border-0 text-muted text-end pe-4" style="font-size: 0.85rem; font-weight: 700;">GROWTH %</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <script>
+                        // Populate history graph and table via JS
+                        document.addEventListener('DOMContentLoaded', () => {
+                            const rawData = '{{ history_data_json|safe }}';
+                            if (rawData) {
+                                const historyData = JSON.parse(rawData);
+                                
+                                // Setup the chart
+                                const ctx = document.getElementById('portfolioHistoryChart').getContext('2d');
+                                
+                                // Gradients
+                                const netWorthGradient = ctx.createLinearGradient(0, 0, 0, 400);
+                                netWorthGradient.addColorStop(0, 'rgba(34, 197, 94, 0.2)');
+                                netWorthGradient.addColorStop(1, 'rgba(34, 197, 94, 0)');
+                                
+                                const capitalGradient = ctx.createLinearGradient(0, 0, 0, 400);
+                                capitalGradient.addColorStop(0, 'rgba(59, 130, 246, 0.1)');
+                                capitalGradient.addColorStop(1, 'rgba(59, 130, 246, 0)');
+
+                                new Chart(ctx, {
+                                    type: 'line',
+                                    data: {
+                                        labels: historyData.dates,
+                                        datasets: [
+                                            {
+                                                label: 'Your Net Worth',
+                                                data: historyData.net_worth,
+                                                borderColor: '#16a34a',
+                                                backgroundColor: netWorthGradient,
+                                                fill: true,
+                                                tension: 0.4,
+                                                pointRadius: 4,
+                                                pointHoverRadius: 6,
+                                                borderWidth: 3
+                                            },
+                                            {
+                                                label: 'Initial Capital',
+                                                data: historyData.invested,
+                                                borderColor: '#2563eb',
+                                                backgroundColor: capitalGradient,
+                                                fill: true,
+                                                tension: 0.4,
+                                                pointRadius: 4,
+                                                pointHoverRadius: 6,
+                                                borderWidth: 2,
+                                                borderDash: [5, 5]
+                                            }
+                                        ]
+                                    },
+                                    options: {
+                                        responsive: true,
+                                        maintainAspectRatio: false,
+                                        interaction: { mode: 'index', intersect: false },
+                                        plugins: {
+                                            legend: { position: 'top', labels: { usePointStyle: true, padding: 20, font: { weight: '600' } } },
+                                            tooltip: {
+                                                padding: 12,
+                                                backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                                                callbacks: {
+                                                    label: (ctx) => {
+                                                        return `${ctx.dataset.label}: ₹${ctx.raw.toLocaleString('en-IN', {minimumFractionDigits: 2})}`;
+                                                    }
+                                                }
+                                            }
+                                        },
+                                        scales: {
+                                            y: {
+                                                beginAtZero: false,
+                                                grid: { color: 'rgba(0,0,0,0.05)' },
+                                                ticks: { callback: (val) => '₹' + (val/100000).toFixed(1) + 'L', font: { weight: '500' } }
+                                            },
+                                            x: { grid: { display: false } }
+                                        }
+                                    }
+                                });
+
+                                // Populate the table (descending)
+                                const tbody = document.querySelector('#historyTable tbody');
+                                if (historyData.dates && historyData.dates.length > 0) {
+                                    const items = historyData.dates.map((date, i) => ({
+                                        date: date,
+                                        invested: historyData.invested[i],
+                                        net_worth: historyData.net_worth[i]
+                                    })).reverse();
+                                    
+                                    items.forEach(item => {
+                                        const growth = item.net_worth - item.invested;
+                                        const pct = item.invested > 0 ? (growth / item.invested * 100) : 0;
+                                        const tr = document.createElement('tr');
+                                        tr.innerHTML = `
+                                            <td class="ps-4 fw-medium">${item.date}</td>
+                                            <td class="text-end fw-semibold">₹${item.invested.toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
+                                            <td class="text-end fw-bold text-primary">₹${item.net_worth.toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
+                                            <td class="text-end fw-bold ${growth >= 0 ? 'text-success' : 'text-danger'}">
+                                                ₹${growth.toLocaleString('en-IN', {minimumFractionDigits: 2})}
+                                            </td>
+                                            <td class="text-end pe-4">
+                                                <span class="badge ${growth >= 0 ? 'bg-success' : 'bg-danger'} rounded-pill">
+                                                    ${growth >= 0 ? '+' : ''}${pct.toFixed(2)}%
+                                                </span>
+                                            </td>
+                                        `;
+                                        tbody.appendChild(tr);
+                                    });
+                                } else {
+                                    tbody.innerHTML = '<tr><td colspan="5" class="text-center py-5 text-muted">Awaiting daily snapshots to generate history.</td></tr>';
+                                }
+                            }
+                        });
+                    </script>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
 </div>
 {% endblock %}
 

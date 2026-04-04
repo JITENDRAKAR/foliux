@@ -4,38 +4,55 @@
 <style>
     /* ── Professional Typography & Global ── */
     :root {
-        --glass-bg: rgba(255, 255, 255, 0.75);
+        --glass-bg: rgba(255, 255, 255, 0.85);
         --glass-border: rgba(255, 255, 255, 0.4);
-        --card-shadow: 0 10px 35px rgba(0, 0, 0, 0.04);
-        --primary-gradient: linear-gradient(135deg, var(--primary-color), #0056b3);
+        --card-shadow: 0 20px 40px rgba(0, 0, 0, 0.06);
+        --primary-gradient: linear-gradient(135deg, #003D7C 0%, #0056b3 100%);
+        --accent-color: #00D1FF;
+    }
+
+    .hero-section {
+        padding: 80px 0;
+        background: radial-gradient(circle at top right, rgba(0, 61, 124, 0.05), transparent),
+                    radial-gradient(circle at bottom left, rgba(0, 209, 255, 0.05), transparent);
+        border-radius: 40px;
+        margin-bottom: 60px;
+    }
+
+    .section-title {
+        font-weight: 850;
+        font-size: 2.5rem;
+        letter-spacing: -0.05em;
+        color: #0F172A;
+        margin-bottom: 20px;
     }
 
     .strategy-card {
         background: #ffffff;
         border: 1px solid rgba(0, 0, 0, 0.05);
-        border-radius: 24px;
-        padding: 28px;
+        border-radius: 28px;
+        padding: 32px;
         height: 100%;
         display: flex;
         flex-direction: column;
-        transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+        transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+        box-shadow: var(--card-shadow);
         position: relative;
         overflow: hidden;
     }
 
     .strategy-card:hover {
-        transform: translateY(-10px);
-        box-shadow: 0 25px 50px rgba(0, 0, 0, 0.08);
-        border-color: rgba(0, 0, 0, 0.06);
+        transform: translateY(-12px);
+        box-shadow: 0 40px 80px rgba(0, 0, 0, 0.12);
+        border-color: var(--primary-color);
     }
 
     /* Premium Left-Accent Borders */
-    .strategy-card.border-flexi { border-left: 6px solid #0F172A; }
-    .strategy-card.border-quant { border-left: 6px solid #10B981; }
-    .strategy-card.border-pyramid { border-left: 6px solid #EF4444; }
-    .strategy-card.border-growth { border-left: 6px solid #F59E0B; }
-    .strategy-card.border-others { border-left: 6px solid #94A3B8; }
+    .strategy-card.border-flexi { border-top: 8px solid #0F172A; }
+    .strategy-card.border-quant { border-top: 8px solid #10B981; }
+    .strategy-card.border-pyramid { border-top: 8px solid #EF4444; }
+    .strategy-card.border-growth { border-top: 8px solid #F59E0B; }
+    .strategy-card.border-others { border-top: 8px solid #94A3B8; }
 
     .strategy-card-body {
         flex-grow: 1;
@@ -52,269 +69,439 @@
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        gap: 10px;
-        padding: 12px 28px;
-        border-radius: 50px;
+        gap: 12px;
+        padding: 14px 32px;
+        border-radius: 16px;
         background: #0f172a;
         color: #fff !important;
         font-weight: 700;
-        font-size: 0.85rem;
+        font-size: 0.9rem;
         text-decoration: none !important;
-        transition: all 0.3s ease;
-        box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15);
-        letter-spacing: 0.02em;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: 0 10px 25px rgba(15, 23, 42, 0.2);
+        letter-spacing: 0.01em;
         width: 100%;
     }
 
     .btn-portfolio-link:hover {
-        transform: scale(1.03);
-        box-shadow: 0 10px 25px rgba(0, 61, 124, 0.25);
-        color: #fff !important;
+        transform: scale(1.02);
+        box-shadow: 0 15px 35px rgba(0, 61, 124, 0.3);
+        filter: brightness(1.1);
     }
 
     .strategy-header {
-        margin-bottom: 1.5rem;
+        margin-bottom: 2rem;
     }
 
     .strategy-title {
         color: #1e293b;
-        font-weight: 800;
-        font-size: 1.25rem;
-        margin-top: 8px;
-        letter-spacing: -0.02em;
+        font-weight: 850;
+        font-size: 1.5rem;
+        margin-top: 12px;
+        letter-spacing: -0.03em;
     }
 
     .section-label {
         font-weight: 800;
         color: #94a3b8;
-        font-size: 0.65rem;
+        font-size: 0.7rem;
         text-transform: uppercase;
-        letter-spacing: 0.1em;
-        margin-top: 1.25rem;
-        margin-bottom: 0.75rem;
+        letter-spacing: 0.12em;
+        margin-top: 1.5rem;
+        margin-bottom: 1rem;
         display: block;
     }
 
     .rule-item {
-        font-size: 0.9rem;
+        font-size: 0.95rem;
         color: #334155;
-        margin-bottom: 0.6rem;
+        margin-bottom: 0.75rem;
         display: flex;
-        align-items: center;
-        gap: 12px;
-        line-height: 1.4;
+        align-items: flex-start;
+        gap: 14px;
+        line-height: 1.5;
     }
 
     .rule-item i {
         color: var(--primary-color);
-        width: 16px;
-        text-align: center;
-        font-size: 0.85rem;
-        opacity: 0.8;
+        margin-top: 4px;
+        font-size: 0.9rem;
+        opacity: 0.9;
     }
 
     .badge-strategy {
-        background: rgba(0, 61, 124, 0.06);
+        background: rgba(0, 61, 124, 0.08);
         color: var(--primary-color);
-        padding: 5px 14px;
-        border-radius: 6px;
-        font-size: 0.7rem;
+        padding: 6px 16px;
+        border-radius: 8px;
+        font-size: 0.75rem;
         font-weight: 800;
-        letter-spacing: 0.03em;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
     }
 
     /* ── Recommended Stocks Strip ── */
     .rec-stocks-section {
-        margin-top: 1.5rem;
-        padding: 14px;
-        background: #f8fafc;
-        border-radius: 18px;
-        border: 1px solid rgba(0, 0, 0, 0.02);
+        margin-top: 2rem;
+        padding: 20px;
+        background: #fbfcfe;
+        border-radius: 20px;
+        border: 1px solid #edf2f7;
     }
 
     .rec-stocks-label {
-        font-size: 0.65rem;
+        font-size: 0.7rem;
         font-weight: 800;
         text-transform: uppercase;
-        letter-spacing: 0.12em;
-        color: #94a3b8;
-        margin-bottom: 12px;
+        letter-spacing: 0.15em;
+        color: #64748b;
+        margin-bottom: 15px;
         display: flex;
         align-items: center;
-        gap: 8px;
+        gap: 10px;
     }
 
     .stock-ticker-wrap {
         overflow: hidden;
         white-space: nowrap;
-        mask-image: linear-gradient(to right, transparent, black 5%, black 95%, transparent);
-        -webkit-mask-image: linear-gradient(to right, transparent, black 5%, black 95%, transparent);
+        mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+        -webkit-mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
     }
 
     .stock-ticker-inner {
         display: inline-flex;
-        gap: 10px;
-        padding: 0 10px;
+        gap: 12px;
+        padding: 5px 0;
     }
 
     .stock-badge {
         display: inline-flex;
         align-items: center;
-        padding: 4px 14px;
-        border-radius: 50px;
+        padding: 6px 18px;
+        border-radius: 12px;
         background: #ffffff;
         border: 1px solid #e2e8f0;
-        font-size: 0.75rem;
+        font-size: 0.8rem;
         font-weight: 700;
         color: #475569;
-        transition: all 0.25s ease;
+        transition: all 0.3s ease;
         text-decoration: none !important;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.03);
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.02);
     }
 
     .stock-badge:hover {
-        background: var(--primary-color);
+        background: var(--primary-gradient);
         color: #fff !important;
-        border-color: var(--primary-color);
-        transform: scale(1.05);
+        border-color: transparent;
+        transform: translateY(-2px);
+        box-shadow: 0 8px 15px rgba(0, 61, 124, 0.2);
     }
 
-    /* ── Investment Calculator (Glassmorphism) ── */
+    /* ── Investment Calculator (Premium Glass) ── */
     .calc-container {
-        background: rgba(255, 255, 255, 0.85);
-        backdrop-filter: blur(16px) saturate(180%);
-        -webkit-backdrop-filter: blur(16px) saturate(180%);
-        border-radius: 40px;
-        padding: 48px;
-        box-shadow: 0 30px 60px rgba(0, 0, 0, 0.08);
-        border: 1px solid rgba(255, 255, 255, 0.6);
-        margin-top: 1rem;
-        margin-bottom: 4rem;
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 48px;
+        padding: 56px;
+        box-shadow: 0 40px 100px rgba(0, 0, 0, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.8);
+        margin-bottom: 80px;
         position: relative;
         overflow: hidden;
     }
 
-    .calc-container::before {
-        content: '';
-        position: absolute;
-        top: -100px;
-        right: -100px;
-        width: 300px;
-        height: 300px;
-        background: radial-gradient(circle, rgba(0, 61, 124, 0.03) 0%, transparent 70%);
-        z-index: -1;
-    }
-
     .profile-btn-group {
         display: flex;
-        gap: 8px;
-        background: rgba(15, 23, 42, 0.04);
-        padding: 6px;
-        border-radius: 16px;
-        margin-bottom: 25px;
+        flex-wrap: wrap;
+        gap: 10px;
+        background: #f1f5f9;
+        padding: 8px;
+        border-radius: 20px;
+        margin-bottom: 30px;
     }
 
     .profile-btn {
         flex: 1;
+        min-width: 120px;
         border: none;
         background: transparent;
-        padding: 12px 8px;
-        border-radius: 12px;
-        font-size: 0.8rem;
+        padding: 14px 10px;
+        border-radius: 14px;
+        font-size: 0.85rem;
         font-weight: 700;
         color: #64748b;
-        transition: all 0.25s ease;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     .profile-btn.active {
         background: #ffffff;
         color: var(--primary-color);
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+        transform: scale(1.02);
     }
 
     .calc-input-wrap {
         position: relative;
-        margin-bottom: 30px;
+        margin-bottom: 35px;
     }
 
     .calc-input-wrap i {
         position: absolute;
-        left: 20px;
+        left: 24px;
         top: 50%;
         transform: translateY(-50%);
         color: var(--primary-color);
-        font-size: 1.25rem;
+        font-size: 1.5rem;
     }
 
     .calc-input {
         width: 100%;
-        padding: 16px 20px 16px 50px;
-        border-radius: 18px;
+        padding: 20px 24px 20px 60px;
+        border-radius: 24px;
         border: 2px solid #e2e8f0;
         background: #fff;
         font-weight: 800;
-        font-size: 1.25rem;
+        font-size: 1.5rem;
         transition: all 0.3s;
-        color: #1e293b;
+        color: #0F172A;
     }
 
     .calc-input:focus {
         border-color: var(--primary-color);
         outline: none;
-        box-shadow: 0 0 0 5px rgba(0, 61, 124, 0.1);
+        box-shadow: 0 0 0 8px rgba(0, 61, 124, 0.05);
     }
 
     .result-item {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 14px 20px;
-        border-radius: 16px;
-        margin-bottom: 10px;
+        padding: 16px 24px;
+        border-radius: 20px;
+        margin-bottom: 12px;
         background: #ffffff;
-        border: 1px solid rgba(0, 0, 0, 0.02);
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
-        transition: all 0.25s ease;
+        border: 1px solid #f1f5f9;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
+        transition: all 0.3s ease;
     }
 
     .result-item:hover {
-        transform: scale(1.02) translateX(5px);
-        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.05);
+        transform: translateX(8px);
+        background: #fafbff;
+        border-color: #e2e8f0;
     }
 
     .result-label {
         font-weight: 700;
-        font-size: 0.9rem;
+        font-size: 1rem;
         color: #475569;
     }
 
     .result-value {
-        font-weight: 800;
-        color: #1e293b;
-        font-size: 1.05rem;
+        font-weight: 850;
+        color: #0F172A;
+        font-size: 1.1rem;
     }
 
-    .portfolio-graph-card {
-        background: #ffffff;
-        border: 1px solid rgba(0, 0, 0, 0.05);
-        border-left: 6px solid var(--primary-color);
-        border-radius: 24px;
-        padding: 24px;
-        height: 100%;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
-        transition: all 0.35s ease;
-    }
-
-    .portfolio-graph-card:hover {
-        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.06);
-        transform: translateY(-5px);
-    }
-
-    .chart-center-wrapper {
+    /* ── Simulation Lab (Premium Dark/Tech Style) ── */
+    .backtest-container {
+        background: #0f172a; /* Deep navy/slate */
+        border-radius: 48px;
+        padding: 80px 60px;
+        margin-top: 40px;
+        margin-bottom: 80px;
+        color: #f8fafc;
         position: relative;
-        display: flex;
+        overflow: hidden;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        box-shadow: 0 40px 100px rgba(0, 0, 0, 0.25);
+    }
+
+    .backtest-container::before {
+        content: '';
+        position: absolute;
+        top: -150px;
+        right: -150px;
+        width: 400px;
+        height: 400px;
+        background: radial-gradient(circle, rgba(0, 209, 255, 0.12) 0%, transparent 70%);
+        pointer-events: none;
+    }
+
+    .backtest-container .section-title {
+        color: #ffffff;
+    }
+
+    .backtest-container .section-label {
+        color: #94a3b8;
+    }
+
+    .backtest-container .calc-input {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        color: #ffffff;
+    }
+
+    .backtest-container .calc-input:focus {
+        background: rgba(255, 255, 255, 0.07);
+        border-color: var(--accent-color);
+        box-shadow: 0 0 0 8px rgba(0, 209, 255, 0.1);
+    }
+
+    .backtest-container .stat-card {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        color: #ffffff;
+    }
+
+    .backtest-container .stat-card:hover {
+        background: rgba(255, 255, 255, 0.06);
+        transform: translateY(-5px);
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+    }
+
+    .backtest-container .stat-value {
+        color: #ffffff;
+    }
+
+    .backtest-container .card {
+        background: rgba(255, 255, 255, 0.02) !important;
+        border: 1px solid rgba(255, 255, 255, 0.05) !important;
+    }
+
+    .backtest-container .card-header {
+        background: transparent !important;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+    }
+
+    .backtest-container .card-header h5 {
+        color: #e2e8f0 !important;
+    }
+
+    .backtest-container .loading-overlay {
+        position: absolute;
+        inset: 0;
+        z-index: 100;
+        display: none;
         align-items: center;
         justify-content: center;
+        backdrop-filter: blur(4px);
+        border-radius: 48px;
+    }
+
+    /* ── Strategy Index Bar ── */
+    .strategy-index-container {
+        display: flex;
+        justify-content: center;
+        margin-bottom: 3rem;
+    }
+
+    .strategy-index-bar {
+        background: #ffffff;
+        border: 1px solid #f1f5f9;
+        padding: 10px 40px;
+        border-radius: 100px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.03);
+    }
+
+    .strategy-index-item {
+        font-weight: 800;
+        text-transform: uppercase;
+        font-size: 0.7rem;
+        letter-spacing: 0.15em;
+        color: #94a3b8;
+        transition: all 0.3s;
+    }
+
+    .strategy-index-item:hover {
+        color: var(--primary-color);
+    }
+
+    .strategy-index-dot {
+        width: 5px;
+        height: 5px;
+        background: #e2e8f0;
+        border-radius: 50%;
+        margin: 0 15px;
+        align-self: center;
+    }
+
+    /* ── Lab Title Overhaul ── */
+    .lab-main-title {
+        font-size: 4.5rem;
+        font-weight: 950;
+        letter-spacing: -0.06em;
+        line-height: 1;
+        margin-bottom: 5px;
+        color: #ffffff;
+    }
+
+    .lab-subtitle {
+        font-family: 'Inter', sans-serif;
+        font-weight: 800;
+        letter-spacing: 0.5em;
+        font-size: 0.75rem;
+        color: #00D1FF;
+        text-transform: uppercase;
+        opacity: 0.9;
+    }
+
+    /* ── Autocomplete Results Overlay ── */
+    .autocomplete-results {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        z-index: 1000;
+        background: #1e293b;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 16px;
+        margin-top: 10px;
+        max-height: 280px;
+        overflow-y: auto;
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+    }
+
+    .autocomplete-results::-webkit-scrollbar {
+        width: 8px;
+    }
+
+    .autocomplete-results::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 10px;
+    }
+
+    .autocomplete-item {
+        padding: 14px 20px;
+        cursor: pointer;
+        transition: all 0.2s;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        color: #cbd5e1;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .autocomplete-item:last-child {
+        border-bottom: none;
+    }
+
+    .autocomplete-item:hover {
+        background: rgba(0, 209, 255, 0.1);
+        color: #00D1FF;
+    }
+
+    .autocomplete-item strong {
+        color: #ffffff;
+        font-weight: 700;
+    }
+
+    .symbol-tag {
+        font-weight: 800;
+        color: #00D1FF;
+        background: rgba(0, 209, 255, 0.1);
+        padding: 2px 8px;
+        border-radius: 6px;
+        font-size: 0.7rem;
     }
 </style>
 {% endblock %}
@@ -322,147 +509,286 @@
 {% block content %}
 {% csrf_token %}
 <div class="container py-5">
-    <div class="text-center mb-5">
-        <h1 class="fw-800 display-5 text-dark" style="letter-spacing: -0.04em;">Investment Strategies</h1>
-        <p class="text-muted lead">Choose investor profile; initial max capital per stock/ETF adjusts automatically.</p>
+    <!-- Hero Section -->
+    <div class="hero-section animate__animated animate__fadeIn">
+        <div class="row align-items-center g-5">
+            <div class="col-lg-7 text-start">
+                <div class="badge-strategy mb-3">Institutional Grade Logic</div>
+                <h1 class="display-3 fw-900 mb-4" style="letter-spacing: -0.05em; color: #0f172a; line-height:1.1;">
+                    Disciplined <span class="text-primary">Wealth</span><br>Execution Engine
+                </h1>
+                <p class="lead text-muted mb-5" style="max-width: 600px; font-size: 1.25rem;">
+                    Eliminate emotional bias with NPITS’ rule-based frameworks. Our strategies automate high-probability entries, systematic averaging, and compounding.
+                </p>
+                <div class="d-flex gap-3">
+                    <a href="#strategies" class="btn-portfolio-link" style="width: auto; padding: 16px 40px;">Explore Strategies</a>
+                    <a href="#backtester" class="btn btn-outline-dark px-4 py-3 rounded-4 fw-bold" style="border-width: 2px;">Try Backtester</a>
+                </div>
+            </div>
+            <div class="col-lg-5">
+                {% if has_investments %}
+                <div class="card border-0 shadow-lg p-4 animate__animated animate__zoomIn" style="border-radius: 32px; background: rgba(255,255,255,0.8); backdrop-filter: blur(10px);">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h5 class="fw-800 text-dark mb-0">Live Allocation</h5>
+                        <a href="{% url 'dashboard' %}" class="small text-primary fw-700 text-decoration-none">Dashboard <i class="fas fa-external-link-alt ms-1"></i></a>
+                    </div>
+                    <div style="height: 250px;">
+                        <canvas id="allocationChart"></canvas>
+                    </div>
+                </div>
+                {% else %}
+                <div class="card border-0 shadow-lg p-5 text-center" style="border-radius: 32px; background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%); color: white;">
+                    <i class="fas fa-shield-alt fa-3x mb-4 text-info"></i>
+                    <h3 class="fw-800 mb-3">Start Your Journey</h3>
+                    <p class="opacity-75 mb-4">Deploy capital using our systematic rules to see your live distribution graph here.</p>
+                    <a href="{% url 'register' %}" class="btn btn-info w-100 py-3 rounded-4 fw-800">Create Account</a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
     </div>
 
-    <!-- Top Header Section -->
-    <div class="row align-items-center mb-5 g-4">
-        <div class="col-lg-7">
-            <h1 class="display-4 fw-900 mb-3" style="letter-spacing: -0.04em; color: #0f172a;">
-                Strategic <span class="text-primary">Intelligence</span>
-            </h1>
-            <p class="lead text-muted mb-0" style="max-width: 600px; line-height: 1.6;">
-                Harness automated, rule-based investment frameworks designed for systematic growth and risk mitigation.
+    <!-- Why Rule-Based Section -->
+    <div class="row mb-5 g-4">
+        <div class="col-md-4">
+            <div class="p-4 rounded-4 h-100" style="background: white; border: 1px solid #f1f5f9;">
+                <div class="text-primary mb-3"><i class="fas fa-brain fa-2x"></i></div>
+                <h5 class="fw-800">Zero Bias</h5>
+                <p class="text-muted small mb-0">Decisions are driven by mathematical triggers, not market fear or greed.</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="p-4 rounded-4 h-100" style="background: white; border: 1px solid #f1f5f9;">
+                <div class="text-success mb-3"><i class="fas fa-percentage fa-2x"></i></div>
+                <h5 class="fw-800">Compounding Focus</h5>
+                <p class="text-muted small mb-0">Automated profit booking and reinvestment logic to maximize CAGR.</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="p-4 rounded-4 h-100" style="background: white; border: 1px solid #f1f5f9;">
+                <div class="text-danger mb-3"><i class="fas fa-layer-group fa-2x"></i></div>
+                <h5 class="fw-800">Risk Mitigation</h5>
+                <p class="text-muted small mb-0">Dynamic averaging matrix ensures your cost basis is always optimized.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Strategy Backtester Section (Simulation Lab) -->
+    <div class="backtest-container animate__animated animate__fadeInUp" id="backtester">
+        <div class="loading-overlay" id="backtestLoading" style="background: rgba(15, 23, 42, 0.9); display: none;">
+            <div class="text-center">
+                <div class="spinner-border text-info mb-3" role="status" style="width: 3rem; height: 3rem;"></div>
+                <h5 class="fw-800 text-white">Propagating Rules...</h5>
+                <p class="text-info small opacity-75">Fetching historical data & executing simulation</p>
+            </div>
+        </div>
+
+        <div class="text-center mb-5">
+            <div class="badge-strategy mb-4" style="background: rgba(0, 209, 255, 0.1); color: #00D1FF; border: 1px solid rgba(0,209,255,0.2);">Scientific Validation</div>
+            <h1 class="lab-main-title">SIMULATION <span class="text-info">LAB</span></h1>
+            <div class="lab-subtitle">Historical Performance Simulator</div>
+            <p class="opacity-75 lead mx-auto mt-4" style="max-width: 750px; color: #cbd5e1; font-size: 1rem;">
+                Validate our rule engine against historical market data with millisecond precision.
             </p>
         </div>
-        <div class="col-lg-5">
-            {% if has_investments %}
-            <div class="portfolio-graph-card animate__animated animate__fadeInRight h-100">
-                <div class="d-flex justify-content-between align-items-center mb-4">
-                    <div>
-                        <span class="badge-strategy mb-1">PRO PORTFOLIO</span>
-                        <h4 class="fw-800 text-dark mb-0" style="font-size: 1.15rem; letter-spacing: -0.02em;">Portfolio Exposure</h4>
-                    </div>
-                    <a href="{% url 'dashboard' %}" class="small text-decoration-none fw-700 text-primary">
-                        View Detailed <i class="fas fa-arrow-right ms-1" style="font-size: 0.75rem;"></i>
-                    </a>
-                </div>
-                <div class="chart-container" style="height: 220px; position: relative;">
-                    <canvas id="allocationChart"></canvas>
-                </div>
-            </div>
-            {% endif %}
-        </div>
-    </div>
 
-    {% if user.is_authenticated and not has_investments %}
-    <div class="row justify-content-center mb-5">
-        <div class="col-lg-6">
-            <div class="alert alert-info border-0 shadow-sm text-center py-4 animate__animated animate__fadeIn" style="border-radius: 20px; background: rgba(13, 110, 253, 0.05); color: #084298;">
-                <i class="fas fa-info-circle fa-2x mb-3 d-block"></i>
-                <div class="fw-bold h6">Your Portfolio Visualization</div>
-                <p class="mb-0 small">Start investing based on our strategies to see your allocation graph here.</p>
+        <div class="row justify-content-center mb-5">
+            <div class="col-lg-10">
+                <div class="row g-4 align-items-end">
+                    <div class="col-md-4">
+                        <label class="section-label mb-2">Asset Symbol</label>
+                        <div class="calc-input-wrap mb-0 position-relative">
+                            <i class="fas fa-search text-info" style="font-size: 1.2rem;"></i>
+                            <input type="text" id="bt-symbol" class="calc-input" placeholder="e.g. RELIANCE" style="padding-top: 14px; padding-bottom: 14px; font-size: 1.1rem; border-color: rgba(255,255,255,0.1);" autocomplete="off">
+                            <div id="bt-autocomplete-results" class="autocomplete-results d-none"></div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="section-label mb-2">Start Date</label>
+                        <input type="date" id="bt-date" class="calc-input" value="{{ default_backtest_date }}" style="padding-top: 14px; padding-bottom: 14px; font-size: 1.1rem; padding-left: 24px; border-color: rgba(255,255,255,0.1);">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="section-label mb-2">Max Allocation/Stock</label>
+                        <div class="calc-input-wrap mb-0">
+                            <i class="fas fa-rupee-sign text-info" style="font-size: 1.2rem;"></i>
+                            <input type="number" id="bt-max-inv" class="calc-input" value="15000" style="padding-top: 14px; padding-bottom: 14px; font-size: 1.1rem; padding-left: 55px; border-color: rgba(255,255,255,0.1);">
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <button class="btn btn-info w-100 py-3 fw-800" onclick="runBacktest()" style="height: 60px; border-radius: 20px; box-shadow: 0 10px 20px rgba(0, 209, 255, 0.2);">
+                            <i class="fas fa-play me-2"></i> RUN
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
+
+        <div id="backtestResults" style="display: none;">
+            <div class="row justify-content-center">
+                <div class="col-lg-10">
+                    <div class="row g-3 mb-5">
+                        <div class="col-6 col-md-3">
+                            <div class="stat-card" style="border-top: 6px solid #38bdf8;">
+                                <div class="stat-label">Invested</div>
+                                <div class="stat-value" id="bt-res-invested">₹0</div>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <div class="stat-card" style="border-top: 6px solid #10B981;">
+                                <div class="stat-label">Wealth Projection</div>
+                                <div class="stat-value" id="bt-res-wealth">₹0</div>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <div class="stat-card" style="border-top: 6px solid #F59E0B;">
+                                <div class="stat-label">Realized Profit</div>
+                                <div class="stat-value" id="bt-res-profit">₹0</div>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <div class="stat-card" style="border-top: 6px solid #EF4444;">
+                                <div class="stat-label">Abs. Return</div>
+                                <div class="stat-value text-danger" id="bt-res-returns">0%</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card border-0 shadow-sm overflow-hidden mb-5" style="border-radius: 32px;">
+                        <div class="card-header border-0 py-4 px-5 d-flex justify-content-between align-items-center">
+                            <h5 class="fw-800 mb-0 uppercase small">Equity Curve Projection</h5>
+                            <div class="badge-strategy" id="bt-period-label" style="background: rgba(255,255,255,0.05); color: #cbd5e1;">Simulation Period</div>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="backtest-chart-wrap px-5 pb-5">
+                                <canvas id="backtestChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="backtestError" class="alert alert-danger mt-4 p-4 rounded-4 shadow-sm" style="display: none; background: rgba(220, 38, 38, 0.1); color: #fca5a5; border-color: rgba(220, 38, 38, 0.2);"></div>
     </div>
-    {% endif %}
 
     <!-- Investment Calculator Section -->
-    <div class="row justify-content-center mb-5">
-        <div class="col-lg-10">
-            <div class="calc-container animate__animated animate__fadeInUp">
-                <div class="row align-items-center">
-                    <div class="col-md-6 pe-lg-5">
-                        <div class="badge-strategy mb-3">AI PROJECTION</div>
-                        <h3 class="fw-800 mb-3" style="letter-spacing: -0.03em; color: #1e293b;">Investment Allocation Calculator</h3>
-                        <p class="text-muted small mb-4">Optimize your capital distribution based on rule-based risk profiles.</p>
-                        
-                        <div class="calc-input-wrap">
-                            <i class="fas fa-rupee-sign"></i>
-                            <input type="number" id="calcAmount" class="calc-input" placeholder="Amount (e.g. 100,000)" value="100000">
-                        </div>
+    <div class="calc-container animate__animated animate__fadeInUp">
+        <div class="text-center mb-5">
+            <h2 class="section-title">Capital Allocation Optimizer</h2>
+            <p class="text-muted">Simulate how your capital should be distributed based on risk tolerance.</p>
+        </div>
 
-                        <label class="section-label mb-3">Investor Risk Profile</label>
-                        <div class="profile-btn-group">
-                            <button class="profile-btn" onclick="setProfile('conservative')" data-profile="conservative">Conservative</button>
-                            <button class="profile-btn active" onclick="setProfile('moderate')" data-profile="moderate">Moderate</button>
-                            <button class="profile-btn" onclick="setProfile('growth')" data-profile="growth">Growth</button>
-                            <button class="profile-btn" onclick="setProfile('aggressive')" data-profile="aggressive">Aggressive</button>
+        <div class="row align-items-center">
+            <div class="col-md-6 pe-lg-5">
+                <label class="section-label">Investment Amount</label>
+                <div class="calc-input-wrap">
+                    <i class="fas fa-rupee-sign"></i>
+                    <input type="number" id="calcAmount" class="calc-input" placeholder="Amount (e.g. 100,000)" value="100000">
+                </div>
+
+                <label class="section-label">Select Investor Persona</label>
+                <div class="profile-btn-group">
+                    <button class="profile-btn" onclick="setProfile('conservative')" data-profile="conservative">Conservative</button>
+                    <button class="profile-btn active" onclick="setProfile('moderate')" data-profile="moderate">Moderate</button>
+                    <button class="profile-btn" onclick="setProfile('growth')" data-profile="growth">Growth</button>
+                    <button class="profile-btn" onclick="setProfile('aggressive')" data-profile="aggressive">Aggressive</button>
+                </div>
+
+                <div class="logic-box mb-4">
+                    <div class="logic-title" id="profile-title">Moderate Persona</div>
+                    <div id="profile-desc" class="text-muted small">Balanced approach focusing on index stability and moderate growth assets. Ideal for long-term wealth building with managed volatility.</div>
+                </div>
+            </div>
+            <div class="col-md-6 mt-5 mt-md-0 border-start ps-lg-5">
+                <div class="row align-items-center">
+                    <div class="col-sm-7 order-2 order-sm-1">
+                        <div id="calcResults">
+                            <div class="result-item" style="border-left: 6px solid #0F172A;">
+                                <span class="result-label">FlexiMulti</span>
+                                <span class="result-value" id="res-flexi">₹0</span>
+                            </div>
+                            <div class="result-item" style="border-left: 6px solid #10B981;">
+                                <span class="result-label">NiftyQuant</span>
+                                <span class="result-value" id="res-quant">₹0</span>
+                            </div>
+                            <div class="result-item" style="border-left: 6px solid #EF4444;">
+                                <span class="result-label">PyramidX</span>
+                                <span class="result-value" id="res-pyramid">₹0</span>
+                            </div>
+                            <div class="result-item" style="border-left: 6px solid #F59E0B;">
+                                <span class="result-label">ReinvestX</span>
+                                <span class="result-value" id="res-growth">₹0</span>
+                            </div>
                         </div>
                     </div>
-                    <div class="col-md-6 mt-5 mt-md-0 border-start ps-lg-5">
-                        <div class="row align-items-center">
-                            <div class="col-sm-7 order-2 order-sm-1">
-                                <div id="calcResults">
-                                    <div class="result-item" style="border-left: 4px solid #0F172A;">
-                                        <span class="result-label">FlexiMultiInvest</span>
-                                        <span class="result-value" id="res-flexi">₹0</span>
-                                    </div>
-                                    <div class="result-item" style="border-left: 4px solid #10B981;">
-                                        <span class="result-label">NiftyQuant</span>
-                                        <span class="result-value" id="res-quant">₹0</span>
-                                    </div>
-                                    <div class="result-item" style="border-left: 4px solid #EF4444;">
-                                        <span class="result-label">Pyramiding</span>
-                                        <span class="result-value" id="res-pyramid">₹0</span>
-                                    </div>
-                                    <div class="result-item" style="border-left: 4px solid #F59E0B;">
-                                        <span class="result-label">ReinvestX</span>
-                                        <span class="result-value" id="res-growth">₹0</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-sm-5 order-1 order-sm-2 mb-4 mb-sm-0 text-center chart-center-wrapper">
-                                <canvas id="calcChart" style="max-width: 160px; max-height: 160px;"></canvas>
-                            </div>
-                        </div>
-                        <div class="mt-4 text-center">
-                            <div class="d-inline-block px-4 py-2 rounded-pill bg-white shadow-sm border border-opacity-10 fw-800 text-primary" id="calcTotalDisplay">
-                                Total: ₹0
-                            </div>
-                        </div>
+                    <div class="col-sm-5 order-1 order-sm-2 mb-4 mb-sm-0 text-center">
+                        <canvas id="calcChart" style="max-width: 180px; max-height: 180px;"></canvas>
+                    </div>
+                </div>
+                <div class="mt-4 text-center">
+                    <div class="d-inline-block px-5 py-3 rounded-4 bg-white shadow-sm border border-primary border-opacity-10 fw-900 text-primary fs-5" id="calcTotalDisplay">
+                        Total: ₹0
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Strategy Tiles Grid -->
+    <div id="strategies" class="text-center mb-4">
+        <h2 class="section-title">Investment Frameworks</h2>
+    </div>
+
+    <div class="strategy-index-container animate__animated animate__fadeIn">
+        <div class="strategy-index-bar d-flex align-items-center">
+            <div class="strategy-index-item">Passive Alpha</div>
+            <div class="strategy-index-dot"></div>
+            <div class="strategy-index-item">Quantitative</div>
+            <div class="strategy-index-dot"></div>
+            <div class="strategy-index-item">Aggressive Scaling</div>
+            <div class="strategy-index-dot"></div>
+            <div class="strategy-index-item">ReinvestX</div>
+            <div class="strategy-index-dot"></div>
+            <div class="strategy-index-item">Untracked</div>
+        </div>
+    </div>
+
     <div class="row g-4 justify-content-center">
         <!-- 1. FlexiMultiInvest -->
         <div class="col-lg-4 col-md-6 mb-4">
             <div class="strategy-card border-flexi h-100">
                 <div class="strategy-header">
-                    <span class="badge-strategy">PASSIVE & STEADY</span>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="badge-strategy">Passive Alpha</span>
+                        <i class="fas fa-globe text-muted"></i>
+                    </div>
                     <h2 class="strategy-title">FlexiMultiInvest</h2>
                 </div>
 
                 <div class="strategy-card-body">
-                    <span class="section-label">Investment Logic</span>
-                    <div class="rule-item">
-                        <i class="fas fa-check-circle"></i>
-                        <span>Diversified Global & Sectoral ETFs</span>
+                    <p class="text-muted small">Diversified global & sectoral exposure via Liquid ETFs and Index funds.</p>
+                    
+                    <div class="logic-box mb-4">
+                        <div class="logic-title">Philosophy</div>
+                        Capture broad market returns with systematic volatility dampening.
                     </div>
 
-                    <span class="section-label">Operational Rules</span>
+                    <span class="section-label">Execution Rules</span>
                     <div class="rule-item">
-                        <i class="fas fa-wallet"></i>
-                        <span>Initial: <strong>₹5,000</strong>/instrument</span>
+                        <i class="fas fa-sign-in-alt"></i>
+                        <span><strong>Entry:</strong> Price < 15-day SMA or 2% dip from weekly high.</span>
                     </div>
                     <div class="rule-item">
-                        <i class="fas fa-rocket"></i>
-                        <span>Target: <strong>+22%</strong> Profit</span>
+                        <i class="fas fa-layer-group"></i>
+                        <span><strong>Averaging:</strong> 5%, 8%, 12% drawdown matrix.</span>
                     </div>
                     <div class="rule-item">
-                        <i class="fas fa-sync-alt"></i>
-                        <span>Reinvest <strong>93%</strong> Compound</span>
+                        <i class="fas fa-sign-out-alt"></i>
+                        <span><strong>Exit:</strong> +22% Profit. 93% reinvested, 7% for costs.</span>
                     </div>
 
                     {% if flexi_stocks %}
                     <div class="rec-stocks-section">
-                        <div class="rec-stocks-label"><i class="fas fa-bolt"></i> Recommended</div>
+                        <div class="rec-stocks-label"><i class="fas fa-bolt text-warning"></i> Core ETFs</div>
                         <div class="stock-ticker-wrap">
                             <div class="stock-ticker-inner" id="flexi-ticker">
                                 {% for stock in flexi_stocks %}
@@ -477,8 +803,8 @@
                     {% endif %}
                 </div>
                 <div class="strategy-card-footer">
-                    <a href="{% url 'dashboard' %}?strategy=flexi" class="btn-portfolio-link" style="background: #0f172a; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.25);">
-                        <i class="fas fa-sliders-h"></i> Configuration
+                    <a href="{% url 'dashboard' %}?strategy=flexi" class="btn-portfolio-link">
+                        Configure Strategy <i class="fas fa-chevron-right ms-2 small"></i>
                     </a>
                 </div>
             </div>
@@ -488,34 +814,38 @@
         <div class="col-lg-4 col-md-6 mb-4">
             <div class="strategy-card border-quant h-100">
                 <div class="strategy-header">
-                    <span class="badge-strategy">QUANTITATIVE</span>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="badge-strategy" style="background:rgba(16, 185, 129, 0.1); color:#10B981;">Quantitative</span>
+                        <i class="fas fa-microchip text-success"></i>
+                    </div>
                     <h2 class="strategy-title">NiftyQuant</h2>
                 </div>
 
                 <div class="strategy-card-body">
-                    <span class="section-label">Investment Logic</span>
-                    <div class="rule-item">
-                        <i class="fas fa-microchip"></i>
-                        <span>High-Quality Nifty 50 Momentum</span>
+                    <p class="text-muted small">High-conviction Nifty 50 stocks selected by momentum and quality scores.</p>
+
+                    <div class="logic-box mb-4" style="border-left-color: #10B981;">
+                        <div class="logic-title">Philosophy</div>
+                        Focus on institutional favorites with high liquidity and proven earnings.
                     </div>
 
-                    <span class="section-label">Operational Rules</span>
+                    <span class="section-label">Execution Rules</span>
                     <div class="rule-item">
-                        <i class="fas fa-wallet"></i>
-                        <span>Initial: <strong>₹5,000</strong>/stock</span>
+                        <i class="fas fa-calculator"></i>
+                        <span><strong>Entry:</strong> Top decile momentum score within Nifty 50.</span>
+                    </div>
+                    <div class="rule-item">
+                        <i class="fas fa-sync"></i>
+                        <span><strong>Rebalance:</strong> Bi-weekly review of position strength.</span>
                     </div>
                     <div class="rule-item">
                         <i class="fas fa-bullseye"></i>
-                        <span>Target: <strong>+22%</strong> Profit</span>
-                    </div>
-                    <div class="rule-item">
-                        <i class="fas fa-robot"></i>
-                        <span>Automated Rebalancing</span>
+                        <span><strong>Exit:</strong> +22% Target or RSI oversold filter.</span>
                     </div>
 
                     {% if quant_stocks %}
                     <div class="rec-stocks-section">
-                        <div class="rec-stocks-label"><i class="fas fa-bolt"></i> Recommended</div>
+                        <div class="rec-stocks-label"><i class="fas fa-robot text-success"></i> Top Selections</div>
                         <div class="stock-ticker-wrap">
                             <div class="stock-ticker-inner" id="quant-ticker">
                                 {% for stock in quant_stocks %}
@@ -530,8 +860,8 @@
                     {% endif %}
                 </div>
                 <div class="strategy-card-footer">
-                    <a href="{% url 'dashboard' %}?strategy=quant" class="btn-portfolio-link" style="background: #10B981; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);">
-                        <i class="fas fa-sliders-h"></i> Configuration
+                    <a href="{% url 'dashboard' %}?strategy=quant" class="btn-portfolio-link" style="background: #10B981; box-shadow: 0 10px 25px rgba(16, 185, 129, 0.2);">
+                        Configure Strategy <i class="fas fa-chevron-right ms-2 small"></i>
                     </a>
                 </div>
             </div>
@@ -541,34 +871,38 @@
         <div class="col-lg-4 col-md-6 mb-4">
             <div class="strategy-card border-pyramid h-100">
                 <div class="strategy-header">
-                    <span class="badge-strategy">AGGRESSIVE</span>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="badge-strategy" style="background:rgba(239, 68, 68, 0.1); color:#EF4444;">Aggressive Scaling</span>
+                        <i class="fas fa-mountain text-danger"></i>
+                    </div>
                     <h2 class="strategy-title">Pyramiding</h2>
                 </div>
 
                 <div class="strategy-card-body">
-                    <span class="section-label">Investment Logic</span>
-                    <div class="rule-item">
-                        <i class="fas fa-chart-line"></i>
-                        <span>Scale on Strength & Drawdowns</span>
+                    <p class="text-muted small">Aggressively scale positions that show strength to maximize winners.</p>
+
+                    <div class="logic-box mb-4" style="border-left-color: #EF4444;">
+                        <div class="logic-title">Philosophy</div>
+                        "Add to winners, cut losers." Scaling up as price confirms the thesis.
                     </div>
 
-                    <span class="section-label">Operational Rules</span>
+                    <span class="section-label">Execution Rules</span>
                     <div class="rule-item">
-                        <i class="fas fa-wallet"></i>
-                        <span>Initial: <strong>₹5,000</strong>/ETF</span>
+                        <i class="fas fa-arrow-up"></i>
+                        <span><strong>Scaling:</strong> Add +50% capital at every 5% upward move.</span>
                     </div>
                     <div class="rule-item">
-                        <i class="fas fa-percentage"></i>
-                        <span>Profit Cap: <strong>+22%</strong></span>
+                        <i class="fas fa-shield-virus"></i>
+                        <span><strong>Protection:</strong> Trailing Stop-Loss at breach of 20-day EMA.</span>
                     </div>
                     <div class="rule-item">
-                        <i class="fas fa-layer-group"></i>
-                        <span>Averaging Matrix applied</span>
+                        <i class="fas fa-fire"></i>
+                        <span><strong>Exit:</strong> +22% Total Profit or Trend reversal.</span>
                     </div>
 
                     {% if pyramid_stocks %}
                     <div class="rec-stocks-section">
-                        <div class="rec-stocks-label"><i class="fas fa-bolt"></i> Recommended</div>
+                        <div class="rec-stocks-label"><i class="fas fa-chart-line text-danger"></i> Momentum Assets</div>
                         <div class="stock-ticker-wrap">
                             <div class="stock-ticker-inner" id="pyramid-ticker">
                                 {% for stock in pyramid_stocks %}
@@ -583,8 +917,8 @@
                     {% endif %}
                 </div>
                 <div class="strategy-card-footer">
-                    <a href="{% url 'dashboard' %}?strategy=pyramid" class="btn-portfolio-link" style="background: #EF4444; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.25);">
-                        <i class="fas fa-sliders-h"></i> Configuration
+                    <a href="{% url 'dashboard' %}?strategy=pyramid" class="btn-portfolio-link" style="background: #EF4444; box-shadow: 0 10px 25px rgba(239, 68, 68, 0.2);">
+                        Configure Strategy <i class="fas fa-chevron-right ms-2 small"></i>
                     </a>
                 </div>
             </div>
@@ -594,34 +928,38 @@
         <div class="col-lg-4 col-md-6 mb-4">
             <div class="strategy-card border-growth h-100">
                 <div class="strategy-header">
-                    <span class="badge-strategy">HIGH GROWTH</span>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="badge-strategy" style="background:rgba(245, 158, 11, 0.1); color:#F59E0B;">High Growth</span>
+                        <i class="fas fa-gem text-warning"></i>
+                    </div>
                     <h2 class="strategy-title">ReinvestX</h2>
                 </div>
 
                 <div class="strategy-card-body">
-                    <span class="section-label">Investment Logic</span>
-                    <div class="rule-item">
-                        <i class="fas fa-gem"></i>
-                        <span>Selection-Based Growth Stocks</span>
+                    <p class="text-muted small">Maximized compounding of profits into new selection-based stocks.</p>
+
+                    <div class="logic-box mb-4" style="border-left-color: #F59E0B;">
+                        <div class="logic-title">Philosophy</div>
+                        Extreme compounding through rapid turnover of profitable positions.
                     </div>
 
-                    <span class="section-label">Operational Rules</span>
+                    <span class="section-label">Execution Rules</span>
                     <div class="rule-item">
-                        <i class="fas fa-wallet"></i>
-                        <span>Initial: <strong>₹5,000</strong>/stock</span>
+                        <i class="fas fa-vial"></i>
+                        <span><strong>Selection:</strong> Proprietary "Selection" stocks list.</span>
                     </div>
                     <div class="rule-item">
-                        <i class="fas fa-redo"></i>
-                        <span>Compound Max Profits</span>
+                        <i class="fas fa-recycle"></i>
+                        <span><strong>Reinvest:</strong> 100% of realized profit goes to new positions.</span>
                     </div>
                     <div class="rule-item">
-                        <i class="fas fa-shield-alt"></i>
-                        <span>Selective Exit Triggers</span>
+                        <i class="fas fa-history"></i>
+                        <span><strong>Exit:</strong> Target +22% realized profit triggers shift.</span>
                     </div>
 
                     {% if growth_stocks %}
                     <div class="rec-stocks-section">
-                        <div class="rec-stocks-label"><i class="fas fa-bolt"></i> Recommended</div>
+                        <div class="rec-stocks-label"><i class="fas fa-seedling text-warning"></i> Growth Picks</div>
                         <div class="stock-ticker-wrap">
                             <div class="stock-ticker-inner" id="growth-ticker">
                                 {% for stock in growth_stocks %}
@@ -636,8 +974,8 @@
                     {% endif %}
                 </div>
                 <div class="strategy-card-footer">
-                    <a href="{% url 'dashboard' %}?strategy=growth" class="btn-portfolio-link" style="background: #F59E0B; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.25);">
-                        <i class="fas fa-sliders-h"></i> Configuration
+                    <a href="{% url 'dashboard' %}?strategy=growth" class="btn-portfolio-link" style="background: #F59E0B; box-shadow: 0 10px 25px rgba(245, 158, 11, 0.2);">
+                        Configure Strategy <i class="fas fa-chevron-right ms-2 small"></i>
                     </a>
                 </div>
             </div>
@@ -645,18 +983,21 @@
 
         <!-- 5. Others -->
         <div class="col-lg-4 col-md-6 mb-4">
-            <div class="strategy-card border-others h-100">
+            <div class="strategy-card border-others h-100" style="background: #f8fafc;">
                 <div class="strategy-header">
-                    <span class="badge-strategy" style="background: rgba(148, 163, 184, 0.1); color: #64748b;">UNTRACKED</span>
-                    <h2 class="strategy-title text-secondary">Other Holdings</h2>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="badge-strategy" style="background: rgba(148, 163, 184, 0.1); color: #64748b;">Untracked</span>
+                        <i class="fas fa-folder-open text-muted"></i>
+                    </div>
+                    <h2 class="strategy-title text-secondary">Custom Assets</h2>
                 </div>
 
                 <div class="strategy-card-body">
-                    <p class="text-muted small mb-3">Portfolio holdings not mapped to primary automated strategies.</p>
+                    <p class="text-muted small">Portfolio holdings maintained outside the standard NPITS rule engine.</p>
 
                     {% if others_stocks %}
                     <div class="rec-stocks-section">
-                        <div class="rec-stocks-label text-secondary"><i class="fas fa-folder"></i> Current Holdings</div>
+                        <div class="rec-stocks-label text-secondary"><i class="fas fa-list"></i> Current Holdings</div>
                         <div class="stock-ticker-wrap">
                             <div class="stock-ticker-inner" id="others-ticker">
                                 {% for stock in others_stocks %}
@@ -669,33 +1010,33 @@
                         </div>
                     </div>
                     {% else %}
-                    <div class="text-center py-4 text-muted border border-dashed rounded-3">
-                        <i class="fas fa-check-double text-success mb-2 d-block fa-lg"></i>
-                        <span class="small fw-600">Pure Strategy Portfolio</span>
+                    <div class="text-center py-5 text-muted border border-dashed rounded-4 mt-4">
+                        <i class="fas fa-check-circle text-success mb-3 fa-2x"></i>
+                        <h6 class="fw-800">Pure Strategy Build</h6>
+                        <p class="small mb-0">100% of your assets follow rules.</p>
                     </div>
                     {% endif %}
                 </div>
                 <div class="strategy-card-footer">
-                    <a href="{% url 'dashboard' %}?strategy=others" class="btn-portfolio-link" style="background: #64748b; box-shadow: 0 4px 12px rgba(100, 116, 139, 0.25);">
-                        <i class="fas fa-eye"></i> View Details
+                    <a href="{% url 'dashboard' %}?strategy=others" class="btn-portfolio-link" style="background: #64748b; box-shadow: 0 10px 25px rgba(100, 116, 139, 0.2);">
+                        View Custom Assets <i class="fas fa-eye ms-2 small"></i>
                     </a>
                 </div>
-            </div>
-        </div>
-    </div>
+
+</div>
 </div>
 </div>
 
 <!-- Stock Availability Toast -->
-<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 9999;">
+<div class="position-fixed bottom-0 end-0 p-4" style="z-index: 9999;">
     <div id="investToast" class="toast align-items-center text-bg-warning border-0 shadow-lg" role="alert"
-        aria-live="assertive" aria-atomic="true">
+        aria-live="assertive" aria-atomic="true" style="border-radius: 16px;">
         <div class="d-flex">
-            <div class="toast-body fw-bold">
-                <i class="fas fa-info-circle me-2"></i>
-                    Please invest at least ₹5,000.
+            <div class="toast-body fw-bold p-3">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                    Minimum investment of ₹5,000 required.
             </div>
-            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"
+            <button type="button" class="btn-close btn-close-white me-3 m-auto" data-bs-toast="toast"
                 aria-label="Close"></button>
         </div>
     </div>
@@ -719,115 +1060,141 @@
     // ── Professional Animation for Tickers ──
     document.querySelectorAll('.stock-ticker-inner').forEach(function (el) {
         const count = el.querySelectorAll('.stock-badge').length / 2;
-        let duration = '18s';
+        let duration = '20s';
         if (el.id === 'others-ticker') {
             duration = '120s';
         } else {
-            duration = count < 5 ? '12s' : (count > 20 ? '35s' : '22s');
+            duration = count < 5 ? '15s' : (count > 20 ? '40s' : '25s');
         }
         
         el.style.animation = `scrollTicker ${duration} linear infinite`;
     });
 
     // Custom Keyframes for Ticker (Fallback if not in CSS)
-    const styleSheet = document.createElement("style");
-    styleSheet.innerText = `@keyframes scrollTicker { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }`;
-    document.head.appendChild(styleSheet);
+    if (!document.getElementById('ticker-style')) {
+        const styleSheet = document.createElement("style");
+        styleSheet.id = 'ticker-style';
+        styleSheet.innerText = `@keyframes scrollTicker { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }`;
+        document.head.appendChild(styleSheet);
+    }
 
     {% if has_investments %}
     // ── Allocation Chart (Portfolio) ──
-    const ctx = document.getElementById('allocationChart').getContext('2d');
-    const dataValues = {{ chart_values|safe }};
-    const chartLabels = {{ chart_labels|safe }};
-    const totalInvested = dataValues.reduce((a, b) => a + b, 0);
-    const actualTotal = totalInvested > 0 ? totalInvested : 1;
+    (function() {
+        const canvas = document.getElementById('allocationChart');
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        const dataValues = {{ chart_values|safe }};
+        const chartLabels = {{ chart_labels|safe }};
+        const totalInvested = dataValues.reduce((a, b) => a + b, 0);
+        const actualTotal = totalInvested > 0 ? totalInvested : 1;
 
-    // Professional Center Text Plugin
-    const centerTextPlugin = {
-        id: 'centerText',
-        afterDraw: function(chart) {
-            if (chart.config.type !== 'doughnut') return;
-            const { ctx, chartArea: { top, bottom, left, right } } = chart;
-            ctx.save();
-            const centerX = (left + right) / 2;
-            const centerY = (top + bottom) / 2;
+        // Professional Center Text Plugin
+        const centerTextPlugin = {
+            id: 'centerText',
+            afterDraw: function(chart) {
+                if (chart.config.type !== 'doughnut') return;
+                const { ctx, chartArea: { top, bottom, left, right } } = chart;
+                ctx.save();
+                const centerX = (left + right) / 2;
+                const centerY = (top + bottom) / 2;
 
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            
-            // Label
-            ctx.font = '700 12px "Inter", sans-serif';
-            ctx.fillStyle = '#64748b';
-            ctx.fillText('TOTAL ASSETS', centerX, centerY - 12);
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                
+                // Label
+                ctx.font = '700 13px "Inter", sans-serif';
+                ctx.fillStyle = '#94a3b8';
+                ctx.fillText('ASSET VALUE', centerX, centerY - 14);
 
-            // Value
-            ctx.font = '800 22px "Inter", sans-serif';
-            ctx.fillStyle = '#1e293b';
-            const valueText = '₹' + totalInvested.toLocaleString('en-IN', { maximumFractionDigits: 0 });
-            ctx.fillText(valueText, centerX, centerY + 12);
-            ctx.restore();
-        }
-    };
+                // Value
+                ctx.font = '850 26px "Inter", sans-serif';
+                ctx.fillStyle = '#0F172A';
+                const valueText = '₹' + totalInvested.toLocaleString('en-IN', { maximumFractionDigits: 0 });
+                ctx.fillText(valueText, centerX, centerY + 14);
+                ctx.restore();
+            }
+        };
 
-    new Chart(ctx, {
-        type: 'doughnut',
-        plugins: [centerTextPlugin],
-        data: {
-            labels: chartLabels,
-            datasets: [{
-                data: dataValues,
-                backgroundColor: ['#0F172A', '#10B981', '#EF4444', '#F59E0B', '#94A3B8'],
-                borderWidth: 0,
-                hoverOffset: 15
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            cutout: '78%',
-            plugins: {
-                legend: {
-                    position: 'bottom',
-                    labels: {
-                        padding: 30,
-                        usePointStyle: true,
-                        font: { size: 13, weight: '600', family: 'Inter' },
-                        generateLabels: (chart) => {
-                            const data = chart.data;
-                            return data.labels.map((label, i) => {
-                                const val = data.datasets[0].data[i];
-                                const p = ((val / actualTotal) * 100).toFixed(1);
-                                return {
-                                    text: `${label} (${p}%)`,
-                                    fillStyle: data.datasets[0].backgroundColor[i],
-                                    index: i
-                                };
-                            });
+        new Chart(ctx, {
+            type: 'doughnut',
+            plugins: [centerTextPlugin],
+            data: {
+                labels: chartLabels,
+                datasets: [{
+                    data: dataValues,
+                    backgroundColor: ['#0F172A', '#10B981', '#EF4444', '#F59E0B', '#94A3B8'],
+                    borderWidth: 0,
+                    hoverOffset: 20
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '82%',
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            padding: 30,
+                            usePointStyle: true,
+                            pointStyle: 'circle',
+                            font: { size: 12, weight: '700', family: 'Inter' },
+                            generateLabels: (chart) => {
+                                const data = chart.data;
+                                return data.labels.map((label, i) => {
+                                    const val = data.datasets[0].data[i];
+                                    const p = ((val / actualTotal) * 100).toFixed(1);
+                                    return {
+                                        text: `${label} (${p}%)`,
+                                        fillStyle: data.datasets[0].backgroundColor[i],
+                                        index: i
+                                    };
+                                });
+                            }
                         }
-                    }
-                },
-                tooltip: {
-                    backgroundColor: '#1e293b',
-                    padding: 12,
-                    cornerRadius: 10,
-                    callbacks: {
-                        label: (ctx) => ' ₹' + ctx.parsed.toLocaleString('en-IN')
+                    },
+                    tooltip: {
+                        backgroundColor: '#0F172A',
+                        padding: 15,
+                        cornerRadius: 12,
+                        titleFont: { size: 14, weight: 'bold' },
+                        bodyFont: { size: 13 },
+                        callbacks: {
+                            label: (ctx) => ' ₹' + ctx.parsed.toLocaleString('en-IN')
+                        }
                     }
                 }
             }
-        }
-    });
+        });
+    })();
     {% endif %}
 
     // ── Investment Calculator Logic ──
     let currentCalcProfile = 'moderate';
     let calcChart = null;
 
-    const profileRatios = {
-        conservative: { flexi: 0.50, pyramid: 0.25, quant: 0.167, growth: 0.083 },
-        moderate: { flexi: 0.25, pyramid: 0.25, quant: 0.25, growth: 0.25 },
-        growth: { flexi: 0.133, pyramid: 0.20, quant: 0.267, growth: 0.40 },
-        aggressive: { flexi: 0.05, pyramid: 0.15, quant: 0.30, growth: 0.50 }
+    const profileData = {
+        conservative: {
+            ratios: { flexi: 0.50, pyramid: 0.25, quant: 0.167, growth: 0.083 },
+            title: "Conservative Persona",
+            desc: "Focuses on capital preservation using global ETFs and stable index funds. High allocation to FlexiMulti for lower volatility."
+        },
+        moderate: {
+            ratios: { flexi: 0.25, pyramid: 0.25, quant: 0.25, growth: 0.25 },
+            title: "Moderate Persona",
+            desc: "Balanced distribution across all strategies. Ideal for long-term compounding with sustainable market risk."
+        },
+        growth: {
+            ratios: { flexi: 0.133, pyramid: 0.20, quant: 0.267, growth: 0.40 },
+            title: "Growth Persona",
+            desc: "Prioritizes momentum and high-growth selection stocks. Significant allocation to ReinvestX for faster capital cycles."
+        },
+        aggressive: {
+            ratios: { flexi: 0.05, pyramid: 0.15, quant: 0.30, growth: 0.50 },
+            title: "Aggressive Persona",
+            desc: "Maximum rotation and scaling. Heavy reliance on quantitative momentum and extreme compounding strategies."
+        }
     };
 
     function setProfile(profile) {
@@ -835,6 +1202,13 @@
         document.querySelectorAll('.profile-btn').forEach(btn => {
             btn.classList.toggle('active', btn.dataset.profile === profile);
         });
+        
+        // Update Info Box
+        const titleEl = document.getElementById('profile-title');
+        const descEl = document.getElementById('profile-desc');
+        if (titleEl) titleEl.innerText = profileData[profile].title;
+        if (descEl) descEl.innerText = profileData[profile].desc;
+        
         updateCalculator();
     }
 
@@ -844,8 +1218,19 @@
     }
 
     function updateCalculator() {
-        const amount = parseFloat(document.getElementById('calcAmount').value) || 0;
-        const ratios = profileRatios[currentCalcProfile];
+        const amountDisplay = document.getElementById('calcAmount');
+        if (!amountDisplay) return;
+        
+        const amount = parseFloat(amountDisplay.value) || 0;
+        
+        // Validation Feedback
+        const toastEl = document.getElementById('investToast');
+        if (amount > 0 && amount < 5000 && toastEl) {
+            const toast = new bootstrap.Toast(toastEl);
+            toast.show();
+        }
+
+        const ratios = profileData[currentCalcProfile].ratios;
 
         const flexi = Math.round(amount * ratios.flexi);
         const quant = Math.round(amount * ratios.quant);
@@ -895,8 +1280,9 @@
                     plugins: { 
                         legend: { display: false },
                         tooltip: {
-                            backgroundColor: '#1e293b',
-                            padding: 10,
+                            backgroundColor: '#0F172A',
+                            padding: 12,
+                            cornerRadius: 8,
                             callbacks: {
                                 label: (ctx) => ' ₹' + ctx.parsed.toLocaleString('en-IN')
                             }
@@ -906,6 +1292,191 @@
             });
         }
     }
+
+    // ── Backtester Simulation Logic ──
+    let btLineChart = null;
+
+    async function runBacktest() {
+        const symbol = document.getElementById('bt-symbol').value.trim();
+        const date = document.getElementById('bt-date').value;
+        const maxInv = document.getElementById('bt-max-inv').value;
+        
+        if (!symbol) {
+            alert('Please enter a stock symbol');
+            return;
+        }
+
+        const loader = document.getElementById('backtestLoading');
+        const resultsArea = document.getElementById('backtestResults');
+        const errorArea = document.getElementById('backtestError');
+        
+        loader.style.display = 'flex';
+        resultsArea.style.display = 'none';
+        errorArea.style.display = 'none';
+
+        try {
+            const response = await fetch(`/api/backtest-strategy/?symbol=${symbol}&start_date=${date}&max_inv=${maxInv}`);
+            const data = await response.json();
+
+            if (data.error) {
+                errorArea.innerText = data.error;
+                errorArea.style.display = 'block';
+                return;
+            }
+
+            // Update Statistics
+            document.getElementById('bt-res-invested').innerText = '₹' + data.summary.total_invested.toLocaleString('en-IN');
+            document.getElementById('bt-res-wealth').innerText = '₹' + data.summary.total_wealth.toLocaleString('en-IN');
+            document.getElementById('bt-res-profit').innerText = '₹' + data.summary.realized_profit.toLocaleString('en-IN');
+            document.getElementById('bt-res-returns').innerText = data.summary.returns_pct + '%';
+            
+            const returnsEl = document.getElementById('bt-res-returns');
+            if (returnsEl) {
+                if (data.summary.returns_pct >= 0) {
+                    returnsEl.classList.remove('text-danger');
+                    returnsEl.classList.add('text-success');
+                } else {
+                    returnsEl.classList.remove('text-success');
+                    returnsEl.classList.add('text-danger');
+                }
+            }
+
+            const periodLabel = document.getElementById('bt-period-label');
+            if (periodLabel) periodLabel.innerText = `${date} to Present`;
+
+            // Prepare Chart Data
+            const labels = data.results.map(r => r.date);
+            const wealthData = data.results.map(r => r.total_wealth);
+            const investedData = data.results.map(r => r.invested);
+
+            renderBacktestChart(labels, wealthData, investedData);
+            resultsArea.style.display = 'block';
+            
+            // Smooth scroll to results
+            resultsArea.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+        } catch (err) {
+            console.error(err);
+            errorArea.innerText = 'System error occurred during simulation.';
+            errorArea.style.display = 'block';
+        } finally {
+            loader.style.display = 'none';
+        }
+    }
+
+    function renderBacktestChart(labels, wealth, invested) {
+        const canvas = document.getElementById('backtestChart');
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        
+        if (btLineChart) {
+            btLineChart.destroy();
+        }
+
+        btLineChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'Compounded Wealth',
+                        data: wealth,
+                        borderColor: '#10B981',
+                        backgroundColor: 'rgba(16, 185, 129, 0.05)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 0
+                    },
+                    {
+                        label: 'Invested Capital',
+                        data: invested,
+                        borderColor: '#EAB308', /* Dark Yellow */
+                        borderWidth: 2,
+                        borderDash: [5, 5],
+                        fill: false,
+                        pointRadius: 0
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { intersect: false, mode: 'index' },
+                plugins: {
+                    legend: { position: 'top', labels: { font: { family: 'Inter', weight: '700' } } },
+                    tooltip: {
+                        backgroundColor: '#0F172A',
+                        padding: 15,
+                        cornerRadius: 12,
+                        callbacks: {
+                            label: (ctx) => ' ₹' + ctx.parsed.y.toLocaleString('en-IN')
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: false,
+                        grid: { color: '#f1f5f9' },
+                        ticks: { 
+                            font: { weight: '600' },
+                            callback: (val) => '₹' + val.toLocaleString('en-IN') 
+                        }
+                    },
+                    x: {
+                        grid: { display: false },
+                        ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 10, font: { weight: '600' } }
+                    }
+                }
+            }
+        });
+    }
+
+    // ── Autocomplete for Backtester ──
+    document.addEventListener('DOMContentLoaded', function () {
+        const btSymbolInput = document.getElementById('bt-symbol');
+        const btResultsDiv = document.getElementById('bt-autocomplete-results');
+
+        if (btSymbolInput && btResultsDiv) {
+            btSymbolInput.addEventListener('input', function () {
+                const query = this.value.trim();
+                if (query.length < 2) {
+                    btResultsDiv.classList.add('d-none');
+                    return;
+                }
+
+                fetch(`/api/stock-suggestions/?q=${encodeURIComponent(query)}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        const results = data.results || [];
+                        btResultsDiv.innerHTML = '';
+                        if (results.length > 0) {
+                            results.forEach(item => {
+                                const div = document.createElement('div');
+                                div.className = 'autocomplete-item';
+                                div.innerHTML = `<strong>${item.name}</strong> <span class="symbol-tag">${item.symbol}</span>`;
+                                div.addEventListener('click', () => {
+                                    btSymbolInput.value = item.symbol;
+                                    btResultsDiv.classList.add('d-none');
+                                });
+                                btResultsDiv.appendChild(div);
+                            });
+                            btResultsDiv.classList.remove('d-none');
+                        } else {
+                            btResultsDiv.classList.add('d-none');
+                        }
+                    })
+                    .catch(err => console.error('Suggestions error:', err));
+            });
+
+            // Close dropdown when clicking outside
+            document.addEventListener('click', function (e) {
+                if (e.target !== btSymbolInput && e.target !== btResultsDiv) {
+                    btResultsDiv.classList.add('d-none');
+                }
+            });
+        }
+    });
 
     // Initialize
     window.addEventListener('DOMContentLoaded', () => {
