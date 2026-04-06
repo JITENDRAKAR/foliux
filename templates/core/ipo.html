@@ -1,0 +1,276 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<style>
+    .ipo-card {
+        border-radius: 16px;
+        transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s ease;
+        border: 1px solid rgba(0, 0, 0, 0.05);
+        background: #fff;
+    }
+
+    .ipo-card:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.1) !important;
+    }
+
+    .advise-badge {
+        padding: 8px 16px;
+        border-radius: 12px;
+        font-weight: 700;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        display: inline-block;
+    }
+
+    .advise-apply { background: #e6f7ef; color: #008D4C; }
+    .advise-non-apply { background: #feecef; color: #D62A2D; }
+    .advise-waiting { background: #fff8e6; color: #ffc107; }
+
+    .status-badge {
+        font-size: 0.75rem;
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-weight: 600;
+    }
+
+    .status-open { background: #003D7C; color: #fff; }
+    .status-upcoming { background: #6c757d; color: #fff; }
+    .status-closed { background: #e9ecef; color: #6c757d; }
+
+    .ipo-date-box {
+        background: #f8fafc;
+        border-radius: 12px;
+        padding: 12px;
+        text-align: center;
+        border: 1px solid #edf2f7;
+    }
+
+    .ipo-date-label {
+        font-size: 0.7rem;
+        color: #718096;
+        text-transform: uppercase;
+        font-weight: 600;
+        margin-bottom: 2px;
+    }
+
+    .ipo-date-value {
+        font-size: 0.9rem;
+        font-weight: 700;
+        color: #2d3748;
+    }
+
+    .company-work {
+        color: #4a5568;
+        font-size: 0.9rem;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        height: 2.7rem;
+    }
+
+    .analysis-preview {
+        background: #f1f5f9;
+        border-radius: 12px;
+        padding: 15px;
+        margin-top: 15px;
+        border-left: 4px solid var(--primary-color);
+    }
+
+    .analysis-text {
+        font-size: 0.88rem;
+        line-height: 1.5;
+        color: #4b5563;
+    }
+
+    .read-more-btn {
+        color: var(--primary-color);
+        font-weight: 600;
+        font-size: 0.85rem;
+        text-decoration: none;
+        cursor: pointer;
+    }
+
+    .read-more-btn:hover {
+        text-decoration: underline;
+    }
+
+    .filter-btn {
+        border-radius: 10px;
+        padding: 8px 20px;
+        font-weight: 600;
+        font-size: 0.9rem;
+        border: 1px solid #e2e8f0;
+        background: #fff;
+        color: #4a5568;
+        transition: all 0.2s;
+        text-decoration: none;
+    }
+
+    .filter-btn.active {
+        background: var(--primary-color);
+        color: #fff;
+        border-color: var(--primary-color);
+    }
+
+    .filter-btn:hover:not(.active) {
+        background: #f8fafc;
+        color: var(--primary-color);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row align-items-center mb-5 animate__animated animate__fadeInDown">
+    <div class="col-md-7">
+        <h1 class="fw-bold mb-1" style="color: var(--primary-color);">Initial Public Offerings</h1>
+        <p class="text-muted">Expert analysis and real-time advice on latest IPOs.</p>
+    </div>
+    <div class="col-md-5 text-md-end">
+        <div class="d-flex flex-wrap gap-2 justify-content-md-end mt-3 mt-md-0">
+            <a href="{% url 'ipo' %}" class="filter-btn {% if not request.GET.advise %}active{% endif %}">All</a>
+            <a href="?advise=APPLY" class="filter-btn {% if request.GET.advise == 'APPLY' %}active{% endif %}">Apply Only</a>
+            <a href="?advise=WAITING" class="filter-btn {% if request.GET.advise == 'WAITING' %}active{% endif %}">Waiting</a>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 mb-5">
+    {% for ipo in ipos %}
+    <div class="col-lg-4 col-md-6 animate__animated animate__fadeInUp" style="animation-delay: {{ forloop.counter0 }}00ms;">
+        <div class="card h-100 ipo-card shadow-sm">
+            <div class="card-body p-4">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <span class="status-badge 
+                        {% if ipo.status == 'Open' %}status-open
+                        {% elif ipo.status == 'Upcoming' %}status-upcoming
+                        {% else %}status-closed{% endif %}">
+                        {{ ipo.status }}
+                    </span>
+                    <div class="advise-badge 
+                        {% if ipo.advise == 'APPLY' %}advise-apply
+                        {% elif ipo.advise == 'NON_APPLY' %}advise-non-apply
+                        {% else %}advise-waiting{% endif %}">
+                        {{ ipo.get_advise_display }}
+                    </div>
+                </div>
+
+                <h4 class="fw-bold mb-1 text-truncate" title="{{ ipo.name }}">{{ ipo.name }}</h4>
+                <div class="company-work mb-3" title="{{ ipo.company_work }}">
+                    {{ ipo.company_work }}
+                </div>
+
+                <div class="row g-2 mb-4">
+                    <div class="col-6">
+                        <div class="ipo-date-box">
+                            <div class="ipo-date-label">Open Date</div>
+                            <div class="ipo-date-value">{{ ipo.start_date|date:"d M Y" }}</div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="ipo-date-box">
+                            <div class="ipo-date-label">Close Date</div>
+                            <div class="ipo-date-value">{{ ipo.end_date|date:"d M Y" }}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="analysis-preview">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="small fw-bold text-uppercase text-muted"><i class="fas fa-chart-line me-1"></i> Analysis</span>
+                    </div>
+                    <div class="analysis-text">
+                        {{ ipo.notes|truncatewords:20 }}
+                        {% if ipo.notes|wordcount > 20 %}
+                            <a class="read-more-btn" data-bs-toggle="modal" data-bs-target="#ipoModal{{ ipo.id }}">Read More</a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer bg-transparent border-0 p-4 pt-0">
+                <button class="btn btn-primary w-100 rounded-pill" data-bs-toggle="modal" data-bs-target="#ipoModal{{ ipo.id }}">
+                    View Details <i class="fas fa-chevron-right ms-1 small"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12 text-center py-5">
+        <div class="mb-4">
+            <i class="fas fa-search fa-4x text-muted opacity-25"></i>
+        </div>
+        <h3 class="fw-bold text-muted">No IPOs Found</h3>
+        <p class="text-muted">There are currently no IPOs matching your filter.</p>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Modals Section: Moved outside the animated grid to fix backdrop issue -->
+{% for ipo in ipos %}
+<div class="modal fade" id="ipoModal{{ ipo.id }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 20px;">
+            <div class="modal-header border-0 p-4 pb-0">
+                <div class="d-flex flex-column">
+                    <div class="d-flex align-items-center gap-2 mb-1">
+                        <h3 class="modal-title fw-bold" style="color: var(--primary-color);">{{ ipo.name }}</h3>
+                        <span class="status-badge 
+                            {% if ipo.status == 'Open' %}status-open
+                            {% elif ipo.status == 'Upcoming' %}status-upcoming
+                            {% else %}status-closed{% endif %}">
+                            {{ ipo.status }}
+                        </span>
+                    </div>
+                    <div class="text-muted small">Updated on {{ ipo.updated_at|date:"d M Y, h:i A" }}</div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="row mb-4">
+                    <div class="col-md-8">
+                        <h6 class="fw-bold text-uppercase text-muted mb-2 small">About the Company</h6>
+                        <p class="mb-0">{{ ipo.company_work }}</p>
+                    </div>
+                    <div class="col-md-4">
+                        <h6 class="fw-bold text-uppercase text-muted mb-2 small">Expert Advice</h6>
+                        <div class="advise-badge w-100 text-center py-2 mb-0
+                            {% if ipo.advise == 'APPLY' %}advise-apply
+                            {% elif ipo.advise == 'NON_APPLY' %}advise-non-apply
+                            {% else %}advise-waiting{% endif %}" style="font-size: 1.1rem;">
+                            {{ ipo.get_advise_display }}
+                        </div>
+                    </div>
+                </div>
+
+                <hr class="opacity-10 mb-4">
+
+                <div class="row g-3 mb-4 text-center">
+                    <div class="col-6">
+                        <div class="p-3 rounded-4 bg-light">
+                            <div class="small text-muted mb-1">Bidding Starts</div>
+                            <div class="fw-bold h5 mb-0">{{ ipo.start_date|date:"F d, Y" }}</div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="p-3 rounded-4 bg-light">
+                            <div class="small text-muted mb-1">Bidding Ends</div>
+                            <div class="fw-bold h5 mb-0">{{ ipo.end_date|date:"F d, Y" }}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="analysis-section p-4 rounded-4" style="background: #f8fafc; border: 1px solid #edf2f7;">
+                    <h6 class="fw-bold text-uppercase text-muted mb-3 small"><i class="fas fa-file-alt me-1"></i> Detailed Analysis & Notes</h6>
+                    <div style="white-space: pre-line; line-height: 1.6; color: #374151;">
+                        {{ ipo.notes }}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
+{% endblock %}

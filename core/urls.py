@@ -75,7 +75,7 @@ urlpatterns = [
     path('portfolio/', views.portfolio, name='portfolio'),
     path('etf-guide/', views.etf_guide, name='etf_guide'),
     path('nps-guide/', views.nps_guide, name='nps_guide'),
-    path('donation/', views.donation, name='donation'),
+    path('ipo/', views.ipo_list, name='ipo'),
     path('aboutproject/', views.about_project, name='about_project'),
     # Transactions and Lots
     path('transactions/', views.transaction_history, name='transaction_history'),

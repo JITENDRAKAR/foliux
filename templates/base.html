@@ -239,10 +239,13 @@
 <li class="nav-item">
     <a class="nav-link" href="{% url 'nps_dashboard' %}">NPS Cue</a>
 </li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'ipo' %}">IPO</a>
+</li>
 
 {% if user.is_authenticated %}
     <li class="nav-item">
-        <a class="nav-link nav-item-dashboard" href="{% url 'portfolio' %}">
+        <a class="nav-link nav-item-dashboard" href="https://npits.in/portfolio/">
             Portfolio
             {% if action_count and action_count > 0 %}
               <span class="badge-fbi" title="Your action is needed!">{{ action_count }}</span>
@@ -261,9 +264,6 @@
         </form>
     </li>
 {% else %}
-    <li class="nav-item">
-        <a class="nav-link" href="{% url 'donation' %}">IPO</a>
-    </li>
     <li class="nav-item">
         <a class="nav-link" href="{% url 'login' %}">Login</a>
     </li>

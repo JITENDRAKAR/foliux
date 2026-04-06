@@ -153,6 +153,11 @@
                     <span class="live-dot"></span>
                     Live Portfolio Status
                 </div>
+                {% if action_count and action_count > 0 %}
+                <a href="#actionable-signals" class="btn btn-warning rounded-pill px-4 fw-bold mb-4 animate__animated animate__headShake animate__infinite" style="--animate-duration: 5s;">
+                    <i class="fas fa-bell me-2"></i>Your action is needed!
+                </a>
+                {% endif %}
                 <div class="hero-label">Your Net Worth</div>
                 <div class="hero-value mb-4">₹ {{ total_latest_value|floatformat:2|default:"0.00" }}</div>
                 <div class="d-flex gap-4">
@@ -385,7 +390,7 @@
     </div>
 
     <!-- Alert Signals Section -->
-    <div class="mt-4 animate__animated animate__fadeInUp">
+    <div id="actionable-signals" class="mt-4 animate__animated animate__fadeInUp">
         <h4 class="fw-bold mb-4" style="color: #334155;">
             <i class="fas fa-bell text-warning me-2"></i> Actionable Signals
         </h4>

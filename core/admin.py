@@ -10,7 +10,7 @@ from .models import (
     StrategyStock, Watchlist, Dividend, InvestmentGoal,
     CorporateAction, MutualFund, MFPortfolio, MFTransaction,
     Coin, CoinPortfolio, CoinTransaction,
-    NPSFund, NPSPortfolio, NPSTransaction
+    NPSFund, NPSPortfolio, NPSTransaction, IPO
 )
 
 class CsvImportForm(forms.Form):
@@ -200,3 +200,14 @@ class NPSTransactionAdmin(admin.ModelAdmin):
     list_display = ('user', 'fund', 'transaction_type', 'units', 'price', 'date')
     list_filter = ('transaction_type', 'date', 'user')
     search_fields = ('user__username', 'fund__name')
+
+@admin.register(IPO)
+class IPOAdmin(admin.ModelAdmin):
+    list_display = ('name', 'start_date', 'end_date', 'advise', 'get_status')
+    list_filter = ('advise', 'start_date', 'end_date')
+    search_fields = ('name', 'company_work')
+    ordering = ('-start_date',)
+
+    def get_status(self, obj):
+        return obj.status
+    get_status.short_description = 'Status'

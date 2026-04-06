@@ -1904,42 +1904,46 @@
                 });
             }
         }
-
-    });
+    }); // End of DOMContentLoaded
 </script>
 
-<!-- Intro Video Modal -->
+<!-- Intro Video Modal (Re-Styled New Gen) -->
 <div class="modal fade" id="introVideoModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="introVideoLabel" aria-hidden="true">
   <div class="modal-dialog modal-md modal-dialog-centered">
-    <div class="modal-content border-0 shadow-lg rounded-4 text-center p-3">
-      <div class="modal-header border-bottom-0 pb-0 position-relative">
-          <button type="button" class="btn-close position-absolute top-0 end-0 m-3" data-bs-dismiss="modal" aria-label="Close" style="z-index: 1060; cursor: pointer;"></button>
-      </div>
-      <div class="modal-body py-4">
-          <!-- Modal Navigation Tabs -->
-          <ul class="nav nav-pills justify-content-center mb-4 bg-light p-1 rounded-pill d-inline-flex mx-auto" role="tablist">
-              <li class="nav-item" role="presentation">
-                  <button class="nav-link active rounded-pill px-4 fw-bold shadow-sm" data-bs-toggle="pill" data-bs-target="#modal-intro-tab" type="button" role="tab">Intro Video</button>
-              </li>
-              <li class="nav-item" role="presentation">
-                  <a href="https://npits.in/strategy/" target="_blank" class="nav-link rounded-pill px-4 fw-bold text-muted">Why NPITS?</a>
-              </li>
-          </ul>
+    <div class="modal-content overflow-hidden border-0 shadow-2xl" style="border-radius: 24px; background: #fff;">
+      <div class="modal-body p-0">
+          <div class="p-4 position-relative" style="background-color: #ffffff;">
+              <button type="button" class="btn-close position-absolute top-0 end-0 m-3 shadow-none" data-bs-dismiss="modal" aria-label="Close" style="font-size: 0.8rem;"></button>
+              
+              <div class="text-center px-2">
+                  <div class="mb-3">
+                      <h4 class="fw-900 text-dark mb-1">Welcome to <span class="text-primary">NPITS!</span></h4>
+                      <p class="text-muted fw-bold x-small opacity-75">Rules-Based Wealth Engineering</p>
+                  </div>
 
-          <div class="tab-content">
-              <div class="tab-pane fade show active" id="modal-intro-tab" role="tabpanel">
-                  <h3 class="fw-bold mb-3">Welcome to NPITS!</h3>
-                  <p class="text-muted mb-4 px-md-3">Share market investing is risky—always consult a financial advisor before investing, and watch our quick YouTube intro to learn how to use the website and maximize your tracking workflow.</p>
-
-                  <a href="https://youtu.be/kq7X2Dr7fpE?si=TD0JBiGtHhk_0hkY" target="_blank" rel="noopener noreferrer" class="text-decoration-none d-inline-block transition-hover">
-                      <i class="fab fa-youtube text-danger mb-4" style="font-size: 4.5rem; transition: transform 0.2s ease;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'"></i>
-                  </a>
-                  
-                  <div class="d-flex flex-column flex-sm-row justify-content-center gap-2">
-                      <button type="button" class="btn btn-light rounded-pill px-4 fw-bold" data-bs-dismiss="modal">Skip for now</button>
-                      <a href="https://youtu.be/kq7X2Dr7fpE?si=TD0JBiGtHhk_0hkY" target="_blank" rel="noopener noreferrer" id="watchIntroBtn" class="btn btn-danger rounded-pill px-4 fw-bold shadow-sm">
-                          <i class="fas fa-play-circle me-2"></i>Watch on YouTube
+                  <!-- Small Video Preview -->
+                  <div class="video-container position-relative rounded-3 overflow-hidden shadow-sm mb-3 mx-auto" style="max-width: 320px; background: #000; aspect-ratio: 16/9;">
+                      <a href="https://youtu.be/kq7X2Dr7fpE?si=TD0JBiGtHhk_0hkY" target="_blank" class="d-block transition-hover h-100">
+                          <img src="https://img.youtube.com/vi/kq7X2Dr7fpE/maxresdefault.jpg" class="img-fluid w-100 h-100 object-fit-cover shadow-inner" alt="NPITS">
+                          <div class="position-absolute shadow top-50 left-50 translate-middle rounded-circle bg-danger d-flex align-items-center justify-content-center pulse-animation" style="width: 50px; height: 50px; border: 3px solid rgba(255,255,255,0.4);">
+                              <i class="fas fa-play text-white ms-1" style="font-size: 1.1rem;"></i>
+                          </div>
                       </a>
+                  </div>
+
+                  <!-- Compact Risk Disclaimer -->
+                  <div class="risk-alert p-3 mb-3 rounded-3 border-start border-4 border-warning" style="background-color: #fff9f0; text-align: left;">
+                      <p class="mb-0 x-small fw-bold text-dark opacity-90" style="line-height: 1.4;">
+                          <i class="fas fa-shield-alt text-warning me-1"></i>
+                          Share market investing is risky—always consult a financial advisor before investing, and watch our quick YouTube intro to learn how to use the website and maximize your tracking workflow.
+                      </p>
+                  </div>
+
+                  <div class="action-footer d-flex flex-column gap-2">
+                      <a href="https://youtu.be/kq7X2Dr7fpE?si=TD0JBiGtHhk_0hkY" target="_blank" class="btn btn-primary btn-sm rounded-pill py-2 fw-black shadow-sm transform-hover w-100">
+                          <i class="fas fa-play-circle me-1"></i> Watch Intro
+                      </a>
+                      <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill fw-bold x-small border-0" data-bs-dismiss="modal">Skip to Dashboard</button>
                   </div>
               </div>
           </div>
@@ -1948,5 +1952,28 @@
   </div>
 </div>
 
-</div>
+<style>
+    .fw-900 { font-weight: 900; }
+    .ls-wider { letter-spacing: 0.1em; }
+    .x-small { font-size: 0.75rem; }
+    .backdrop-blur { backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+    .transform-hover:hover { transform: translateY(-4px); }
+    .transition-hover:hover { opacity: 0.9; }
+    .shadow-2xl { box-shadow: 0 35px 70px -15px rgba(0, 0, 0, 0.4); }
+    
+    .pulse-animation {
+        animation: pulse-red 2s infinite;
+        box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7);
+    }
+    
+    @keyframes pulse-red {
+        0% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7); }
+        70% { box-shadow: 0 0 0 20px rgba(220, 53, 69, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0); }
+    }
+    
+    @media (max-width: 991px) {
+        .modal-xl { max-width: 95%; margin: 10px auto; }
+    }
+</style>
 {% endblock %}

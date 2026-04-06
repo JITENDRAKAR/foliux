@@ -351,6 +351,8 @@
         background: rgba(255, 255, 255, 0.03);
         border: 1px solid rgba(255, 255, 255, 0.05);
         color: #ffffff;
+        padding: 15px 10px;
+        text-align: center;
     }
 
     .backtest-container .stat-card:hover {
@@ -359,8 +361,20 @@
         box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
     }
 
+    .backtest-container .stat-label {
+        font-size: 0.7rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: #94a3b8;
+        margin-bottom: 8px;
+    }
+
     .backtest-container .stat-value {
         color: #ffffff;
+        font-size: 1rem;
+        font-weight: 850;
+        white-space: nowrap;
     }
 
     .backtest-container .card {
@@ -388,42 +402,7 @@
         border-radius: 48px;
     }
 
-    /* ── Strategy Index Bar ── */
-    .strategy-index-container {
-        display: flex;
-        justify-content: center;
-        margin-bottom: 3rem;
-    }
 
-    .strategy-index-bar {
-        background: #ffffff;
-        border: 1px solid #f1f5f9;
-        padding: 10px 40px;
-        border-radius: 100px;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.03);
-    }
-
-    .strategy-index-item {
-        font-weight: 800;
-        text-transform: uppercase;
-        font-size: 0.7rem;
-        letter-spacing: 0.15em;
-        color: #94a3b8;
-        transition: all 0.3s;
-    }
-
-    .strategy-index-item:hover {
-        color: var(--primary-color);
-    }
-
-    .strategy-index-dot {
-        width: 5px;
-        height: 5px;
-        background: #e2e8f0;
-        border-radius: 50%;
-        margin: 0 15px;
-        align-self: center;
-    }
 
     /* ── Lab Title Overhaul ── */
     .lab-main-title {
@@ -626,29 +605,35 @@
         <div id="backtestResults" style="display: none;">
             <div class="row justify-content-center">
                 <div class="col-lg-10">
-                    <div class="row g-3 mb-5">
-                        <div class="col-6 col-md-3">
+                    <div class="row g-2 mb-5 row-cols-2 row-cols-md-5">
+                        <div class="col">
                             <div class="stat-card" style="border-top: 6px solid #38bdf8;">
                                 <div class="stat-label">Invested</div>
                                 <div class="stat-value" id="bt-res-invested">₹0</div>
                             </div>
                         </div>
-                        <div class="col-6 col-md-3">
+                        <div class="col">
                             <div class="stat-card" style="border-top: 6px solid #10B981;">
-                                <div class="stat-label">Wealth Projection</div>
+                                <div class="stat-label">Projection</div>
                                 <div class="stat-value" id="bt-res-wealth">₹0</div>
                             </div>
                         </div>
-                        <div class="col-6 col-md-3">
+                        <div class="col">
                             <div class="stat-card" style="border-top: 6px solid #F59E0B;">
                                 <div class="stat-label">Realized Profit</div>
                                 <div class="stat-value" id="bt-res-profit">₹0</div>
                             </div>
                         </div>
-                        <div class="col-6 col-md-3">
+                        <div class="col">
                             <div class="stat-card" style="border-top: 6px solid #EF4444;">
-                                <div class="stat-label">Abs. Return</div>
-                                <div class="stat-value text-danger" id="bt-res-returns">0%</div>
+                                <div class="stat-label">NPIT Ret</div>
+                                <div class="stat-value" id="bt-res-returns">0%</div>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <div class="stat-card" style="border-top: 6px solid #00D1FF;">
+                                <div class="stat-label">Mkt Ret</div>
+                                <div class="stat-value" id="bt-res-market-returns">0%</div>
                             </div>
                         </div>
                     </div>
@@ -738,19 +723,7 @@
         <h2 class="section-title">Investment Frameworks</h2>
     </div>
 
-    <div class="strategy-index-container animate__animated animate__fadeIn">
-        <div class="strategy-index-bar d-flex align-items-center">
-            <div class="strategy-index-item">Passive Alpha</div>
-            <div class="strategy-index-dot"></div>
-            <div class="strategy-index-item">Quantitative</div>
-            <div class="strategy-index-dot"></div>
-            <div class="strategy-index-item">Aggressive Scaling</div>
-            <div class="strategy-index-dot"></div>
-            <div class="strategy-index-item">ReinvestX</div>
-            <div class="strategy-index-dot"></div>
-            <div class="strategy-index-item">Untracked</div>
-        </div>
-    </div>
+
 
     <div class="row g-4 justify-content-center">
         <!-- 1. FlexiMultiInvest -->
@@ -783,7 +756,7 @@
                     </div>
                     <div class="rule-item">
                         <i class="fas fa-sign-out-alt"></i>
-                        <span><strong>Exit:</strong> +22% Profit. 93% reinvested, 7% for costs.</span>
+                        <span><strong>Exit:</strong> +22% Profit. 98% reinvested, 2% for costs.</span>
                     </div>
 
                     {% if flexi_stocks %}
@@ -1328,17 +1301,17 @@
             document.getElementById('bt-res-invested').innerText = '₹' + data.summary.total_invested.toLocaleString('en-IN');
             document.getElementById('bt-res-wealth').innerText = '₹' + data.summary.total_wealth.toLocaleString('en-IN');
             document.getElementById('bt-res-profit').innerText = '₹' + data.summary.realized_profit.toLocaleString('en-IN');
-            document.getElementById('bt-res-returns').innerText = data.summary.returns_pct + '%';
             
             const returnsEl = document.getElementById('bt-res-returns');
+            const marketReturnsEl = document.getElementById('bt-res-market-returns');
+            
             if (returnsEl) {
-                if (data.summary.returns_pct >= 0) {
-                    returnsEl.classList.remove('text-danger');
-                    returnsEl.classList.add('text-success');
-                } else {
-                    returnsEl.classList.remove('text-success');
-                    returnsEl.classList.add('text-danger');
-                }
+                returnsEl.innerText = data.summary.returns_pct.toFixed(2) + '%';
+                returnsEl.className = data.summary.returns_pct >= 0 ? 'stat-value text-success' : 'stat-value text-danger';
+            }
+            if (marketReturnsEl) {
+                marketReturnsEl.innerText = data.summary.market_returns_pct.toFixed(2) + '%';
+                marketReturnsEl.className = data.summary.market_returns_pct >= 0 ? 'stat-value text-success' : 'stat-value text-danger';
             }
 
             const periodLabel = document.getElementById('bt-period-label');
@@ -1348,8 +1321,9 @@
             const labels = data.results.map(r => r.date);
             const wealthData = data.results.map(r => r.total_wealth);
             const investedData = data.results.map(r => r.invested);
+            const marketData = data.results.map(r => r.market_wealth);
 
-            renderBacktestChart(labels, wealthData, investedData);
+            renderBacktestChart(labels, wealthData, investedData, marketData);
             resultsArea.style.display = 'block';
             
             // Smooth scroll to results
@@ -1364,7 +1338,7 @@
         }
     }
 
-    function renderBacktestChart(labels, wealth, invested) {
+    function renderBacktestChart(labels, wealth, invested, market) {
         const canvas = document.getElementById('backtestChart');
         if (!canvas) return;
         const ctx = canvas.getContext('2d');
@@ -1386,6 +1360,15 @@
                         borderWidth: 3,
                         fill: true,
                         tension: 0.4,
+                        pointRadius: 0
+                    },
+                    {
+                        label: 'Normal mkt Return',
+                        data: market,
+                        borderColor: '#00D1FF', /* Cyan */
+                        borderWidth: 2,
+                        fill: false,
+                        tension: 0.2,
                         pointRadius: 0
                     },
                     {

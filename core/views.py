@@ -23,7 +23,7 @@ from .models import (
     SignupOTP, MarketTicker, Strategy, MutualFund, MFPortfolio, MFTransaction,
     Coin, CoinPortfolio, CoinTransaction,
     NPSFund, NPSPortfolio, NPSTransaction, FixedAsset, OtherAsset,
-    Loan, LoanPayment
+    Loan, LoanPayment, IPO
 )
 from .forms import (
     UploadFileForm, PortfolioForm, ManualPortfolioForm, 
@@ -1142,6 +1142,31 @@ def portfolio(request):
     total_realized_gain = stocks_realized + mf_realized + coin_realized + nps_realized
     total_other_gain = 0  # Placeholder for future models
 
+    # Actionable Signals Calculation
+    # 1. Stocks & ETFs (Broad Logic - matching dashboard recommendations)
+    buy_count = sum(1 for r in recommendations if r.get('action') == 'BUY')
+    sell_count = sum(1 for r in recommendations if r.get('action') == 'SELL')
+    reduce_count = sum(1 for r in recommendations if r.get('action') == 'REDUCE')
+
+    # 2. Mutual Funds
+    mf_buy_count = 0
+    mf_redemption_count = 0
+    from decimal import Decimal
+    for h in mf_holdings:
+        if h.pnl_percentage >= 22:
+            mf_redemption_count += 1
+        if h.realized_profit > 0:
+            target = Decimal('100000') + h.realized_profit
+            if h.invested_amount < target:
+                mf_buy_count += 1
+
+    # 3. Coin
+    coin_buy_count = 0
+    coin_sell_count = 0
+    for h in coin_holdings:
+        if h.pnl_percentage >= 22:
+            coin_sell_count += 1
+
     context = {
         'total_investment_cost': total_investment_cost,
         'total_latest_value': total_latest_value,
@@ -1183,11 +1208,14 @@ def portfolio(request):
         'loan_outstanding': loan_outstanding,
         'upcoming_emis_count': upcoming_emis_count,
         
-        # Actionable Signals Placeholders
-        'mf_buy_count': 0,
-        'mf_redemption_count': 0,
-        'coin_buy_count': 0,
-        'coin_sell_count': 0,
+        # Actionable Signals counts
+        'buy_count': buy_count,
+        'sell_count': sell_count,
+        'reduce_count': reduce_count,
+        'mf_buy_count': mf_buy_count,
+        'mf_redemption_count': mf_redemption_count,
+        'coin_buy_count': coin_buy_count,
+        'coin_sell_count': coin_sell_count,
     }
     
     # Get Portfolio Value History (Total Initial Capital vs Net Worth)
@@ -1212,9 +1240,22 @@ def nps_guide(request):
     """NPS Guide page."""
     return render(request, 'core/nps_guide.html')
 
-def donation(request):
-    """Donation page."""
-    return render(request, 'core/donation.html')
+
+def ipo_list(request):
+    """IPO list page for users."""
+    from .models import IPO
+    ipos = IPO.objects.all().order_by('-start_date')
+    
+    # Optional filtering
+    advise_filter = request.GET.get('advise')
+    if advise_filter:
+        ipos = ipos.filter(advise=advise_filter)
+        
+    context = {
+        'ipos': ipos,
+        'title': 'IPO Management',
+    }
+    return render(request, 'core/ipo.html', context)
 
 def about_project(request):
     """Project Report Page."""
@@ -3423,11 +3464,13 @@ def backtest_strategy_api(request):
         gross_total_buys = 0 # Cumulative sum of all buy transactions
         capital_injected = 0 # Fresh money brought in from outside
         cash_balance = 0     # Liquidity from sells
+        market_qty = 0       # Unit tracking for benchmark
         
         results = []
         
         for i, (dt, row) in enumerate(sim_data.iterrows()):
             price = float(row['Close'])
+            prev_capital = capital_injected
             
             # Apply 5% annual interest on cash balance for the number of days since the last data point
             if i > 0 and cash_balance > 0:
@@ -3452,9 +3495,9 @@ def backtest_strategy_api(request):
                     sell_proceeds = current_val
                     profit = sell_proceeds - invested_val
                     
-                    # From profit booking, 7% of profit is deducted as expenses
-                    realized_profit += profit * 0.93
-                    cash_balance += sell_proceeds - (profit * 0.07)
+                    # From profit booking, 2% of profit is deducted as expenses
+                    realized_profit += profit * 0.98
+                    cash_balance += sell_proceeds - (profit * 0.02)
                     
                     quantity = 0
                     avg_cost = 0
@@ -3482,6 +3525,11 @@ def backtest_strategy_api(request):
                     avg_cost = float((quantity * avg_cost + buy_cost) / total_qty)
                     quantity = total_qty
 
+            # Benchmark Logic: If capital was injected, "buy" the same amount in market portfolio
+            if capital_injected > prev_capital:
+                new_injection = capital_injected - prev_capital
+                market_qty += float(new_injection / price)
+
             results.append({
                 'date': dt.strftime('%Y-%m-%d'),
                 'price': round(price, 2),
@@ -3490,17 +3538,20 @@ def backtest_strategy_api(request):
                 'realized_profit': round(realized_profit, 2),
                 'cash_balance': round(cash_balance, 2),
                 'total_wealth': round(quantity * price + cash_balance, 2),
+                'market_wealth': round(market_qty * price, 2),
             })
 
         # Summary Metrics
         last_wealth = results[-1]['total_wealth']
+        last_market_wealth = results[-1]['market_wealth']
         summary = {
             'total_invested': round(capital_injected, 2), # Correct: Basis is net capital put in
             'realized_profit': round(realized_profit, 2),
             'current_holdings_value': round(results[-1]['current_value'], 2),
             'total_wealth': round(last_wealth, 2),
             'net_profit': round(last_wealth - capital_injected, 2),
-            'returns_pct': round(((last_wealth - capital_injected) / capital_injected * 100) if capital_injected > 0 else 0, 2)
+            'returns_pct': round(((last_wealth - capital_injected) / capital_injected * 100) if capital_injected > 0 else 0, 2),
+            'market_returns_pct': round(((last_market_wealth - capital_injected) / capital_injected * 100) if capital_injected > 0 else 0, 2)
         }
         
         return JsonResponse({'summary': summary, 'results': results})

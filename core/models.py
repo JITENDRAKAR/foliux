@@ -704,3 +704,38 @@ class PortfolioValueHistory(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - {self.date} - {self.current_value}"
+
+class IPO(models.Model):
+    ADVISE_CHOICES = [
+        ('APPLY', 'Apply'),
+        ('NON_APPLY', 'Non Apply'),
+        ('WAITING', 'Waiting'),
+    ]
+    
+    name = models.CharField(max_length=200)
+    start_date = models.DateField()
+    end_date = models.DateField()
+    company_work = models.TextField(help_text="What company does – short text")
+    notes = models.TextField(help_text="Post / Analysis")
+    advise = models.CharField(max_length=20, choices=ADVISE_CHOICES, default='WAITING')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.name
+
+    @property
+    def status(self):
+        from django.utils import timezone
+        today = timezone.now().date()
+        if today < self.start_date:
+            return 'Upcoming'
+        elif self.start_date <= today <= self.end_date:
+            return 'Open'
+        else:
+            return 'Closed'
+
+    class Meta:
+        ordering = ['-start_date']
+        verbose_name = "IPO"
+        verbose_name_plural = "IPOs"
