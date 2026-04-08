@@ -1,4 +1,4 @@
-from .utils import get_recommendations
+from .utils import get_recommendations, get_target_user
 
 def signal_info(request):
     """
@@ -10,7 +10,11 @@ def signal_info(request):
     try:
         from .models import MFPortfolio, CoinPortfolio
         from decimal import Decimal
-        recommendations, _, _ = get_recommendations(request.user)
+        
+        # Identify the target user for signals
+        target_user, is_family_view = get_target_user(request)
+        
+        recommendations, _, _ = get_recommendations(target_user)
         
         # 1. Stocks & ETFs (Broad Logic - matching dashboard recommendations)
         buy_count = sum(1 for r in recommendations if r.get('action') == 'BUY')
@@ -20,7 +24,7 @@ def signal_info(request):
         # 2. Mutual Funds advice
         mf_buy = 0
         mf_sell = 0
-        mf_holdings = MFPortfolio.objects.filter(user=request.user)
+        mf_holdings = MFPortfolio.objects.filter(user=target_user)
         for h in mf_holdings:
             if h.pnl_percentage >= 22:
                 mf_sell += 1
@@ -32,7 +36,7 @@ def signal_info(request):
         # 3. Coin advice (Simple 22% rule for now)
         coin_buy = 0
         coin_sell = 0
-        coin_holdings = CoinPortfolio.objects.filter(user=request.user)
+        coin_holdings = CoinPortfolio.objects.filter(user=target_user)
         for h in coin_holdings:
             if h.pnl_percentage >= 22:
                 coin_sell += 1
@@ -57,7 +61,28 @@ def signal_info(request):
         logger = logging.getLogger(__name__)
         logger.error(f"Error in signal_info context processor: {e}")
         return {
-            'buy_reduce_count': 0,
+            'total_signal_count': 0,
+            'action_count': 0,
             'sell_count': 0,
+            'buy_count': 0,
+            'reduce_count': 0,
+            'mf_buy_count': 0,
+            'mf_redemption_count': 0,
+            'coin_buy_count': 0,
+            'coin_sell_count': 0,
             'has_sell_signal': False,
         }
+
+def family_context(request):
+    """
+    Globally provides information about whether the current view is for a family member.
+    """
+    if not request.user.is_authenticated:
+        return {}
+    
+    target_user, is_family_view = get_target_user(request)
+    
+    return {
+        'target_user': target_user,
+        'is_family_view': is_family_view,
+    }

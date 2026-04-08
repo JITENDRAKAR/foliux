@@ -131,9 +131,9 @@
     </div>
     <div class="col-md-5 text-md-end">
         <div class="d-flex flex-wrap gap-2 justify-content-md-end mt-3 mt-md-0">
-            <a href="{% url 'ipo' %}" class="filter-btn {% if not request.GET.advise %}active{% endif %}">All</a>
-            <a href="?advise=APPLY" class="filter-btn {% if request.GET.advise == 'APPLY' %}active{% endif %}">Apply Only</a>
-            <a href="?advise=WAITING" class="filter-btn {% if request.GET.advise == 'WAITING' %}active{% endif %}">Waiting</a>
+            <a href="{% url 'ipo' %}{% if is_family_view %}?user_id={{ target_user.id }}{% endif %}" class="filter-btn {% if not request.GET.advise %}active{% endif %}">All</a>
+            <a href="?advise=APPLY{% if is_family_view %}&user_id={{ target_user.id }}{% endif %}" class="filter-btn {% if request.GET.advise == 'APPLY' %}active{% endif %}">Apply Only</a>
+            <a href="?advise=WAITING{% if is_family_view %}&user_id={{ target_user.id }}{% endif %}" class="filter-btn {% if request.GET.advise == 'WAITING' %}active{% endif %}">Waiting</a>
         </div>
     </div>
 </div>

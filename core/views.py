@@ -10,6 +10,7 @@ from django.core.mail import send_mail
 from django.conf import settings
 from django.http import JsonResponse
 from django.utils import timezone
+from datetime import datetime, timedelta, date
 from dateutil.relativedelta import relativedelta
 from django.contrib.auth.views import PasswordChangeView
 from django.contrib.auth.forms import SetPasswordForm as DjangoSetPasswordForm
@@ -31,7 +32,7 @@ from .forms import (
     VerifyOTPForm, SetPasswordForm, EditLotForm,
     LoanForm, LoanPaymentForm
 )
-from .utils import fetch_live_ltp, perform_sync, get_recommendations, fetch_strategy_stocks
+from .utils import fetch_live_ltp, perform_sync, get_recommendations, fetch_strategy_stocks, get_target_user
 import random
 import json
 import yfinance as yf
@@ -48,37 +49,13 @@ def _auto_update_mf():
         from django.utils import timezone
         from datetime import timedelta
         from .models import MutualFund
-        from decimal import Decimal
-        import yfinance as yf
-        import pandas as pd
+        from .utils import sync_mutual_funds_from_sheet
         
         ten_mins_ago = timezone.now() - timedelta(minutes=10)
         stale_funds = MutualFund.objects.filter(last_updated__lt=ten_mins_ago)
-        if not stale_funds.exists(): return
-        
-        symbols = list(set([f.symbol for f in stale_funds if f.symbol]))
-        if not symbols: return
-        
-        if len(symbols) == 1:
-            ticker = yf.Ticker(symbols[0])
-            hist = ticker.history(period="1d")
-            if not hist.empty:
-                val = hist['Close'].iloc[-1]
-                for f in stale_funds:
-                    if f.symbol == symbols[0]:
-                        f.prev_nav = f.nav
-                        f.nav = Decimal(str(val))
-                        f.save()
-        else:
-            data = yf.download(symbols, period="1d", progress=False)
-            close_data = data['Close'] if isinstance(data.columns, pd.MultiIndex) else data[['Close']]
-            for f in stale_funds:
-                if f.symbol in close_data.columns:
-                    val = close_data[f.symbol].iloc[-1]
-                    if not pd.isna(val):
-                        f.prev_nav = f.nav
-                        f.nav = Decimal(str(val))
-                        f.save()
+        if stale_funds.exists():
+            # This function syncs names and data from Google Sheets
+            sync_mutual_funds_from_sheet()
     except Exception as e:
         logger.error(f"Auto update MF failed: {e}")
 
@@ -553,8 +530,17 @@ def _process_auto_mf_sips(user):
 @login_required
 def mf_dashboard(request):
     """Isolated dashboard for Mutual Funds with SIP processing."""
-    _process_auto_mf_sips(request.user)
-    all_holdings = MFPortfolio.objects.filter(user=request.user).select_related('fund')
+    # Trigger auto update if data is stale in background thread
+    import threading
+    def _run_bg_mf():
+        try:
+            _auto_update_mf()
+        except Exception:
+            pass
+    threading.Thread(target=_run_bg_mf, daemon=True).start()
+    target_user, is_family_view = get_target_user(request)
+    _process_auto_mf_sips(target_user)
+    all_holdings = MFPortfolio.objects.filter(user=target_user).select_related('fund')
     
     total_invested = sum(h.invested_amount for h in all_holdings)
     total_current_value = sum(h.current_value for h in all_holdings)
@@ -574,17 +560,20 @@ def mf_dashboard(request):
     active_sips = {sip.fund_id: sip for sip in MFSIP.objects.filter(user=request.user, is_active=True)}
     
     # Process advice and attach SIP data for each holding
+    mf_limit = target_user.profile.mf_investment_limit
     for h in mf_holdings:
         h.active_sip = active_sips.get(h.fund_id)
         h.advice = []
         if h.pnl_percentage >= 22:
             h.advice.append({'type': 'SELL', 'reason': f'Target 22% reached ({float(h.pnl_percentage):.2f}%)'})
         
-        if h.realized_profit > 0:
-            target = Decimal('100000') + h.realized_profit
-            if h.invested_amount < target:
-                gap = target - h.invested_amount
-                h.advice.append({'type': 'BUY', 'reason': f'Realized profit target ₹{float(gap):,.0f} gap'})
+        target = mf_limit + h.realized_profit
+        if h.invested_amount < target:
+            gap = target - h.invested_amount
+            h.advice.append({'type': 'BUY', 'reason': f'Target ₹{float(target):,.0f} (Gap ₹{float(gap):,.0f})'})
+        elif h.invested_amount > target + Decimal('3000'):
+            excess = h.invested_amount - target
+            h.advice.append({'type': 'REDUCE', 'reason': f'Excess of ₹{float(excess):,.0f} over target ₹{float(target):,.0f}'})
 
     context = {
         'mf_holdings': mf_holdings,
@@ -809,44 +798,17 @@ def mf_transaction_history(request):
 
 @login_required
 def refresh_mf_navs(request):
-    """Fetch latest NAVs for all funds in the user's portfolio."""
-    mf_holdings = MFPortfolio.objects.filter(user=request.user).select_related('fund')
-    if not mf_holdings:
-        return redirect('mf_dashboard')
-    
-    import yfinance as yf
-    symbols = [h.fund.symbol for h in mf_holdings]
-    
+    """Fetch latest NAVs for all funds by triggering a master sync from Google Sheets and yfinance."""
+    from .utils import sync_mutual_funds_from_sheet
     try:
-        # Fetch data for all symbols at once
-        if len(symbols) == 1:
-            ticker = yf.Ticker(symbols[0])
-            hist = ticker.history(period="1d")
-            if not hist.empty:
-                new_nav = hist['Close'].iloc[-1]
-                fund = mf_holdings[0].fund
-                fund.prev_nav = fund.nav # Store old NAV
-                fund.nav = Decimal(str(new_nav))
-                fund.save()
+        count = sync_mutual_funds_from_sheet()
+        if count > 0:
+            messages.success(request, f"Synced {count} Mutual Funds with latest NAVs.")
         else:
-            data = yf.download(symbols, period="1d", progress=False)
-            # Handle the case where download returns a multi-index or single Series
-            close_data = data['Close']
-            for h in mf_holdings:
-                try:
-                    sym = h.fund.symbol
-                    if sym in close_data.columns:
-                        val = close_data[sym].iloc[-1]
-                        if not pd.isna(val):
-                            h.fund.prev_nav = h.fund.nav # Store old NAV
-                            h.fund.nav = Decimal(str(val))
-                            h.fund.save()
-                except Exception: continue
-                
-        messages.success(request, "Mutual Fund NAVs refreshed successfully.")
+            messages.info(request, "Mutual fund sync completed.")
     except Exception as e:
-        logger.error(f"NAV Refresh failed: {e}")
-        messages.error(request, "Failed to refresh some NAVs. Yahoo Finance might be temporarily unavailable.")
+        logger.error(f"Manual MF refresh failed: {e}")
+        messages.error(request, "Failed to refresh Mutual Fund NAVs.")
         
     return redirect('mf_dashboard')
 
@@ -855,7 +817,16 @@ def refresh_mf_navs(request):
 @login_required
 def coin_dashboard(request):
     """Dashboard for Cryptocurrency holdings using FIFO."""
-    all_holdings = CoinPortfolio.objects.filter(user=request.user).select_related('coin')
+    # Trigger auto update if data is stale in background thread
+    import threading
+    def _run_bg_coin():
+        try:
+            _auto_update_coin()
+        except Exception:
+            pass
+    threading.Thread(target=_run_bg_coin, daemon=True).start()
+    target_user, is_family_view = get_target_user(request)
+    all_holdings = CoinPortfolio.objects.filter(user=target_user).select_related('coin')
     
     total_invested = sum(h.invested_amount for h in all_holdings)
     total_current_value = sum(h.current_value for h in all_holdings)
@@ -869,6 +840,21 @@ def coin_dashboard(request):
         
     # Only display holdings with units > 0
     coin_holdings = [h for h in all_holdings if h.units > 0]
+    
+    coin_limit = target_user.profile.coin_investment_limit
+    for h in coin_holdings:
+        h.advice = []
+        if h.pnl_percentage >= 22:
+            h.advice.append({'type': 'SELL', 'reason': f'Profit {float(h.pnl_percentage):.2f}% >= 22%'})
+        
+        # Crypto target: user defined (default 15k)
+        target = coin_limit + h.realized_profit
+        if h.invested_amount < target:
+            gap = target - h.invested_amount
+            h.advice.append({'type': 'BUY', 'reason': f'Target ₹{float(target):,.0f} (Gap ₹{float(gap):,.0f})'})
+        elif h.invested_amount > target + Decimal('3000'):
+            excess = h.invested_amount - target
+            h.advice.append({'type': 'REDUCE', 'reason': f'Excess of ₹{float(excess):,.0f} over target ₹{float(target):,.0f}'})
     
     context = {
         'coin_holdings': coin_holdings,
@@ -1061,11 +1047,27 @@ def refresh_coin_prices(request):
 
 @login_required
 def portfolio(request):
-    """Unified Portfolio Dashboard with SIP/EMI processing."""
+    """Broad portfolio summary view for all asset classes."""
+    # Ensure asset data is fresh (lazy sync) in a background thread to prevent blocking
+    import threading
+    def _run_bg_sync():
+        try:
+            _auto_update_mf()
+            _auto_update_coin()
+            _auto_update_nps()
+        except Exception:
+            pass
+    
+    threading.Thread(target=_run_bg_sync, daemon=True).start()
+    
+    target_user, is_family_view = get_target_user(request)
+    
+    # Portfolio history for chart
+    
     # Process any background tasks
-    _process_auto_mf_sips(request.user)
+    _process_auto_mf_sips(target_user)
     # 1. Stocks/ETF
-    recommendations, realized_profits, _ = get_recommendations(request.user)
+    recommendations, realized_profits, _ = get_recommendations(target_user)
     stocks_recs = [r for r in recommendations if r.get('in_portfolio', False)]
     stocks_invested = float(sum(r.get('invested_amount', 0) for r in stocks_recs))
     stocks_current = float(sum(r.get('current_value', 0) for r in stocks_recs))
@@ -1073,21 +1075,21 @@ def portfolio(request):
     stocks_realized = float(sum(realized_profits.values()) if isinstance(realized_profits, dict) else 0)
 
     # 2. Mutual Funds
-    mf_holdings = MFPortfolio.objects.filter(user=request.user).select_related('fund')
+    mf_holdings = MFPortfolio.objects.filter(user=target_user).select_related('fund')
     mf_invested = float(sum(h.invested_amount for h in mf_holdings))
     mf_current = float(sum(h.current_value for h in mf_holdings))
     mf_unrealized = mf_current - mf_invested
     mf_realized = float(sum(h.realized_profit for h in mf_holdings))
 
     # 3. Coin (Crypto)
-    coin_holdings = CoinPortfolio.objects.filter(user=request.user).select_related('coin')
+    coin_holdings = CoinPortfolio.objects.filter(user=target_user).select_related('coin')
     coin_invested = float(sum(h.invested_amount for h in coin_holdings))
     coin_current = float(sum(h.current_value for h in coin_holdings))
     coin_unrealized = coin_current - coin_invested
     coin_realized = float(sum(h.realized_profit for h in coin_holdings))
 
     # 4. NPS
-    nps_holdings = NPSPortfolio.objects.filter(user=request.user).select_related('fund')
+    nps_holdings = NPSPortfolio.objects.filter(user=target_user).select_related('fund')
     nps_invested = float(sum(h.invested_amount for h in nps_holdings))
     nps_current = float(sum(h.current_value for h in nps_holdings))
     nps_unrealized = nps_current - nps_invested
@@ -1096,8 +1098,8 @@ def portfolio(request):
     # 5. Fixed Assets
     fd_invested = fd_current = fd_unrealized = fd_percentage = 0.0
     try:
-        fd_holdings = FixedAsset.objects.filter(user=request.user)
-        fd_invested = float(sum(h.invested_amount for h in fd_holdings))
+        fd_holdings = FixedAsset.objects.filter(user=target_user)
+        fd_invested = float(sum(h.invested_amount_decimal for h in fd_holdings))
         fd_current = float(sum(h.current_value for h in fd_holdings))
         fd_unrealized = float(sum(h.unrealized_pnl for h in fd_holdings))
         if fd_invested > 0:
@@ -1108,7 +1110,7 @@ def portfolio(request):
     # 6. Other Assets (Real Estate, Gold, etc)
     other_invested = other_current = other_unrealized = other_percentage = 0.0
     try:
-        other_holdings = OtherAsset.objects.filter(user=request.user)
+        other_holdings = OtherAsset.objects.filter(user=target_user)
         other_invested = float(sum(h.purchase_price for h in other_holdings))
         other_current = float(sum(h.current_value for h in other_holdings))
         other_unrealized = float(sum(h.unrealized_pnl for h in other_holdings))
@@ -1119,14 +1121,14 @@ def portfolio(request):
 
     # 7. Loans
     # Process any background tasks for loans and RDs
-    _process_auto_mf_sips(request.user)
-    _process_auto_rd_deposits(request.user)
+    _process_auto_mf_sips(target_user)
+    _process_auto_rd_deposits(target_user)
     
-    loans = Loan.objects.filter(user=request.user, is_active=True)
+    loans = Loan.objects.filter(user=target_user, is_active=True)
     for l in loans:
         _process_auto_emis(l)
     
-    loan_taken = float(sum(l.loan_amount for l in loans))
+    loan_taken = float(sum(l.loan_amount_decimal for l in loans))
     loan_outstanding = float(sum(l.current_outstanding for l in loans))
     
     # Calculate upcoming EMIs (due in next 7 days)
@@ -1148,90 +1150,93 @@ def portfolio(request):
     sell_count = sum(1 for r in recommendations if r.get('action') == 'SELL')
     reduce_count = sum(1 for r in recommendations if r.get('action') == 'REDUCE')
 
-    # 2. Mutual Funds
+    # 2. Mutual Funds advice
     mf_buy_count = 0
     mf_redemption_count = 0
-    from decimal import Decimal
+    mf_reduce_count = 0
+    mf_limit = target_user.profile.mf_investment_limit
     for h in mf_holdings:
         if h.pnl_percentage >= 22:
             mf_redemption_count += 1
-        if h.realized_profit > 0:
-            target = Decimal('100000') + h.realized_profit
-            if h.invested_amount < target:
-                mf_buy_count += 1
-
-    # 3. Coin
+            
+        target = mf_limit + h.realized_profit
+        if h.invested_amount < target:
+            mf_buy_count += 1
+        elif h.invested_amount > target + Decimal('3000'):
+            mf_reduce_count += 1
+                
+    # 3. Coin advice (Simple 22% rule for now)
     coin_buy_count = 0
     coin_sell_count = 0
+    coin_reduce_count = 0
+    coin_limit = target_user.profile.coin_investment_limit
     for h in coin_holdings:
         if h.pnl_percentage >= 22:
             coin_sell_count += 1
+        
+        # Crypto target: user defined (default 15k)
+        target = coin_limit + h.realized_profit
+        if h.invested_amount < target:
+            coin_buy_count += 1
+        elif h.invested_amount > target + Decimal('3000'):
+            coin_reduce_count += 1
+
+    total_signal_count = buy_count + reduce_count + sell_count + mf_buy_count + mf_redemption_count + mf_reduce_count + coin_buy_count + coin_sell_count + coin_reduce_count
+
+    # 8. Portfolio History Data will now be loaded via API
+
+    # Get all verified family links for switching
+    from .models import FamilyLink
+    linked_family = FamilyLink.objects.filter(user=request.user, is_verified=True).select_related('family_user__profile')
 
     context = {
-        'total_investment_cost': total_investment_cost,
-        'total_latest_value': total_latest_value,
-        'total_unrealized_gain': total_unrealized_gain,
-        'total_realized_gain': total_realized_gain,
-        'total_other_gain': total_other_gain,
-
+        'linked_family': linked_family,
+        'target_user': target_user,
+        'is_family_view': is_family_view,
         'stocks_invested': stocks_invested,
         'stocks_current': stocks_current,
         'stocks_unrealized': stocks_unrealized,
         'stocks_realized': stocks_realized,
-
         'mf_invested': mf_invested,
         'mf_current': mf_current,
         'mf_unrealized': mf_unrealized,
         'mf_realized': mf_realized,
-
         'coin_invested': coin_invested,
         'coin_current': coin_current,
         'coin_unrealized': coin_unrealized,
         'coin_realized': coin_realized,
-
         'nps_invested': nps_invested,
         'nps_current': nps_current,
         'nps_unrealized': nps_unrealized,
         'nps_realized': nps_realized,
-
         'fd_invested': fd_invested,
         'fd_current': fd_current,
         'fd_unrealized': fd_unrealized,
         'fd_percentage': fd_percentage,
-
         'other_invested': other_invested,
         'other_current': other_current,
         'other_unrealized': other_unrealized,
         'other_percentage': other_percentage,
-
         'loan_taken': loan_taken,
         'loan_outstanding': loan_outstanding,
         'upcoming_emis_count': upcoming_emis_count,
-        
-        # Actionable Signals counts
+        'total_investment_cost': total_investment_cost,
+        'total_latest_value': total_latest_value,
+        'total_unrealized_gain': total_unrealized_gain,
+        'total_realized_gain': total_realized_gain,
+        'action_count': total_signal_count,
         'buy_count': buy_count,
         'sell_count': sell_count,
         'reduce_count': reduce_count,
         'mf_buy_count': mf_buy_count,
         'mf_redemption_count': mf_redemption_count,
+        'mf_reduce_count': mf_reduce_count,
         'coin_buy_count': coin_buy_count,
         'coin_sell_count': coin_sell_count,
+        'coin_reduce_count': coin_reduce_count,
     }
-    
-    # Get Portfolio Value History (Total Initial Capital vs Net Worth)
-    from .models import PortfolioValueHistory
-    import json
-    history = PortfolioValueHistory.objects.filter(user=request.user, date__gte='2026-04-03').order_by('date')
-    history_data = {
-        'dates': [h.date.strftime('%Y-%m-%d') for h in history],
-        'invested': [float(h.invested_value) for h in history],
-        'current': [float(h.current_value) for h in history],
-        'net_worth': [float(h.net_worth) for h in history],
-        'nifty': [float(h.nifty_price) if h.nifty_price else None for h in history]
-    }
-    context['history_data_json'] = json.dumps(history_data)
-    
     return render(request, 'core/portfolio.html', context)
+
 def etf_guide(request):
     """ETF Guide page."""
     return render(request, 'core/etf_guide.html')
@@ -1263,7 +1268,8 @@ def about_project(request):
 
 @login_required
 def dashboard(request):
-    recommendations, realized_profits, strategy_stocks = get_recommendations(request.user)
+    target_user, is_family_view = get_target_user(request)
+    recommendations, realized_profits, strategy_stocks = get_recommendations(target_user)
     
     total_invested = 0
     total_current_value = 0
@@ -1798,7 +1804,7 @@ def register(request):
                 print(f"Error sending email: {e}")
                 messages.success(request, "Registration successful, but failed to send welcome email.")
 
-            return redirect('dashboard')
+            return redirect('landing')
     else:
         form = CustomUserCreationForm()
     return render(request, 'registration/register.html', {'form': form})
@@ -1837,7 +1843,118 @@ def edit_profile(request):
             return redirect('dashboard')
     else:
         form = ProfileForm(instance=profile)
-    return render(request, 'core/edit_profile.html', {'form': form})
+    
+    # Get linked family members for display
+    from .models import FamilyLink
+    linked_family = FamilyLink.objects.filter(user=request.user, is_verified=True).select_related('family_user__profile')
+    pending_family = FamilyLink.objects.filter(user=request.user, is_verified=False).select_related('family_user__profile')
+    
+    return render(request, 'core/edit_profile.html', {
+        'form': form,
+        'linked_family': linked_family,
+        'pending_family': pending_family
+    })
+
+@login_required
+def link_family_id(request):
+    if request.method == 'POST':
+        family_id = request.POST.get('family_id', '').strip()
+        if not family_id:
+            messages.error(request, "Please enter a valid Family ID (Email or Mobile Number).")
+            return redirect('edit_profile')
+            
+        # Try to find user by email or mobile
+        from .models import Profile, FamilyLink, OTP
+        from django.db.models import Q
+        
+        target_user = None
+        # Check by email/username
+        target_user = User.objects.filter(Q(email__iexact=family_id) | Q(username__iexact=family_id)).first()
+        
+        if not target_user:
+            # Check by mobile
+            profile_match = Profile.objects.filter(mobile_number=family_id).first()
+            if profile_match:
+                target_user = profile_match.user
+                
+        if not target_user:
+            messages.error(request, f"No user found with Family ID: {family_id}")
+            return redirect('edit_profile')
+            
+        if target_user == request.user:
+            messages.error(request, "You cannot link your own account as a family member.")
+            return redirect('edit_profile')
+            
+        # Check if already linked
+        existing = FamilyLink.objects.filter(user=request.user, family_user=target_user).first()
+        if existing and existing.is_verified:
+            messages.info(request, "This account is already linked to your profile.")
+            return redirect('dashboard')
+            
+        # Create unverified link or reuse existing
+        if not existing:
+            FamilyLink.objects.create(user=request.user, family_user=target_user, is_verified=False)
+            
+        # Generate OTP for target user
+        code = str(random.randint(100000, 999999))
+        OTP.objects.filter(user=target_user).delete()
+        OTP.objects.create(user=target_user, code=code)
+        
+        # Send OTP
+        try:
+            subject = "Family Account Linking Request - NPITS"
+            requester_name = request.user.profile.full_name or request.user.email
+            message = f"User {requester_name} has requested to link your portfolio as a family member. \n\nYour verification code is: {code}\n\nPlease provide this code to them if you wish to authorize the link. This allows them to view and manage your portfolio data separately from theirs."
+            send_mail(subject, message, settings.EMAIL_HOST_USER, [target_user.email])
+            
+            messages.success(request, f"An OTP has been sent to the registered email of {family_id}. Please enter it below.")
+            request.session['linking_family_user_id'] = target_user.id
+            return redirect('verify_family_otp')
+        except Exception as e:
+            logger.error(f"Error sending family OTP: {e}")
+            messages.error(request, "Failed to send OTP. Please ensure the target user has a valid email.")
+            return redirect('edit_profile')
+
+    return redirect('edit_profile')
+
+@login_required
+def verify_family_otp(request):
+    target_user_id = request.session.get('linking_family_user_id')
+    if not target_user_id:
+        return redirect('edit_profile')
+        
+    target_user = get_object_or_404(User, id=target_user_id)
+    
+    if request.method == 'POST':
+        otp_code = request.POST.get('otp', '').strip()
+        from .models import OTP, FamilyLink
+        
+        otp_obj = OTP.objects.filter(user=target_user, code=otp_code).first()
+        if otp_obj and otp_obj.is_valid():
+            # SUCCESS
+            link = FamilyLink.objects.filter(user=request.user, family_user=target_user).first()
+            if link:
+                link.is_verified = True
+                link.save()
+                
+            # Cleanup
+            otp_obj.delete()
+            del request.session['linking_family_user_id']
+            
+            messages.success(request, f"Successfully linked {target_user.username}'s portfolio to your account!")
+            return redirect('dashboard')
+        else:
+            messages.error(request, "Invalid or expired OTP.")
+            
+    return render(request, 'core/verify_family_otp.html', {'target_user': target_user})
+
+@login_required
+def unlink_family(request, pk):
+    from .models import FamilyLink
+    link = get_object_or_404(FamilyLink, pk=pk, user=request.user)
+    link.delete()
+    messages.success(request, "Family account unlinked successfully.")
+    return redirect('edit_profile')
 
 
 @login_required
@@ -2038,10 +2155,11 @@ def get_current_financial_year():
 @login_required
 def transaction_history(request):
     """View all buy/sell transactions for the user."""
-    transactions = Transaction.objects.filter(user=request.user).select_related('instrument').order_by('-date', '-created_at')
+    target_user, is_family_view = get_target_user(request)
+    transactions = Transaction.objects.filter(user=target_user).select_related('instrument').order_by('-date', '-created_at')
     
     current_fy_str = get_current_financial_year()
-    portfolios = Portfolio.objects.filter(user=request.user)
+    portfolios = Portfolio.objects.filter(user=target_user)
     current_invested = sum(p.invested_amount for p in portfolios)
     current_value = sum(p.current_value for p in portfolios)
     current_unrealized = sum(p.unrealized_pnl for p in portfolios)
@@ -2050,17 +2168,17 @@ def transaction_history(request):
     end_year = int(current_fy_str.split('-')[1])
     from .models import FinancialYearData
     
-    total_realized_profits = PnLStatement.objects.filter(user=request.user)
+    total_realized_profits = PnLStatement.objects.filter(user=target_user)
     total_realized = sum(rp.realized_profit for rp in total_realized_profits)
     
-    past_fys = FinancialYearData.objects.filter(user=request.user).exclude(financial_year=current_fy_str)
+    past_fys = FinancialYearData.objects.filter(user=target_user).exclude(financial_year=current_fy_str)
     past_fys_realized_sum = sum(fd.realized_profit for fd in past_fys)
     
     current_realized = total_realized - past_fys_realized_sum
     
     # Automatically add/update current FY
     current_fy_obj, _ = FinancialYearData.objects.update_or_create(
-        user=request.user,
+        user=target_user,
         financial_year=current_fy_str,
         defaults={
             'invested_amount': current_invested,
@@ -2071,18 +2189,18 @@ def transaction_history(request):
     )
     
     # Get all FY data (including current that we just saved/updated) ordered by most recent
-    fy_data = FinancialYearData.objects.filter(user=request.user).order_by('-financial_year')
+    fy_data = FinancialYearData.objects.filter(user=target_user).order_by('-financial_year')
     current_fy_data = [fd for fd in fy_data if fd.financial_year == current_fy_str]
     past_fy_data = [fd for fd in fy_data if fd.financial_year != current_fy_str]
     
     # Record current value history
     from .utils import record_portfolio_value_history
-    record_portfolio_value_history(request.user)
+    record_portfolio_value_history(target_user)
 
     # Get Portfolio Performance History (Same as Portfolio Dashboard)
     from .models import PortfolioValueHistory
     # Increase history range for a better chart
-    history = PortfolioValueHistory.objects.filter(user=request.user, date__gte=timezone.now().date() - timedelta(days=180)).order_by('date')
+    history = PortfolioValueHistory.objects.filter(user=target_user, date__gte=timezone.now().date() - timedelta(days=180)).order_by('date')
     history_data = {
         'dates': [h.date.strftime('%b %d') for h in history],
         'invested': [float(h.stock_invested) for h in history],
@@ -2200,8 +2318,9 @@ def delete_fy_data(request):
 def lot_breakdown(request, instrument_id):
     """View specific buy lots for a particular instrument."""
     inst = get_object_or_404(Instrument, id=instrument_id)
+    target_user, _ = get_target_user(request)
     lots = Transaction.objects.filter(
-        user=request.user,
+        user=target_user,
         instrument=inst,
         transaction_type='BUY',
         remaining_quantity__gt=0
@@ -2338,11 +2457,11 @@ def sync_data_api(request):
     sync_key = 'last_sync_timestamp'
     lock_key = 'sync_in_progress'
     
-    # Rate limit: 1 minute
+    # Rate limit: 2 hours (7200 seconds)
     last_sync = cache.get(sync_key)
     now = timezone.now().timestamp()
     
-    if last_sync is not None and (now - last_sync) < 60:
+    if last_sync is not None and (now - last_sync) < 7200:
         return JsonResponse({'status': 'skipped', 'message': 'Recently synced'})
     
     if cache.get(lock_key):
@@ -2457,6 +2576,7 @@ def index_data_api(request):
             elif '^BSESN' in symbol: name = 'SENSEX'
             elif '^IXIC' in symbol: name = 'NASDAQ'
             elif '^DJI' in symbol: name = 'DOW JONES'
+            elif 'BZ=F' in symbol: name = 'Brent Crude'
             else: name = symbol
 
         result = {
@@ -2890,14 +3010,23 @@ def coin_suggestions_api(request):
 
 @login_required
 def nps_dashboard(request):
-    """NPS Portfolio Dashboard."""
-    nps_holdings = NPSPortfolio.objects.filter(user=request.user).select_related('fund')
+    """NPS Portfolio dashboard with active NAV sync."""
+    # Trigger auto update if data is stale in background thread
+    import threading
+    def _run_bg_nps():
+        try:
+            _auto_update_nps()
+        except Exception:
+            pass
+    threading.Thread(target=_run_bg_nps, daemon=True).start()
+    target_user, is_family_view = get_target_user(request)
+    nps_holdings = NPSPortfolio.objects.filter(user=target_user).select_related('fund')
     nps_holdings = [h for h in nps_holdings if h.units > 0]
     total_invested = sum(h.invested_amount for h in nps_holdings)
     total_current_value = sum(h.current_value for h in nps_holdings)
     total_unrealized_pnl = sum(h.unrealized_pnl for h in nps_holdings)
     total_day_change = sum(h.day_change for h in nps_holdings)
-    total_realized_profit = NPSPortfolio.objects.filter(user=request.user).aggregate(
+    total_realized_profit = NPSPortfolio.objects.filter(user=target_user).aggregate(
         total=models.Sum('realized_profit'))['total'] or 0
     context = {
         'nps_holdings': nps_holdings,
@@ -3021,7 +3150,7 @@ def _process_auto_rd_deposits(user):
             iterations += 1
             
             # Increase invested amount
-            rd.invested_amount += rd.monthly_deposit
+            rd.invested_amount = str(rd.invested_amount_decimal + rd.monthly_deposit)
             
             # Update next deposit date
             rd.next_deposit_date = rd.next_deposit_date + relativedelta(months=1)
@@ -3035,10 +3164,11 @@ def _process_auto_rd_deposits(user):
 @login_required
 def fd_dashboard(request):
     """Dashboard for Fixed Assets (FD, RD, PPF, etc) with automation."""
-    _process_auto_rd_deposits(request.user)
-    fd_holdings = FixedAsset.objects.filter(user=request.user).order_by('-investment_date')
+    target_user, is_family_view = get_target_user(request)
+    _process_auto_rd_deposits(target_user)
+    fd_holdings = FixedAsset.objects.filter(user=target_user).order_by('-investment_date')
     
-    total_invested = sum(h.invested_amount for h in fd_holdings)
+    total_invested = sum(h.invested_amount_decimal for h in fd_holdings)
     total_current_value = sum(h.current_value for h in fd_holdings)
     total_unrealized_pnl = sum(h.unrealized_pnl for h in fd_holdings)
     
@@ -3059,10 +3189,30 @@ def fd_dashboard(request):
 @login_required
 def add_fd(request):
     """Add a fixed asset manually."""
+    renewal_id = request.GET.get('renewal_id')
+    prefill_data = {}
+    if renewal_id:
+        try:
+            old_asset = FixedAsset.objects.get(id=renewal_id, user=request.user)
+            prefill_data = {
+                'instrument_name': old_asset.instrument_name,
+                'asset_type': old_asset.asset_type,
+                'invested_amount': old_asset.invested_amount_decimal,
+                'interest_rate': old_asset.interest_rate_decimal,
+                'monthly_deposit': old_asset.monthly_deposit,
+                'tenure_years': old_asset.tenure_years,
+                'holder_name': old_asset.holder_name,
+                'fd_id': old_asset.fd_id,
+            }
+        except FixedAsset.DoesNotExist:
+            pass
+
     if request.method == 'POST':
         instrument_name = request.POST.get('instrument_name', '').strip()
         investment_date_str = request.POST.get('investment_date')
         maturity_date_str = request.POST.get('maturity_date')
+        holder_name = request.POST.get('holder_name', '').strip()
+        fd_id = request.POST.get('fd_id', '').strip()
         
         try:
             invested_amount = Decimal(request.POST.get('invested_amount', '0'))
@@ -3099,18 +3249,21 @@ def add_fd(request):
             user=request.user,
             instrument_name=instrument_name,
             asset_type=asset_type,
-            invested_amount=invested_amount,
-            interest_rate=interest_rate,
+            invested_amount=str(invested_amount),
+            interest_rate=str(interest_rate),
             investment_date=investment_date,
             maturity_date=maturity_date,
             monthly_deposit=monthly_deposit,
             tenure_years=tenure_years,
-            next_deposit_date=next_deposit_date
+            next_deposit_date=next_deposit_date,
+            holder_name=holder_name,
+            fd_id=fd_id,
+            parent_asset_id=renewal_id if renewal_id else None
         )
         messages.success(request, f"Added {asset_type}: {instrument_name}.")
         return redirect('fd_dashboard')
         
-    return render(request, 'core/fd_add_item.html')
+    return render(request, 'core/fd_add_item.html', {'prefill': prefill_data})
 
 @login_required
 def delete_fd(request, pk):
@@ -3125,7 +3278,8 @@ def delete_fd(request, pk):
 @login_required
 def other_assets_dashboard(request):
     """Dashboard for Other Assets (Plot, Flat, Gold, etc)."""
-    other_holdings = OtherAsset.objects.filter(user=request.user).order_by('-purchase_date')
+    target_user, is_family_view = get_target_user(request)
+    other_holdings = OtherAsset.objects.filter(user=target_user).order_by('-purchase_date')
     
     total_invested = sum(h.purchase_price for h in other_holdings)
     total_current_value = sum(h.current_value for h in other_holdings)
@@ -3237,15 +3391,15 @@ def _process_auto_emis(loan):
         
         # Calculate interest component
         if loan.interest_type == 'Flat':
-            interest = (loan.loan_amount * loan.interest_rate / 100) / 12
+            interest = (loan.loan_amount_decimal * loan.interest_rate_decimal / 100) / 12
         else:
             # Reducing balance: based on current outstanding
-            interest = (loan.current_outstanding * loan.interest_rate / 100) / 12
+            interest = (loan.current_outstanding * loan.interest_rate_decimal / 100) / 12
             
         interest = Decimal(str(interest)).quantize(Decimal('0.01'))
         
         # Principal component is EMI minus interest
-        principal = loan.emi_amount - interest
+        principal = loan.emi_amount_decimal - interest
         if principal < 0: principal = 0
         
         # If remaining principal is less than calculated principal, adjust
@@ -3257,7 +3411,7 @@ def _process_auto_emis(loan):
         LoanPayment.objects.create(
             loan=loan,
             payment_type='EMI',
-            amount=loan.emi_amount,
+            amount=loan.emi_amount_decimal,
             date=loan.next_emi_date,
             principal_component=principal,
             interest_component=interest
@@ -3278,14 +3432,15 @@ def _process_auto_emis(loan):
 @login_required
 def loan_dashboard(request):
     """Dashboard for all loans."""
-    loans = Loan.objects.filter(user=request.user).order_by('-start_date')
+    target_user, is_family_view = get_target_user(request)
+    loans = Loan.objects.filter(user=target_user).order_by('-start_date')
     
     # Process auto EMIs before calculating totals
     for l in loans:
         if l.is_active:
             _process_auto_emis(l)
             
-    total_loan_amount = float(sum(l.loan_amount for l in loans))
+    total_loan_amount = float(sum(l.loan_amount_decimal for l in loans))
     total_outstanding = float(sum(l.current_outstanding for l in loans))
     total_interest_paid = float(sum(l.total_interest_paid for l in loans))
     total_paid = float(sum(l.total_paid_till_date for l in loans))
@@ -3356,17 +3511,17 @@ def loan_detail(request, pk):
         if temp_outstanding <= 0: break
         
         if loan.interest_type == 'Flat':
-            interest = (float(loan.loan_amount) * float(loan.interest_rate) / 100) / 12
+            interest = (float(loan.loan_amount_decimal) * float(loan.interest_rate_decimal) / 100) / 12
         else:
-            interest = (temp_outstanding * float(loan.interest_rate) / 100) / 12
+            interest = (temp_outstanding * float(loan.interest_rate_decimal) / 100) / 12
             
-        principal = float(loan.emi_amount) - interest
+        principal = float(loan.emi_amount_decimal) - interest
         if principal > temp_outstanding:
             principal = temp_outstanding
             
         amortization.append({
             'date': temp_date,
-            'emi': loan.emi_amount,
+            'emi': loan.emi_amount_decimal,
             'principal': principal,
             'interest': interest,
             'balance': temp_outstanding - principal
@@ -3558,4 +3713,17 @@ def backtest_strategy_api(request):
     except Exception as e:
         logger.error(f"Backtest failed: {e}")
         return JsonResponse({'error': str(e)}, status=500)
+
+@login_required
+def portfolio_history_api(request):
+    """API for lazy loading portfolio history graph data."""
+    target_user, is_family_view = get_target_user(request)
+    from .models import PortfolioValueHistory
+    history = PortfolioValueHistory.objects.filter(user=target_user).order_by('date')
+    history_data = {
+        'dates': [h.date.strftime('%Y-%m-%d') for h in history],
+        'net_worth': [float(h.net_worth) for h in history],
+        'invested': [float(h.invested_value) for h in history],
+    }
+    return JsonResponse(history_data)
 

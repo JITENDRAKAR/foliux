@@ -111,9 +111,11 @@ def perform_sync():
         }
         
         for name, sym in major_indices.items():
+            seen_tickers.add(name)
             try:
                 ticker = yf.Ticker(sym)
-                hist = ticker.history(period='2d')
+                # Use period='5d' to overcome holiday/gap issues occasionally seen with '2d'
+                hist = ticker.history(period='5d')
                 if not hist.empty:
                     cp = float(hist['Close'].iloc[-1])
                     pc = float(hist['Close'].iloc[-2]) if len(hist) > 1 else cp
@@ -124,7 +126,6 @@ def perform_sync():
                         name=name,
                         defaults={'price': round(cp, 2), 'change': change_val, 'percent_change': pct}
                     )
-                    seen_tickers.add(name)
             except Exception as ex:
                 logger.error(f"Error fetching live index override for {name}: {ex}")
 
@@ -136,8 +137,8 @@ def perform_sync():
     except Exception as e:
         logger.error(f"Error fetching market data: {e}")
 
-    # 2. Sync Instrument LTP Data
-    ltp_url = "https://docs.google.com/spreadsheets/d/12eLJHTlHO1naQgJ-dzf-UTgUbasVv02tgwlHKofG2Y4/export?format=csv"
+    # 2. Sync Instrument LTP Data (from 'n2g' sheet)
+    ltp_url = "https://docs.google.com/spreadsheets/d/12eLJHTlHO1naQgJ-dzf-UTgUbasVv02tgwlHKofG2Y4/gviz/tq?tqx=out:csv&sheet=n2g"
     try:
         response = requests.get(ltp_url, timeout=10)
         response.raise_for_status()
@@ -158,6 +159,13 @@ def perform_sync():
                     if math.isnan(ltp): continue
                 except (ValueError, TypeError):
                     continue
+
+                # Special Case: Update NIFTY 50 if found in Instrument Sheet
+                if "NIFTY_50" in symbol or "NIFTY 50" in symbol:
+                    MarketTicker.objects.update_or_create(
+                        name='NIFTY 50',
+                        defaults={'price': ltp}
+                    )
                 
                 change_val = 0
                 if len(row) > 5:
@@ -171,27 +179,30 @@ def perform_sync():
                         pass
 
                 pe_val = None
-                if len(row) > 8:
+                if len(row) > 9:
                     try:
-                        pv = row.iloc[8]
+                        # Index 9 is PE in 'n2g' sheet
+                        pv = row.iloc[9]
                         if pd.notna(pv):
                             pe_val = float(pv)
                     except (ValueError, TypeError):
                         pass
                 
                 lh_diff_val = None
-                if len(row) > 9:
+                if len(row) > 10:
                     try:
-                        lv = row.iloc[9]
+                        # Index 10 is 'Differ %' if available
+                        lv = row.iloc[10]
                         if pd.notna(lv):
                             lh_diff_val = float(lv)
                     except (ValueError, TypeError):
                         pass
 
                 high_52w_val = None
-                if len(row) > 7:
+                if len(row) > 8:
                     try:
-                        hv = row.iloc[7]
+                        # Index 8 is 51W HIGH in 'n2g' sheet
+                        hv = row.iloc[8]
                         if pd.notna(hv):
                             high_52w_val = float(hv)
                     except (ValueError, TypeError):
@@ -382,13 +393,15 @@ def sync_mutual_funds_from_sheet():
                         pass
                 
                 # Update or create MutualFund record
-                MutualFund.objects.update_or_create(
-                    symbol=symbol,
-                    defaults={
-                        'name': clean_name,
-                        'nav': Decimal(str(target_nav)),
-                    }
-                )
+                fund, created = MutualFund.objects.get_or_create(symbol=symbol)
+                
+                # Store previous nav for day change calculation if it was already in DB
+                if not created:
+                    fund.prev_nav = fund.nav
+                
+                fund.name = clean_name
+                fund.nav = Decimal(str(target_nav))
+                fund.save()
                 count += 1
             except Exception as e:
                 logger.error(f"Error processing MF row: {e}")
@@ -650,7 +663,7 @@ def record_portfolio_value_history(user):
     
     # 5. Fixed Assets (FD, PPF, etc.)
     fds = FixedAsset.objects.filter(user=user)
-    fd_invested = sum(p.invested_amount for p in fds)
+    fd_invested = sum(p.invested_amount_decimal for p in fds)
     fd_current = sum(Decimal(str(p.current_value)) for p in fds)
     
     # 6. Other Assets (Real Estate, Gold, etc.)
@@ -937,3 +950,37 @@ def get_recommendations(user):
             })
             
     return recommendations, realized_profits, strategy_stocks
+
+def get_target_user(request):
+    """
+    Identifies the target user for portfolio views.
+    Handles family link verification for user_id in GET parameters.
+    Returns (target_user, is_family_view)
+    """
+    from django.contrib.auth.models import User
+    from .models import FamilyLink
+    
+    target_user = request.user
+    is_family_view = False
+    
+    if not request.user.is_authenticated:
+        return target_user, is_family_view
+
+    user_id = request.GET.get('user_id')
+    if user_id:
+        try:
+            # Verify the link exists and is verified
+            link = FamilyLink.objects.filter(user=request.user, family_user_id=user_id, is_verified=True).first()
+            if link:
+                target_user = link.family_user
+                is_family_view = True
+            elif str(user_id) == str(request.user.id):
+                # Requesting self
+                pass
+            else:
+                # Permission denied
+                pass
+        except (ValueError, TypeError):
+            pass
+            
+    return target_user, is_family_view

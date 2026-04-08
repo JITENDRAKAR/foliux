@@ -30,6 +30,10 @@
 
                     <h5 class="fw-bold mt-4 mb-3 border-bottom pb-2"><i class="fas fa-chart-line me-2"></i>Investment Settings</h5>
                     {{ form.initial_investment_limit|as_crispy_field }}
+                    <div class="row">
+                        <div class="col-md-6">{{ form.mf_investment_limit|as_crispy_field }}</div>
+                        <div class="col-md-6">{{ form.coin_investment_limit|as_crispy_field }}</div>
+                    </div>
 
                     <h5 class="fw-bold mt-4 mb-3 border-bottom pb-2"><i class="fas fa-tag me-2"></i>Brokerage Settings (Delivery)</h5>
                     <div class="row">
@@ -52,6 +56,69 @@
                         <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary py-2 fw-bold">Cancel</a>
                     </div>
                 </form>
+
+                <div class="mt-5 pt-4 border-top">
+                    <h4 class="fw-bold mb-3"><i class="fas fa-users me-2"></i>Linked Family Accounts</h4>
+                    <p class="text-muted small mb-4">Link another registered NPITS account to view their portfolio data separately.</p>
+
+                    {% if linked_family %}
+                    <div class="list-group mb-4">
+                        {% for link in linked_family %}
+                        <div class="list-group-item d-flex justify-content-between align-items-center rounded-3 mb-2 border-0 shadow-sm px-4 py-3">
+                            <div>
+                                <h6 class="mb-0 fw-bold">{{ link.family_user.profile.full_name|default:link.family_user.username }}</h6>
+                                <small class="text-muted">{{ link.family_user.email }}</small>
+                            </div>
+                            <div>
+                                <a href="{% url 'portfolio' %}?user_id={{ link.family_user.id }}" class="btn btn-sm btn-outline-primary me-2">
+                                    <i class="fas fa-chart-pie me-1"></i> View Portfolio
+                                </a>
+                                <a href="{% url 'unlink_family' link.pk %}" class="btn btn-sm btn-link text-danger text-decoration-none" 
+                                   onclick="return confirm('Are you sure you want to unlink this family account?')">
+                                    <i class="fas fa-unlink"></i>
+                                </a>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="alert alert-light border-dashed text-center py-4 mb-4">
+                        <i class="fas fa-user-friends fa-2x text-muted mb-2 opacity-50"></i>
+                        <p class="mb-0 text-muted">No family accounts linked yet.</p>
+                    </div>
+                    {% endif %}
+
+                    {% if pending_family %}
+                    <h6 class="fw-bold mb-3 text-warning">Pending Verification</h6>
+                    <div class="list-group mb-4">
+                        {% for link in pending_family %}
+                        <div class="list-group-item d-flex justify-content-between align-items-center rounded-3 mb-2 bg-light border-0 px-4 py-3">
+                            <div>
+                                <h6 class="mb-0">{{ link.family_user.profile.full_name|default:link.family_user.username }}</h6>
+                                <small class="text-muted">Awaiting OTP verification</small>
+                            </div>
+                            <a href="{% url 'verify_family_otp' %}" class="btn btn-sm btn-warning fw-bold">
+                                Enter OTP
+                            </a>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+
+                    <form action="{% url 'link_family_id' %}" method="post" class="mt-4 p-4 bg-light rounded-4 border">
+                        {% csrf_token %}
+                        <h6 class="fw-bold mb-3">Link New Family ID</h6>
+                        <div class="input-group">
+                            <input type="text" name="family_id" class="form-control" placeholder="Enter Email or Mobile Number" required>
+                            <button class="btn btn-primary px-4 fw-bold" type="submit">
+                                Request OTP <i class="fas fa-paper-plane ms-2"></i>
+                            </button>
+                        </div>
+                        <p class="small text-muted mt-2 mb-0">
+                            <i class="fas fa-info-circle me-1"></i> An OTP will be sent to the family member's registered email for authorization.
+                        </p>
+                    </form>
+                </div>
             </div>
         </div>
     </div>

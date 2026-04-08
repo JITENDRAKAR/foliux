@@ -63,15 +63,17 @@
             <p class="text-muted mb-0">Track your National Pension System investments with live NAV sync</p>
         </div>
         <div class="d-flex gap-2">
-            <a href="{% url 'nps_transaction_history' %}" class="btn btn-outline-primary rounded-pill px-4">
+            <a href="{% url 'nps_transaction_history' %}{% if is_family_view %}?user_id={{ target_user.id }}{% endif %}" class="btn btn-outline-primary rounded-pill px-4">
                 <i class="fas fa-history me-2"></i>History
             </a>
+            {% if not is_family_view %}
             <a href="{% url 'refresh_nps_navs' %}" class="btn btn-outline-primary rounded-pill px-4">
                 <i class="fas fa-sync-alt me-2"></i>Refresh NAVs
             </a>
             <a href="{% url 'add_nps' %}" class="btn btn-nps-gradient rounded-pill px-4">
                 <i class="fas fa-plus me-2"></i>Add New Holding
             </a>
+            {% endif %}
         </div>
     </div>
 
@@ -154,6 +156,7 @@
                         <td class="fw-600 text-primary">₹ {{ item.realized_profit|floatformat:2 }}</td>
                         <td class="pe-4 py-2" style="min-width: 140px;">
                             <div class="d-flex flex-column align-items-center">
+                                {% if not is_family_view %}
                                 <div class="d-flex gap-1 w-100">
                                     <a href="{% url 'add_nps' %}?fund={{ item.fund.name }}" class="btn btn-sm btn-success flex-grow-1 py-1" style="border-radius: 8px; font-size: 0.7rem;">
                                         <i class="fas fa-plus"></i>
@@ -166,6 +169,7 @@
                                    onclick="return confirm('Remove this scheme from your portfolio?')" style="font-size: 0.55rem; letter-spacing: 0.5px;">
                                     REMOVE
                                 </a>
+                                {% endif %}
                             </div>
                         </td>
                     </tr>
@@ -175,7 +179,9 @@
                             <div class="text-muted py-4">
                                 <i class="fas fa-landmark fa-3x mb-3 opacity-25"></i>
                                 <p>No NPS holdings found. Add your first scheme to start tracking!</p>
+                                {% if not is_family_view %}
                                 <a href="{% url 'add_nps' %}" class="btn btn-primary rounded-pill mt-2">Add My First NPS</a>
+                                {% endif %}
                             </div>
                         </td>
                     </tr>

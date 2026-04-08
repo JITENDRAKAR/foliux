@@ -68,15 +68,17 @@
             <p class="text-muted mb-0">Track your mutual fund investments with real-time NAV updates</p>
         </div>
         <div class="d-flex gap-2">
-            <a href="{% url 'mf_transaction_history' %}" class="btn btn-outline-primary rounded-pill px-4">
+            <a href="{% url 'mf_transaction_history' %}{% if is_family_view %}?user_id={{ target_user.id }}{% endif %}" class="btn btn-outline-primary rounded-pill px-4">
                 <i class="fas fa-history me-2"></i>History
             </a>
+            {% if not is_family_view %}
             <a href="{% url 'refresh_mf_navs' %}" class="btn btn-outline-primary rounded-pill px-4">
                 <i class="fas fa-sync-alt me-2"></i>Refresh NAVs
             </a>
             <a href="{% url 'add_mf_portfolio' %}" class="btn btn-gradient rounded-pill px-4">
                 <i class="fas fa-plus me-2"></i>Add New Fund
             </a>
+            {% endif %}
         </div>
     </div>
 
@@ -168,8 +170,8 @@
                             <div class="d-flex flex-column align-items-center">
                                 {% for adv in item.advice %}
                                     <div class="mb-2 text-center">
-                                        <div class="badge rounded-pill {% if adv.type == 'SELL' %}bg-danger{% else %}bg-success{% endif %} mb-1" style="font-size: 0.6rem; padding: 0.2rem 0.6rem;">
-                                            {{ adv.type }}
+                                        <div class="badge rounded-pill {% if adv.type == 'SELL' %}bg-danger{% elif adv.type == 'BUY' %}bg-success{% else %}bg-warning text-dark{% endif %} mb-1" style="font-size: 0.6rem; padding: 0.2rem 0.6rem;">
+                                            {% if adv.type == 'BUY' %}BUY / TOP-UP{% elif adv.type == 'SELL' %}REDEMPTION{% else %}{{ adv.type }}{% endif %}
                                         </div>
                                         <div class="text-muted" style="font-size: 0.6rem; line-height: 1.1; max-width: 130px;">
                                             {{ adv.reason }}
@@ -177,6 +179,7 @@
                                     </div>
                                 {% endfor %}
                                 
+                                {% if not is_family_view %}
                                 <div class="d-flex gap-1 w-100">
                                     <a href="{% url 'add_mf_portfolio' %}?symbol={{ item.fund.symbol }}" class="btn btn-sm btn-success flex-grow-1 py-1" style="border-radius: 8px; font-size: 0.7rem;">
                                         <i class="fas fa-plus"></i>
@@ -189,6 +192,7 @@
                                    onclick="return confirm('Remove this fund from your portfolio?')" style="font-size: 0.55rem; letter-spacing: 0.5px;">
                                     REMOVE
                                 </a>
+                                {% endif %}
                             </div>
                         </td>
                     </tr>
@@ -198,7 +202,9 @@
                             <div class="text-muted py-4">
                                 <i class="fas fa-chart-pie fa-3x mb-3 opacity-25"></i>
                                 <p>No Mutual Fund holdings found. Add your first fund to start tracking!</p>
+                                {% if not is_family_view %}
                                 <a href="{% url 'add_mf_portfolio' %}" class="btn btn-primary rounded-pill mt-2">Add My First MF</a>
+                                {% endif %}
                             </div>
                         </td>
                     </tr>

@@ -63,15 +63,17 @@
             <p class="text-muted mb-0">Track your cryptocurrency investments (INR) with real-time yfinance updates</p>
         </div>
         <div class="d-flex gap-2">
-            <a href="{% url 'coin_transaction_history' %}" class="btn btn-outline-warning rounded-pill px-4" style="color: #f7931a; border-color: #f7931a;">
+            <a href="{% url 'coin_transaction_history' %}{% if is_family_view %}?user_id={{ target_user.id }}{% endif %}" class="btn btn-outline-warning rounded-pill px-4" style="color: #f7931a; border-color: #f7931a;">
                 <i class="fas fa-history me-2"></i>History
             </a>
+            {% if not is_family_view %}
             <a href="{% url 'refresh_coin_prices' %}" class="btn btn-outline-warning rounded-pill px-4" style="color: #f7931a; border-color: #f7931a;">
                 <i class="fas fa-sync-alt me-2"></i>Refresh Prices
             </a>
             <a href="{% url 'add_coin' %}" class="btn btn-coin-gradient rounded-pill px-4">
                 <i class="fas fa-plus me-2"></i>Add New Coin
             </a>
+            {% endif %}
         </div>
     </div>
 
@@ -155,6 +157,18 @@
                         <td class="fw-600 text-primary">₹ {{ item.realized_profit|floatformat:2 }}</td>
                         <td class="pe-4 py-2" style="min-width: 140px;">
                             <div class="d-flex flex-column align-items-center">
+                                {% for adv in item.advice %}
+                                    <div class="mb-2 text-center">
+                                        <div class="badge rounded-pill {% if adv.type == 'SELL' %}bg-danger{% elif adv.type == 'BUY' %}bg-success{% else %}bg-warning text-dark{% endif %} mb-1" style="font-size: 0.6rem; padding: 0.2rem 0.6rem;">
+                                            {% if adv.type == 'BUY' %}ACCUMULATE{% elif adv.type == 'SELL' %}PROFIT BOOKING{% else %}{{ adv.type }}{% endif %}
+                                        </div>
+                                        <div class="text-muted" style="font-size: 0.6rem; line-height: 1.1; max-width: 130px;">
+                                            {{ adv.reason }}
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                                
+                                {% if not is_family_view %}
                                 <div class="d-flex gap-1 w-100">
                                     <a href="{% url 'add_coin' %}?symbol={{ item.coin.symbol }}" class="btn btn-sm btn-success flex-grow-1 py-1" style="border-radius: 8px; font-size: 0.7rem;">
                                         <i class="fas fa-plus"></i>
@@ -167,6 +181,7 @@
                                    onclick="return confirm('Remove this coin from your portfolio?')" style="font-size: 0.55rem; letter-spacing: 0.5px;">
                                     REMOVE
                                 </a>
+                                {% endif %}
                             </div>
                         </td>
                     </tr>
@@ -176,7 +191,9 @@
                             <div class="text-muted py-4">
                                 <i class="fas fa-coins fa-3x mb-3 opacity-25"></i>
                                 <p>No Coins found. Add your first crypto to start tracking!</p>
+                                {% if not is_family_view %}
                                 <a href="{% url 'add_coin' %}" class="btn btn-warning rounded-pill mt-2" style="color:white; background-color:#f7931a; border:none;">Add My First Coin</a>
+                                {% endif %}
                             </div>
                         </td>
                     </tr>

@@ -9,7 +9,7 @@
             <div>
                 <nav aria-label="breadcrumb">
                     <ol class="breadcrumb mb-1">
-                        <li class="breadcrumb-item"><a href="{% url 'dashboard' %}"
+                        <li class="breadcrumb-item"><a href="{% url 'dashboard' %}{% if is_family_view %}?user_id={{ target_user.id }}{% endif %}"
                                 class="text-decoration-none text-muted">Dashboard</a></li>
                         <li class="breadcrumb-item active" aria-current="page">Lot Breakdown</li>
                     </ol>
@@ -20,7 +20,7 @@
                 </h2>
                 <p class="text-muted mb-0">Detailed First-In, First-Out (FIFO) view of your active holdings.</p>
             </div>
-            <a href="{% url 'dashboard' %}" class="btn btn-outline-primary rounded-pill px-4">
+            <a href="{% url 'dashboard' %}{% if is_family_view %}?user_id={{ target_user.id }}{% endif %}" class="btn btn-outline-primary rounded-pill px-4">
                 <i class="fas fa-arrow-left me-2"></i>Dashboard
             </a>
         </div>
@@ -116,6 +116,7 @@
                             </td>
                             <td class="text-center">
                                 <div class="btn-group">
+                                    {% if not is_family_view %}
                                     <a href="{% url 'edit_lot' lot.id %}"
                                         class="btn btn-sm btn-light border rounded-pill me-2" title="Edit Lot">
                                         <i class="fas fa-edit text-primary"></i>
@@ -125,6 +126,9 @@
                                         onclick="return confirm('Delete this lot? Total holdings will decrease.')">
                                         <i class="fas fa-trash text-danger"></i>
                                     </a>
+                                    {% else %}
+                                    <span class="text-muted small"><i class="fas fa-lock"></i></span>
+                                    {% endif %}
                                 </div>
                             </td>
                         </tr>

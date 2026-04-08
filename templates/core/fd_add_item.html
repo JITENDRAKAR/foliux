@@ -70,18 +70,29 @@
                 
                 <div class="mb-4">
                     <label for="instrument_name" class="form-label">Instrument Name</label>
-                    <input type="text" name="instrument_name" id="instrument_name" class="form-control" placeholder="e.g. SBI FD, Post Office RD, PPF" required>
+                    <input type="text" name="instrument_name" id="instrument_name" class="form-control" placeholder="e.g. SBI FD, Post Office RD, PPF" value="{{ prefill.instrument_name|default:'' }}" required>
+                </div>
+
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <label for="holder_name" class="form-label">FD Holder Name & Relation</label>
+                        <input type="text" name="holder_name" id="holder_name" class="form-control" placeholder="e.g. Name (Self)" value="{{ prefill.holder_name|default:'' }}">
+                    </div>
+                    <div class="col-md-6">
+                        <label for="fd_id" class="form-label">FD ID</label>
+                        <input type="text" name="fd_id" id="fd_id" class="form-control" placeholder="Unique FD number" value="{{ prefill.fd_id|default:'' }}">
+                    </div>
                 </div>
                 
                 <div id="fd_fields">
                     <div class="row mb-3">
                         <div class="col-md-6">
                             <label for="invested_amount" class="form-label">Invested Amount (INR)</label>
-                            <input type="number" step="0.01" name="invested_amount" id="invested_amount" class="form-control" placeholder="0.00" value="0.00">
+                            <input type="number" step="0.01" name="invested_amount" id="invested_amount" class="form-control" placeholder="0.00" value="{{ prefill.invested_amount|default:'0.00' }}">
                         </div>
                         <div class="col-md-6">
                             <label for="interest_rate" class="form-label">Annual Interest Rate (%)</label>
-                            <input type="number" step="0.01" name="interest_rate" id="interest_rate" class="form-control" placeholder="e.g. 7.1" required>
+                            <input type="number" step="0.01" name="interest_rate" id="interest_rate" class="form-control" placeholder="e.g. 7.1" value="{{ prefill.interest_rate|default:'' }}" required>
                         </div>
                     </div>
 
@@ -97,15 +108,15 @@
                     </div>
                 </div>
 
-                <div id="rd_fields" class="d-none">
+                <div id="rd_fields" class="{% if prefill.asset_type != 'RD' %}d-none{% endif %}">
                     <div class="row mb-4">
                         <div class="col-md-6">
                             <label for="monthly_deposit" class="form-label">Monthly Deposit (INR)</label>
-                            <input type="number" step="0.01" name="monthly_deposit" id="monthly_deposit" class="form-control" placeholder="5000.00">
+                            <input type="number" step="0.01" name="monthly_deposit" id="monthly_deposit" class="form-control" placeholder="5000.00" value="{{ prefill.monthly_deposit|default:'' }}">
                         </div>
                         <div class="col-md-6">
                             <label for="tenure_years" class="form-label">Tenure (Years)</label>
-                            <input type="number" name="tenure_years" id="tenure_years" class="form-control" placeholder="e.g. 2" min="1" max="50">
+                            <input type="number" name="tenure_years" id="tenure_years" class="form-control" placeholder="e.g. 2" min="1" max="50" value="{{ prefill.tenure_years|default:'' }}">
                         </div>
                     </div>
                 </div>

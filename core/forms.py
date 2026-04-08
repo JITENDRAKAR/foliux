@@ -40,6 +40,7 @@ class ProfileForm(forms.ModelForm):
         fields = [
             'full_name', 'mobile_number', 'date_of_birth', 'gender', 
             'investor_type', 'initial_investment_limit',
+            'mf_investment_limit', 'coin_investment_limit',
             'equity_fixed_charge', 'equity_brokerage_pct',
             'intraday_fixed_charge', 'intraday_brokerage_pct'
         ]
@@ -50,6 +51,8 @@ class ProfileForm(forms.ModelForm):
             'gender': 'Gender',
             'investor_type': 'Investor Type',
             'initial_investment_limit': 'Maximum Investment per Stock/ETF',
+            'mf_investment_limit': 'Maximum Investment per Mutual Fund',
+            'coin_investment_limit': 'Maximum Investment for Coin (Crypto)',
             'equity_fixed_charge': 'Delivery Fixed Charge (0.0)',
             'equity_brokerage_pct': 'Delivery Brokerage Charge (%)',
             'intraday_fixed_charge': 'Intraday Fixed Charge (0.0)',
@@ -62,6 +65,8 @@ class ProfileForm(forms.ModelForm):
             'gender': forms.Select(attrs={'class': 'form-control'}),
             'investor_type': forms.Select(attrs={'class': 'form-control'}),
             'initial_investment_limit': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'mf_investment_limit': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'coin_investment_limit': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'equity_fixed_charge': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'equity_brokerage_pct': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.001'}),
             'intraday_fixed_charge': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),

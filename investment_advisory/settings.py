@@ -93,6 +93,8 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework.authtoken',
     'corsheaders',
+    # Field-level encryption
+    'encrypted_model_fields',
 ]
 
 SITE_ID = 1
@@ -126,6 +128,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'core.context_processors.signal_info',
+                'core.context_processors.family_context',
             ],
         },
     },
@@ -215,7 +218,7 @@ SOCIALACCOUNT_EMAIL_REQUIRED = True
 SOCIALACCOUNT_EMAIL_AUTHENTICATION = True
 SOCIALACCOUNT_QUERY_EMAIL = True
 SOCIALACCOUNT_LOGIN_ON_GET = True     # Allow GET-based social redirects
-LOGIN_REDIRECT_URL = 'portfolio'
+LOGIN_REDIRECT_URL = 'landing'
 
 # OAuth Provider credentials (set in .env)
 SOCIALACCOUNT_PROVIDERS = {
@@ -282,7 +285,7 @@ STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-LOGIN_REDIRECT_URL = 'portfolio'
+LOGIN_REDIRECT_URL = 'landing'
 LOGOUT_REDIRECT_URL = 'landing'
 
 # Cache configuration
@@ -317,4 +320,8 @@ REST_FRAMEWORK = {
     ],
 }
 
-
+# ---------------------------------------------------------------------
+# Field-level encryption (django-encrypted-model-fields)
+# Fernet AES-128-CBC symmetric key – stored in .env as FIELD_ENCRYPTION_KEY
+# ---------------------------------------------------------------------
+FIELD_ENCRYPTION_KEY = os.environ.get('FIELD_ENCRYPTION_KEY', '')

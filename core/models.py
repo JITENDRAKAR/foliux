@@ -3,6 +3,12 @@ from django.utils import timezone
 from datetime import timedelta
 from decimal import Decimal
 from django.contrib.auth.models import User
+from encrypted_model_fields.fields import (
+    EncryptedCharField,
+    EncryptedDateField,
+    EncryptedEmailField,
+    EncryptedTextField,
+)
 
 class Instrument(models.Model):
     name = models.CharField(max_length=100)
@@ -70,16 +76,18 @@ class PnLStatement(models.Model):
 
 class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
-    full_name = models.CharField(max_length=100, null=True, blank=True)
-    mobile_number = models.CharField(max_length=15, unique=True, null=True, blank=True)
-    date_of_birth = models.DateField(null=True, blank=True)
-    gender = models.CharField(max_length=10, choices=[('M','Male'),('F','Female')], null=True, blank=True)
+    full_name = EncryptedCharField(max_length=100, null=True, blank=True)
+    mobile_number = EncryptedCharField(max_length=15, null=True, blank=True)
+    date_of_birth = EncryptedDateField(null=True, blank=True)
+    gender = EncryptedCharField(max_length=10, null=True, blank=True)
     investor_type = models.CharField(max_length=20, choices=[('conservative','Conservative'),('moderate','Moderate'),('growth','Growth'),('aggressive','Aggressive')], default='moderate')
     initial_investment_limit = models.DecimalField(max_digits=15, decimal_places=2, default=15000.00)
+    mf_investment_limit = models.DecimalField(max_digits=15, decimal_places=2, default=100000.00)
+    coin_investment_limit = models.DecimalField(max_digits=15, decimal_places=2, default=15000.00)
     equity_fixed_charge = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, null=True, blank=True)
-    equity_brokerage_pct = models.DecimalField(max_digits=10, decimal_places=4, default=0.00, null=True, blank=True) # Percentage (e.g., 0.02%)
+    equity_brokerage_pct = models.DecimalField(max_digits=10, decimal_places=4, default=0.0200, null=True, blank=True) # Percentage (e.g., 0.02%)
     intraday_fixed_charge = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, null=True, blank=True)
-    intraday_brokerage_pct = models.DecimalField(max_digits=10, decimal_places=4, default=0.00, null=True, blank=True) # Percentage (e.g., 0.2%)
+    intraday_brokerage_pct = models.DecimalField(max_digits=10, decimal_places=4, default=0.0200, null=True, blank=True) # Percentage (e.g., 0.2%)
 
     def __str__(self):
         return f"{self.user.username}'s Profile"
@@ -148,7 +156,7 @@ def protect_password_on_social_link(request, sociallogin, **kwargs):
         logger.info(f"Social account linked/updated for {user.username}. Provider: {sociallogin.account.provider}")
 class OTP(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    code = models.CharField(max_length=6)
+    code = EncryptedCharField(max_length=6)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def is_valid(self):
@@ -180,8 +188,8 @@ class Transaction(models.Model):
 
 class SignupOTP(models.Model):
     """OTP sent to an email address BEFORE a user account is created."""
-    email = models.EmailField()
-    code = models.CharField(max_length=6)
+    email = EncryptedEmailField()
+    code = EncryptedCharField(max_length=6)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def is_valid(self):
@@ -276,6 +284,18 @@ class SignalNotificationState(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - Buy:{self.last_buy_count} Reduce:{self.last_reduce_count} Sell:{self.last_sell_count}"
+
+class FamilyLink(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='family_links')
+    family_user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='linked_to_family')
+    is_verified = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('user', 'family_user')
+
+    def __str__(self):
+        return f"{self.user.username} -> {self.family_user.username} ({'Verified' if self.is_verified else 'Pending'})"
 
 class FinancialYearData(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='financial_year_data')
@@ -476,61 +496,75 @@ class FixedAsset(models.Model):
         ('Other', 'Other Fixed Asset')
     ]
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='fixed_assets')
-    instrument_name = models.CharField(max_length=100) # e.g. "HDFC FD 123"
+    parent_asset = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='renewals')
+    instrument_name = EncryptedCharField(max_length=100)
     asset_type = models.CharField(max_length=20, choices=ASSET_TYPES, default='FD')
-    invested_amount = models.DecimalField(max_digits=20, decimal_places=2)
-    interest_rate = models.DecimalField(max_digits=5, decimal_places=2) # Annual interest rate
+    # Stored encrypted as strings; use .invested_amount_decimal / .interest_rate_decimal properties
+    invested_amount = EncryptedCharField(max_length=50)
+    interest_rate = EncryptedCharField(max_length=20)
     investment_date = models.DateField()
     maturity_date = models.DateField(null=True, blank=True)
     
     # RD specific fields
-    monthly_deposit = models.DecimalField(max_digits=20, decimal_places=2, default=0)
-    tenure_years = models.IntegerField(default=1)
+    monthly_deposit = models.DecimalField(max_digits=20, decimal_places=2, default=0) # Only for RD/PPF if monthly
+    tenure_years = models.IntegerField(default=0)
     next_deposit_date = models.DateField(null=True, blank=True)
+    
+    # New fields
+    holder_name = EncryptedCharField(max_length=100, null=True, blank=True)
+    fd_id = EncryptedCharField(max_length=50, null=True, blank=True)
     
     created_at = models.DateTimeField(auto_now_add=True)
     
+    def _d(self, val):
+        """Safely convert encrypted string field to Decimal."""
+        try:
+            return Decimal(str(val)) if val not in (None, '', 'None') else Decimal('0')
+        except Exception:
+            return Decimal('0')
+
+    @property
+    def invested_amount_decimal(self):
+        return self._d(self.invested_amount)
+
+    @property
+    def interest_rate_decimal(self):
+        return self._d(self.interest_rate)
+
     @property
     def current_value(self):
         from datetime import date
         today = date.today()
+        # Helper: safely get float from encrypted string field
+        try:
+            inv = float(self.invested_amount) if self.invested_amount else 0.0
+        except (ValueError, TypeError):
+            inv = 0.0
+        try:
+            ir = float(self.interest_rate) if self.interest_rate else 0.0
+        except (ValueError, TypeError):
+            ir = 0.0
+
         # Interest compounding stops at the maturity date if it has passed
         calculation_date = min(today, self.maturity_date) if self.maturity_date else today
         
         # Monthly interest rate
-        i = float(self.interest_rate) / 100 / 12
+        i = ir / 100 / 12
         
         if self.asset_type == 'RD':
-            # RD Compound Interest calculation:
-            # We assume installments were added on the same day each month starting from investment_date.
-            # Number of months passed so far
             n = max(0, (calculation_date.year - self.investment_date.year) * 12 + (calculation_date.month - self.investment_date.month))
-            if n == 0: return float(self.invested_amount)
-            
-            # Simple summation logic for each installment
-            # installment_1 compounds for 'n' months, installment_2 for 'n-1' months...
-            total = 0
-            # Note: invested_amount is the SUM of all installments added so far.
-            # We assume monthly_deposit is the amount of each installment.
-            # However, if user manually edited invested_amount, we should be careful.
-            # For simplicity, we calculate based on the number of installments (n+1)
-            # but capped by the actual invested_amount / monthly_deposit.
-            
+            if n == 0: return inv
             monthly_val = float(self.monthly_deposit)
-            if monthly_val <= 0: return float(self.invested_amount)
-            
+            if monthly_val <= 0: return inv
+            total = 0
             for month in range(1, n + 2):
-                # How many months this specific installment has been earning interest
                 months_active = (n + 1) - month
-                # If we've reached the current date, stop
                 if months_active < 0: break
-                
                 total += monthly_val * ((1 + i) ** months_active)
             return total
         else:
-            # One-time investment (FD, etc)
             months = max(0, (calculation_date.year - self.investment_date.year) * 12 + (calculation_date.month - self.investment_date.month))
-            return float(self.invested_amount) * ((1 + i) ** months)
+            return inv * ((1 + i) ** months)
         
     @property
     def is_matured(self):
@@ -541,12 +575,20 @@ class FixedAsset(models.Model):
 
     @property
     def unrealized_pnl(self):
-        return self.current_value - float(self.invested_amount)
+        try:
+            inv = float(self.invested_amount) if self.invested_amount else 0.0
+        except (ValueError, TypeError):
+            inv = 0.0
+        return self.current_value - inv
 
     @property
     def pnl_percentage(self):
-        if self.invested_amount == 0: return 0
-        return (self.unrealized_pnl / float(self.invested_amount)) * 100
+        try:
+            inv = float(self.invested_amount) if self.invested_amount else 0.0
+        except (ValueError, TypeError):
+            inv = 0.0
+        if inv == 0: return 0
+        return (self.unrealized_pnl / inv) * 100
 
     def __str__(self):
         return f"{self.user.username} - {self.instrument_name}"
@@ -595,14 +637,15 @@ class Loan(models.Model):
     INTEREST_LOCKS = [('Fixed', 'Fixed'), ('Floating', 'Floating')]
     
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='loans')
-    bank_name = models.CharField(max_length=100)
+    bank_name = EncryptedCharField(max_length=100)
     category = models.CharField(max_length=50, choices=LOAN_CATEGORIES, default='Personal')
-    loan_amount = models.DecimalField(max_digits=20, decimal_places=2)
+    # Stored encrypted as strings
+    loan_amount = EncryptedCharField(max_length=50)
     start_date = models.DateField()
-    interest_rate = models.DecimalField(max_digits=5, decimal_places=2)
+    interest_rate = EncryptedCharField(max_length=20)
     interest_type = models.CharField(max_length=20, choices=INTEREST_TYPES, default='Reducing')
     tenure_months = models.IntegerField()
-    emi_amount = models.DecimalField(max_digits=20, decimal_places=2)
+    emi_amount = EncryptedCharField(max_length=50)
     interest_lock = models.CharField(max_length=20, choices=INTEREST_LOCKS, default='Fixed')
     next_emi_date = models.DateField(null=True, blank=True)
     is_active = models.BooleanField(default=True)
@@ -611,42 +654,64 @@ class Loan(models.Model):
     def __str__(self):
         return f"{self.user.username} - {self.bank_name} ({self.category})"
 
+    def _d(self, val):
+        """Safely convert encrypted string field to Decimal."""
+        try:
+            return Decimal(str(val)) if val not in (None, '', 'None') else Decimal('0')
+        except Exception:
+            return Decimal('0')
+
+    @property
+    def loan_amount_decimal(self):
+        return self._d(self.loan_amount)
+
+    @property
+    def interest_rate_decimal(self):
+        return self._d(self.interest_rate)
+
+    @property
+    def emi_amount_decimal(self):
+        return self._d(self.emi_amount)
+
     @property
     def total_paid_till_date(self):
-        return sum(p.amount for p in self.payments.all())
+        return sum(p.amount_decimal for p in self.payments.all())
 
     @property
     def total_interest_paid(self):
-        return sum(p.interest_component for p in self.payments.all())
+        return sum(p.interest_component_decimal for p in self.payments.all())
 
     @property
     def total_principal_paid(self):
-        return sum(p.principal_component for p in self.payments.all())
+        return sum(p.principal_component_decimal for p in self.payments.all())
 
     @property
     def current_outstanding(self):
-        return self.loan_amount - self.total_principal_paid
+        return self.loan_amount_decimal - self.total_principal_paid
 
     @property
     def progress_percentage(self):
-        if self.loan_amount == 0: return 0
-        return (self.total_principal_paid / self.loan_amount) * 100
+        la = self.loan_amount_decimal
+        if la == 0: return 0
+        return (self.total_principal_paid / la) * 100
 
     @property
     def remaining_tenure_months(self):
-        # Rough estimate based on EMI and outstanding principal if reducing
-        if self.emi_amount <= 0 or self.current_outstanding <= 0: return 0
+        emi = self.emi_amount_decimal
+        out = self.current_outstanding
+        if emi <= 0 or out <= 0: return 0
         if self.interest_type == 'Flat':
-            total_payable = self.loan_amount + (self.loan_amount * self.interest_rate / 100 * self.tenure_months / 12)
+            la = self.loan_amount_decimal
+            ir = self.interest_rate_decimal
+            total_payable = la + (la * ir / 100 * self.tenure_months / 12)
             remaining_to_pay = total_payable - self.total_paid_till_date
-            return int(remaining_to_pay / self.emi_amount)
+            return int(remaining_to_pay / emi)
         else:
-            # For reducing balance
             import math
-            P = float(self.current_outstanding)
-            r = float(self.interest_rate) / 100 / 12
-            E = float(self.emi_amount)
-            if E <= P * r: return 999 # EMI too small to cover interest
+            P = float(out)
+            r = float(self.interest_rate_decimal) / 100 / 12
+            E = float(emi)
+            if E <= P * r: return 999
             try:
                 n = -math.log(1 - (P * r / E)) / math.log(1 + r)
                 return int(math.ceil(n))
@@ -657,11 +722,30 @@ class LoanPayment(models.Model):
     PAYMENT_TYPES = [('EMI', 'EMI'), ('Prepayment', 'Prepayment')]
     loan = models.ForeignKey(Loan, on_delete=models.CASCADE, related_name='payments')
     payment_type = models.CharField(max_length=20, choices=PAYMENT_TYPES, default='EMI')
-    amount = models.DecimalField(max_digits=20, decimal_places=2)
+    # Stored encrypted as strings
+    amount = EncryptedCharField(max_length=50)
     date = models.DateField()
-    principal_component = models.DecimalField(max_digits=20, decimal_places=2)
-    interest_component = models.DecimalField(max_digits=20, decimal_places=2)
+    principal_component = EncryptedCharField(max_length=50)
+    interest_component = EncryptedCharField(max_length=50)
     created_at = models.DateTimeField(auto_now_add=True)
+
+    def _d(self, val):
+        try:
+            return Decimal(str(val)) if val not in (None, '', 'None') else Decimal('0')
+        except Exception:
+            return Decimal('0')
+
+    @property
+    def amount_decimal(self):
+        return self._d(self.amount)
+
+    @property
+    def principal_component_decimal(self):
+        return self._d(self.principal_component)
+
+    @property
+    def interest_component_decimal(self):
+        return self._d(self.interest_component)
 
     class Meta:
         ordering = ['date', 'created_at']

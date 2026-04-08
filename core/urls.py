@@ -29,6 +29,9 @@ urlpatterns = [
     path('accounts/login/', auth_views.LoginView.as_view(authentication_form=EmailOrMobileAuthenticationForm), name='login'),
     path('strategy/', views.strategy, name='strategy'),
     path('profile/edit/', views.edit_profile, name='edit_profile'),
+    path('profile/link-family/', views.link_family_id, name='link_family_id'),
+    path('profile/verify-family/', views.verify_family_otp, name='verify_family_otp'),
+    path('profile/unlink-family/<int:pk>/', views.unlink_family, name='unlink_family'),
     path('mf-guide/', views.mf_guide, name='mf_guide'),
     path('mf-dashboard/', views.mf_dashboard, name='mf_dashboard'),
     path('mf-portfolio/add/', views.add_mf_portfolio, name='add_mf_portfolio'),
@@ -94,6 +97,7 @@ urlpatterns = [
     
     # Internal Sync API
     path('api/sync-data/', views.sync_data_api, name='sync_data_api'),
+    path('api/portfolio-history/', views.portfolio_history_api, name='portfolio_history_api'),
     path('auto-migrate/', views.auto_migrate, name='auto_migrate'),
     path('api/mf-suggestions/', views.mf_suggestions_api, name='mf_suggestions_api'),
     path('api/index-data/', views.index_data_api, name='index_data_api'),
