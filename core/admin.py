@@ -10,7 +10,7 @@ from .models import (
     StrategyStock, Watchlist, Dividend, InvestmentGoal,
     CorporateAction, MutualFund, MFPortfolio, MFTransaction,
     Coin, CoinPortfolio, CoinTransaction,
-    NPSFund, NPSPortfolio, NPSTransaction, IPO
+    NPSFund, NPSPortfolio, NPSTransaction, IPO, ChatbotKnowledge
 )
 
 class CsvImportForm(forms.Form):
@@ -211,3 +211,8 @@ class IPOAdmin(admin.ModelAdmin):
     def get_status(self, obj):
         return obj.status
     get_status.short_description = 'Status'
+
+@admin.register(ChatbotKnowledge)
+class ChatbotKnowledgeAdmin(admin.ModelAdmin):
+    list_display = ('question', 'created_at', 'updated_at')
+    search_fields = ('question', 'answer')

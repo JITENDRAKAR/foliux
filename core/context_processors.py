@@ -11,7 +11,7 @@ def signal_info(request):
         from .models import MFPortfolio, CoinPortfolio, NPSPortfolio
         from decimal import Decimal
         
-        target_user, is_family_view = get_target_user(request)
+        target_user, is_family_view, is_consolidated = get_target_user(request)
         recommendations, _, _ = get_recommendations(target_user)
         
         # 1. Stocks & ETFs signals
@@ -116,9 +116,12 @@ def family_context(request):
     if not request.user.is_authenticated:
         return {}
     
-    target_user, is_family_view = get_target_user(request)
+    from .models import FamilyLink
+    target_user, is_family_view, is_consolidated = get_target_user(request)
     
     return {
         'target_user': target_user,
         'is_family_view': is_family_view,
+        'is_consolidated': is_consolidated,
+        'linked_family': FamilyLink.objects.filter(user=request.user, is_verified=True).order_by('family_user__username')
     }

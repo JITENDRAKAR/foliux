@@ -198,6 +198,8 @@
                 {% endfor %}
                 {% endif %}
                 <li class="dropdown-divider"></li>
+                <li><a class="dropdown-item {% if is_consolidated %}active{% endif %}" href="{% url 'portfolio' %}?user_id=consolidated"><i class="fas fa-layer-group me-2"></i>Consolidated View</a></li>
+                <li class="dropdown-divider"></li>
                 <li><a class="dropdown-item small" href="{% url 'edit_profile' %}"><i class="fas fa-plus me-2"></i>Link New Family ID</a></li>
             </ul>
         </div>

@@ -37,6 +37,7 @@ class Portfolio(models.Model):
     quantity = models.IntegerField()
     avg_cost = models.DecimalField(max_digits=10, decimal_places=2)
     ltp = models.DecimalField(max_digits=10, decimal_places=2) # Last Traded Price
+    notes = models.TextField(blank=True, null=True)
     
     @property
     def invested_amount(self):
@@ -857,3 +858,16 @@ class IPO(models.Model):
         ordering = ['-start_date']
         verbose_name = "IPO"
         verbose_name_plural = "IPOs"
+
+class ChatbotKnowledge(models.Model):
+    question = models.TextField(help_text="Expected matching words/phrases")
+    answer = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Q: {self.question[:50]}..."
+
+    class Meta:
+        verbose_name = "Chatbot Knowledge"
+        verbose_name_plural = "Chatbot Knowledge Base"

@@ -62,6 +62,50 @@
 {% endblock %}
 
 {% block content %}
+<!-- Family Switcher -->
+{% if linked_family or is_family_view %}
+<div class="d-flex justify-content-between align-items-center mb-4 p-3 bg-white rounded-4 shadow-sm border animate__animated animate__fadeIn">
+    <div class="d-flex align-items-center">
+        <div class="bg-primary bg-opacity-10 text-primary rounded-circle p-2 me-3">
+            <i class="fas fa-users-cog"></i>
+        </div>
+        <div>
+            <span class="text-muted small d-block">Viewing Data of:</span>
+            <span class="fw-bold fs-5">
+                {% if is_family_view %}
+                    {{ target_user.profile.full_name|default:target_user.username }}
+                {% elif is_consolidated %}
+                    Combined Family Portfolio
+                {% else %}
+                    My Account
+                {% endif %}
+            </span>
+        </div>
+    </div>
+    <div class="dropdown">
+        <button class="btn btn-outline-primary dropdown-toggle fw-bold" type="button" data-bs-toggle="dropdown">
+            Switch View
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end shadow border-0 rounded-3">
+            <li><a class="dropdown-item {% if not is_family_view and not is_consolidated %}active{% endif %}" href="{% url 'mf_dashboard' %}">Self (Personal)</a></li>
+            {% if linked_family %}
+            <li class="dropdown-divider"></li>
+            <li class="dropdown-header small text-muted text-uppercase">Family Members</li>
+            {% for link in linked_family %}
+            <li>
+                <a class="dropdown-item {% if is_family_view and target_user.id == link.family_user.id %}active{% endif %}" 
+                   href="{% url 'mf_dashboard' %}?user_id={{ link.family_user.id }}">
+                    {{ link.family_user.profile.full_name|default:link.family_user.username }}
+                </a>
+            </li>
+            {% endfor %}
+            {% endif %}
+            <li class="dropdown-divider"></li>
+            <li><a class="dropdown-item {% if is_consolidated %}active{% endif %}" href="{% url 'mf_dashboard' %}?user_id=consolidated"><i class="fas fa-layer-group me-2"></i>Consolidated View</a></li>
+        </ul>
+    </div>
+</div>
+{% endif %}
 <div class="container py-4">
     <!-- Header Area -->
     <div class="d-flex justify-content-between align-items-center mb-5">
@@ -73,12 +117,16 @@
             <a href="{% url 'mf_transaction_history' %}{% if is_family_view %}?user_id={{ target_user.id }}{% endif %}" class="btn btn-outline-primary rounded-pill px-4">
                 <i class="fas fa-history me-2"></i>History
             </a>
-            {% if not is_family_view %}
-            <a href="{% url 'refresh_mf_navs' %}" class="btn btn-outline-primary rounded-pill px-4">
+            {% if not is_family_view and not is_consolidated %}
+            <a href="{% url 'refresh_mf_navs' %}" class="btn btn-outline-primary rounded-pill px-4" title="Update latest NAVs from AMFI">
                 <i class="fas fa-sync-alt me-2"></i>Refresh NAVs
             </a>
             <a href="{% url 'add_mf_portfolio' %}" class="btn btn-gradient rounded-pill px-4">
                 <i class="fas fa-plus me-2"></i>Add New Fund
+            </a>
+            {% elif is_family_view and not is_consolidated %}
+            <a href="{% url 'add_mf_portfolio' %}?user_id={{ target_user.id }}" class="btn btn-gradient rounded-pill px-4">
+                <i class="fas fa-plus me-2"></i>Add for {{ target_user.username }}
             </a>
             {% endif %}
         </div>
@@ -181,19 +229,23 @@
                                     </div>
                                 {% endfor %}
                                 
-                                {% if not is_family_view %}
+                                {% if not is_consolidated %}
                                 <div class="d-flex gap-1 w-100">
-                                    <a href="{% url 'add_mf_portfolio' %}?symbol={{ item.fund.symbol }}" class="btn btn-sm btn-success flex-grow-1 py-1" style="border-radius: 8px; font-size: 0.7rem;">
+                                    <a href="{% url 'add_mf_portfolio' %}?symbol={{ item.fund.symbol }}{% if is_family_view %}&user_id={{ target_user.id }}{% endif %}" class="btn btn-sm btn-success flex-grow-1 py-1" style="border-radius: 8px; font-size: 0.7rem;" title="Buy / Add More">
                                         <i class="fas fa-plus"></i>
                                     </a>
-                                    <a href="{% url 'sell_mf_portfolio' item.id %}" class="btn btn-sm btn-danger flex-grow-1 py-1" style="border-radius: 8px; font-size: 0.7rem;">
+                                    <a href="{% url 'sell_mf_portfolio' item.id %}{% if is_family_view %}?user_id={{ target_user.id }}{% endif %}" class="btn btn-sm btn-danger flex-grow-1 py-1" style="border-radius: 8px; font-size: 0.7rem;" title="Sell / Redeem">
                                         <i class="fas fa-minus"></i>
                                     </a>
                                 </div>
+                                {% if not is_family_view %}
                                 <a href="{% url 'delete_mf_portfolio' item.id %}" class="text-muted x-small mt-2 opacity-50 text-decoration-none" 
                                    onclick="return confirm('Remove this fund from your portfolio?')" style="font-size: 0.55rem; letter-spacing: 0.5px;">
                                     REMOVE
                                 </a>
+                                {% endif %}
+                                {% else %}
+                                <span class="text-muted small"><i class="fas fa-lock opacity-50"></i> Read Only</span>
                                 {% endif %}
                             </div>
                         </td>

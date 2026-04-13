@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your Daily Portfolio Summary - NPITS</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background-color: #f0f4f8;
+            margin: 0;
+            padding: 0;
+            color: #2d3748;
+        }
+        .wrapper {
+            width: 100%;
+            background-color: #f0f4f8;
+            padding: 40px 0;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+        }
+        .header {
+            background: linear-gradient(135deg, #003D7C 0%, #0056b3 100%);
+            color: #ffffff;
+            padding: 40px 30px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 28px;
+            font-weight: 700;
+            letter-spacing: -0.01em;
+        }
+        .header p {
+            margin-top: 10px;
+            opacity: 0.9;
+            font-size: 16px;
+        }
+        .content {
+            padding: 35px;
+        }
+        .section-title {
+            font-size: 14px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: #718096;
+            margin-bottom: 20px;
+            letter-spacing: 0.05em;
+            border-bottom: 1px solid #edf2f7;
+            padding-bottom: 10px;
+        }
+        .stats-grid {
+            display: table;
+            width: 100%;
+            margin-bottom: 30px;
+        }
+        .stats-row {
+            display: table-row;
+        }
+        .stat-card {
+            display: table-cell;
+            width: 50%;
+            padding: 15px;
+            vertical-align: top;
+        }
+        .stat-label {
+            font-size: 13px;
+            color: #718096;
+            margin-bottom: 5px;
+        }
+        .stat-value {
+            font-size: 18px;
+            font-weight: 700;
+            color: #1a202c;
+        }
+        .stat-value.profit { color: #38a169; }
+        .stat-value.loss { color: #e53e3e; }
+        
+        .summary-card {
+            background-color: #f8fafc;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 30px;
+            border: 1px solid #e2e8f0;
+        }
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 12px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #edf2f7;
+        }
+        .summary-row:last-child {
+            margin-bottom: 0;
+            padding-bottom: 0;
+            border-bottom: none;
+        }
+        .summary-label {
+            color: #4a5568;
+            font-size: 15px;
+        }
+        .summary-value {
+            font-weight: 600;
+            color: #2d3748;
+            font-size: 15px;
+        }
+        
+        .signal-box {
+            background-color: #fff;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid #e2e8f0;
+        }
+        .signal-item {
+            padding: 15px 20px;
+            border-bottom: 1px solid #edf2f7;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .signal-item:last-child {
+            border-bottom: none;
+            background-color: #f7fafc;
+        }
+        .signal-name {
+            font-weight: 600;
+            color: #4a5568;
+        }
+        .signal-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-weight: 700;
+            font-size: 14px;
+            color: #fff;
+        }
+        .buy-bg { background-color: #38a169; }
+        .reduce-bg { background-color: #ed8936; }
+        .sell-bg { background-color: #e53e3e; }
+        .total-bg { background-color: #003D7C; }
+
+        .cta-container {
+            text-align: center;
+            margin-top: 40px;
+        }
+        .btn {
+            display: inline-block;
+            background-color: #003D7C;
+            color: #ffffff !important;
+            padding: 14px 35px;
+            border-radius: 10px;
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+        
+        .footer {
+            padding: 40px 30px;
+            text-align: center;
+            font-size: 13px;
+            color: #a0aec0;
+            background-color: #f7fafc;
+        }
+        .footer p { margin-bottom: 10px; }
+        
+        @media only screen and (max-width: 480px) {
+            .stat-card { width: 100%; display: block; }
+        }
+    </style>
+</head>
+<body>
+    <div class="wrapper">
+        <div class="container">
+            <div class="header">
+                <h1>NPITS Summary</h1>
+                <p>{{ today|date:"d M, Y" }}</p>
+            </div>
+            
+            <div class="content">
+                <p style="font-size: 16px; line-height: 1.6; margin-bottom: 25px;">
+                    Hi <strong>{{ user.profile.full_name|default:user.username }}</strong>,<br>
+                    Here is your daily portfolio snapshot and latest investment signals.
+                </p>
+
+                <div class="section-title">Portfolio Snapshot</div>
+                <div class="summary-card">
+                    <div class="summary-row">
+                        <span class="summary-label">Portfolio Value</span>
+                        <span class="summary-value">₹{{ portfolio_value|floatformat:2 }}</span>
+                    </div>
+                    <div class="summary-row">
+                        <span class="summary-label">Initial Capital</span>
+                        <span class="summary-value">₹{{ initial_capital|floatformat:2 }}</span>
+                    </div>
+                    <div class="summary-row">
+                        <span class="summary-label">Unrealized P&L</span>
+                        <span class="summary-value {% if unrealized_pnl >= 0 %}profit{% else %}loss{% endif %}">
+                            {% if unrealized_pnl > 0 %}+{% endif %}₹{{ unrealized_pnl|floatformat:2 }}
+                        </span>
+                    </div>
+                    <div class="summary-row">
+                        <span class="summary-label">Total Realized</span>
+                        <span class="summary-value">₹{{ total_realized|floatformat:2 }}</span>
+                    </div>
+                    <div class="summary-row">
+                        <span class="summary-label">Liabilities (Loans)</span>
+                        <span class="summary-value" style="color: #e53e3e;">₹{{ liabilities|floatformat:2 }}</span>
+                    </div>
+                </div>
+
+                <div class="section-title">Investment Signals</div>
+                <div class="signal-box">
+                    <div class="signal-item">
+                        <span class="signal-name">Buy Signals</span>
+                        <span class="signal-badge buy-bg">{{ buy_count }}</span>
+                    </div>
+                    <div class="signal-item">
+                        <span class="signal-name">Reduce Signals</span>
+                        <span class="signal-badge reduce-bg">{{ reduce_count }}</span>
+                    </div>
+                    <div class="signal-item">
+                        <span class="signal-name">Sell Signals</span>
+                        <span class="signal-badge sell-bg">{{ sell_count }}</span>
+                    </div>
+                    <div class="signal-item">
+                        <span class="signal-name" style="font-size: 16px; color: #1a202c;">Total Signals</span>
+                        <span class="signal-badge total-bg">{{ total_count }}</span>
+                    </div>
+                </div>
+                
+                <div class="cta-container">
+                    <a href="{{ site_url }}/dashboard/" class="btn">Login to Dashboard</a>
+                </div>
+            </div>
+            
+            <div class="footer">
+                <p>&copy; 2026 NPITS - Net Profit Investment Tracking System</p>
+                <p>Rule-based investing for disciplined wealth creation.</p>
+                <p>This is an automated daily summary. If you wish to unsubscribe, please update your profile settings.</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

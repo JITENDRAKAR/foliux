@@ -1,0 +1,30 @@
+{
+  "packageId": "in.npits.twa",
+  "host": "npits.in",
+  "name": "NPITS",
+  "launcherName": "NPITS",
+  "display": "standalone",
+  "themeColor": "#003D7C",
+  "navigationColor": "#000000",
+  "backgroundColor": "#ffffff",
+  "enableNotifications": true,
+  "startUrl": "/",
+  "iconUrl": "https://placehold.co/512x512/003D7C/ffffff?text=NPITS",
+  "maskableIconUrl": "https://placehold.co/512x512/003D7C/ffffff?text=NPITS",
+  "splashScreenFadeOutDuration": 300,
+  "signingKey": {
+    "path": "./android.keystore",
+    "alias": "android"
+  },
+  "appVersionCode": 1,
+  "appVersionName": "1.0.0",
+  "generatorApp": "bubblewrap-cli",
+  "webManifestUrl": "https://npits.in/static/manifest.json",
+  "fallbackType": "customtabs",
+  "orientation": "any",
+  "shortcuts": [],
+  "features": {},
+  "alphaDependencies": false,
+  "enableSiteSettingsShortcut": true,
+  "isAssetOnly": false
+}

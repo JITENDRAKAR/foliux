@@ -699,24 +699,51 @@ def record_all_portfolio_history():
         count += 1
     return count
 
-def get_recommendations(user):
+def get_recommendations(user, is_consolidated=False):
     """
-    Calculate buy/sell recommendations for a given user.
-    Extracted from dashboard view for reusability.
+    Calculate buy/sell recommendations for a given user or consolidated family portfolio.
     """
-    from core.models import Portfolio, PnLStatement, Instrument, Profile
+    from core.models import Portfolio, PnLStatement, Instrument, Profile, FamilyLink
+    from django.db.models.functions import Upper
+    from django.db.models import Sum
+    from django.contrib.auth.models import User
     
-    portfolio_items = Portfolio.objects.filter(user=user).select_related('instrument')
+    if is_consolidated:
+        linked_users = FamilyLink.objects.filter(user=user, is_verified=True).values_list('family_user', flat=True)
+        user_list = [user.id] + list(linked_users)
+        portfolio_items_query = Portfolio.objects.filter(user_id__in=user_list).select_related('instrument')
+        pnl_items_query = PnLStatement.objects.filter(user_id__in=user_list).select_related('instrument')
+    else:
+        portfolio_items_query = Portfolio.objects.filter(user=user).select_related('instrument')
+        pnl_items_query = PnLStatement.objects.filter(user=user).select_related('instrument')
+    
     live_ltps = fetch_live_ltp() or {}
-    pnl_items = PnLStatement.objects.filter(user=user).select_related('instrument')
     
-    # Aggregate Realized Profit per Instrument
-    realized_profits_qs = pnl_items.annotate(
+    # Aggregate Realized Profit per Instrument across all target users
+    realized_profits_qs = pnl_items_query.annotate(
         symbol_upper=Upper('instrument__symbol')
     ).values('symbol_upper').annotate(
         total_profit=Sum('realized_profit')
     )
     realized_profits = {item['symbol_upper'].upper(): float(item['total_profit']) for item in realized_profits_qs}
+
+    # Aggregate Portfolio items across all target users
+    # We group by instrument symbol
+    agg_portfolio = {}
+    for item in portfolio_items_query:
+        sym = item.instrument.symbol.upper()
+        if sym not in agg_portfolio:
+            agg_portfolio[sym] = {
+                'instrument': item.instrument,
+                'quantity': 0,
+                'invested_amount': 0,
+                'ltp': item.ltp, # base ltp
+                'notes': item.notes,
+            }
+        agg_portfolio[sym]['quantity'] += item.quantity
+        agg_portfolio[sym]['invested_amount'] += float(item.quantity) * float(item.avg_cost)
+        if not agg_portfolio[sym]['notes'] and item.notes:
+            agg_portfolio[sym]['notes'] = item.notes
 
     # Map symbols to strategies
     strategy_stocks = fetch_strategy_stocks()
@@ -745,35 +772,35 @@ def get_recommendations(user):
         if pe > 50: return 50.0 / pe
         return 1.0
 
+    # Profile for recommendation logic uses the PRIMARY user's settings even in consolidated
     profile, _ = Profile.objects.get_or_create(user=user)
-    portfolio_symbols = {item.instrument.symbol.upper() for item in portfolio_items}
     recommendations = []
 
-    for item in portfolio_items:
-        symbol = item.instrument.symbol
-        quantity = item.quantity
-        avg_cost = float(item.avg_cost)
+    for symbol, data in agg_portfolio.items():
+        inst = data['instrument']
+        quantity = data['quantity']
+        invested = data['invested_amount']
+        avg_cost = invested / quantity if quantity > 0 else 0
         
-        ltp = float(live_ltps.get(symbol.upper(), 0))
+        ltp = float(live_ltps.get(symbol, 0))
         if ltp <= 0:
             try:
-                ltp = float(item.instrument.last_price)
+                ltp = float(inst.last_price)
             except (AttributeError, ValueError, TypeError):
                 ltp = 0
         if ltp <= 0:
-            ltp = float(item.ltp)
+            ltp = float(data['ltp'])
         
-        invested = quantity * avg_cost
         current = quantity * ltp
         unrealized = current - invested
         unrealized_pct = (unrealized / invested * 100) if invested else 0
         
-        realized_profit = realized_profits.get(symbol.upper(), 0)
-        strat_key = symbol_to_strategy.get(symbol.upper(), 'moderate')
+        realized_profit = realized_profits.get(symbol, 0)
+        strat_key = symbol_to_strategy.get(symbol, 'moderate')
         initial_inv = float(profile.get_max_investment(strat_key))
         
-        factor_j = get_factor_j(item.instrument.diff_from_lh_pct)
-        factor_i = get_factor_i(item.instrument.pe_ratio)
+        factor_j = get_factor_j(inst.diff_from_lh_pct)
+        factor_i = get_factor_i(inst.pe_ratio)
         
         buy_gap_formula = (realized_profit * 0.93 - invested) + (initial_inv * factor_j * factor_i)
         
@@ -797,10 +824,9 @@ def get_recommendations(user):
         reduce_gap = abs(buy_gap_formula) if action == 'REDUCE' else 0
 
         # Day Change Calculations
-        absolute_change = float(item.instrument.price_change or 0)
-        previous_close = float(item.instrument.previous_close or 0)
+        absolute_change = float(inst.price_change or 0)
+        previous_close = float(inst.previous_close or 0)
         
-        # Fallback if previous_close is not set
         if previous_close <= 0:
             previous_close = ltp - absolute_change
             
@@ -809,7 +835,7 @@ def get_recommendations(user):
 
         recommendations.append({
             'symbol': symbol,
-            'name': item.instrument.name,
+            'name': inst.name,
             'quantity': quantity,
             'avg_cost': avg_cost,
             'ltp': ltp,
@@ -822,17 +848,17 @@ def get_recommendations(user):
             'previous_close': round(previous_close, 2),
             'action': action,
             'reason': reason,
-            'portfolio_id': item.id,
-            'instrument_id': item.instrument.id,
+            'instrument_id': inst.id,
             'buy_gap': round(buy_gap, 2),
             'reduce_gap': round(reduce_gap, 2),
             'realized_profit': realized_profit,
             'in_portfolio': True if quantity > 0 else False,
+            'notes': data.get('notes', ''),
         })
     
     # Add P&L-only stocks
+    portfolio_symbols = set(agg_portfolio.keys())
     for symbol, realized_profit in realized_profits.items():
-        symbol = symbol.upper()
         if symbol not in portfolio_symbols:
             inst = Instrument.objects.filter(symbol__iexact=symbol).first()
             if not inst: continue
@@ -847,21 +873,17 @@ def get_recommendations(user):
             
             buy_gap_formula = (realized_profit * 0.93) + (initial_inv * factor_j * factor_i)
             
-            if -3000 <= buy_gap_formula <= 3000:
-                action = "HOLD"
-            elif buy_gap_formula > 3000:
-                action = "BUY"
-            elif buy_gap_formula < -3000:
-                action = "REDUCE"
-            else:
-                action = "HOLD"
+            if -3000 <= buy_gap_formula <= 3000: action = "HOLD"
+            elif buy_gap_formula > 3000: action = "BUY"
+            elif buy_gap_formula < -3000: action = "REDUCE"
+            else: action = "HOLD"
 
             buy_gap = buy_gap_formula if action == 'BUY' else 0
             reduce_gap = abs(buy_gap_formula) if action == 'REDUCE' else 0
 
             recommendations.append({
                 'symbol': symbol,
-                'name': inst.name if inst else symbol,
+                'name': inst.name,
                 'quantity': 0,
                 'avg_cost': 0,
                 'ltp': ltp,
@@ -895,22 +917,17 @@ def get_recommendations(user):
             strat_key = symbol_to_strategy.get(symbol, 'moderate')
             initial_inv = float(profile.get_max_investment(strat_key))
             
-            factor_j = 1.0
-            factor_i = 1.0
+            factor_j = 1.0; factor_i = 1.0
             if inst:
                 factor_j = get_factor_j(inst.diff_from_lh_pct)
                 factor_i = get_factor_i(inst.pe_ratio)
             
             buy_gap_formula = initial_inv * factor_j * factor_i
             
-            if -3000 <= buy_gap_formula <= 3000:
-                action = "HOLD"
-            elif buy_gap_formula > 3000:
-                action = "BUY"
-            elif buy_gap_formula < -3000:
-                action = "REDUCE"
-            else:
-                action = "HOLD"
+            if -3000 <= buy_gap_formula <= 3000: action = "HOLD"
+            elif buy_gap_formula > 3000: action = "BUY"
+            elif buy_gap_formula < -3000: action = "REDUCE"
+            else: action = "HOLD"
 
             buy_gap = buy_gap_formula if action == 'BUY' else 0
             reduce_gap = abs(buy_gap_formula) if action == 'REDUCE' else 0
@@ -935,24 +952,28 @@ def get_recommendations(user):
             })
             
     return recommendations, realized_profits, strategy_stocks
-
 def get_target_user(request):
     """
-    Identifies the target user for portfolio views.
-    Handles family link verification for user_id in GET parameters.
-    Returns (target_user, is_family_view)
+    Identifies the target user for portfolio views and actions.
+    Handles family link verification for user_id in GET or POST parameters.
+    Returns (target_user, is_family_view, is_consolidated)
     """
     from django.contrib.auth.models import User
     from .models import FamilyLink
     
     target_user = request.user
     is_family_view = False
+    is_consolidated = False
     
     if not request.user.is_authenticated:
-        return target_user, is_family_view
+        return target_user, is_family_view, is_consolidated
 
-    user_id = request.GET.get('user_id')
-    if user_id:
+    # Support both GET (views) and POST (actions like buy/sell)
+    user_id = request.POST.get('user_id') or request.GET.get('user_id')
+    
+    if user_id == 'consolidated':
+        is_consolidated = True
+    elif user_id:
         try:
             # Verify the link exists and is verified
             link = FamilyLink.objects.filter(user=request.user, family_user_id=user_id, is_verified=True).first()
@@ -963,9 +984,101 @@ def get_target_user(request):
                 # Requesting self
                 pass
             else:
-                # Permission denied
+                # Permission denied or link not found/unverified
                 pass
         except (ValueError, TypeError):
             pass
             
-    return target_user, is_family_view
+    return target_user, is_family_view, is_consolidated
+
+def get_consolidated_users(user):
+    """Returns a list of User IDs for the user and all verified family members."""
+    from .models import FamilyLink
+    linked_users = FamilyLink.objects.filter(user=user, is_verified=True).values_list('family_user_id', flat=True)
+    return [user.id] + list(linked_users)
+
+def get_portfolio_summary_metrics(user):
+    """
+    Calculates comprehensive portfolio metrics for a user.
+    Returns a dictionary suitable for template context.
+    """
+    from core.models import Portfolio, MFPortfolio, CoinPortfolio, NPSPortfolio, Loan, FixedAsset, OtherAsset
+    
+    # 1. Get Recommendations (Signals)
+    recommendations, realized_profits, _ = get_recommendations(user)
+    
+    # Filter signals (matching dashboard logic)
+    user_signals = [
+        r for r in recommendations 
+        if r.get('in_portfolio', False) or (r.get('action') == 'BUY' and r.get('realized_profit', 0) > 0)
+    ]
+    
+    buy_count = sum(1 for r in user_signals if r.get('action') == 'BUY')
+    reduce_count = sum(1 for r in user_signals if r.get('action') == 'REDUCE')
+    sell_count = sum(1 for r in user_signals if r.get('action') == 'SELL')
+    total_signals = buy_count + reduce_count + sell_count
+
+    # 2. Calculate Portfolio Metrics
+    # Stocks
+    stocks = Portfolio.objects.filter(user=user)
+    stocks_invested = sum(p.invested_amount for p in stocks)
+    stocks_current = sum(p.current_value for p in stocks)
+    stocks_realized = float(sum(realized_profits.values()) if isinstance(realized_profits, dict) else 0)
+
+    # Mutual Funds
+    mf_holdings = MFPortfolio.objects.filter(user=user)
+    mf_invested = float(sum(h.invested_amount for h in mf_holdings))
+    mf_current = float(sum(h.current_value for h in mf_holdings))
+    mf_realized = float(sum(h.realized_profit for h in mf_holdings))
+
+    # Coins
+    coin_holdings = CoinPortfolio.objects.filter(user=user)
+    coin_invested = float(sum(h.invested_amount for h in coin_holdings))
+    coin_current = float(sum(h.current_value for h in coin_holdings))
+    coin_realized = float(sum(h.realized_profit for h in coin_holdings))
+
+    # NPS
+    nps_holdings = NPSPortfolio.objects.filter(user=user)
+    nps_invested = float(sum(h.invested_amount for h in nps_holdings))
+    nps_current = float(sum(h.current_value for h in nps_holdings))
+    nps_realized = float(sum(h.realized_profit for h in nps_holdings))
+
+    # Fixed Assets
+    fd_holdings = FixedAsset.objects.filter(user=user)
+    fd_invested = float(sum(h.invested_amount_decimal for h in fd_holdings))
+    fd_current = float(sum(h.current_value for h in fd_holdings))
+
+    # Other Assets
+    other_holdings = OtherAsset.objects.filter(user=user)
+    other_invested = float(sum(h.purchase_price for h in other_holdings))
+    other_current = float(sum(h.current_value for h in other_holdings))
+
+    # Loans
+    loans = Loan.objects.filter(user=user, is_active=True)
+    loan_outstanding = float(sum(l.current_outstanding for l in loans))
+
+    # Aggregates
+    total_invested = float(stocks_invested) + mf_invested + coin_invested + nps_invested + fd_invested + other_invested
+    total_current_assets = float(stocks_current) + mf_current + coin_current + nps_current + fd_current + other_current
+    
+    # Portfolio Value (Equity/Assets)
+    portfolio_value = total_current_assets
+    # Liabilities
+    liabilities = loan_outstanding
+    # Realized
+    total_realized_profit = stocks_realized + mf_realized + coin_realized + nps_realized
+    # Unrealized (Asset Current - Asset Invested)
+    total_unrealized_pnl = total_current_assets - total_invested
+
+    return {
+        'portfolio_value': portfolio_value,
+        'initial_capital': total_invested,
+        'unrealized_pnl': total_unrealized_pnl,
+        'total_realized': total_realized_profit,
+        'liabilities': liabilities,
+        'buy_count': buy_count,
+        'reduce_count': reduce_count,
+        'sell_count': sell_count,
+        'total_count': total_signals
+    }
+

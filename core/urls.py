@@ -114,4 +114,5 @@ urlpatterns = [
     path('api/add-transaction/', api_views.api_add_transaction, name='api_add_transaction'),
     
     path('.well-known/assetlinks.json', views.assetlinks_json, name='assetlinks_json'),
+    path('chatbot-response/', views.chatbot_response, name='chatbot_response'),
 ]

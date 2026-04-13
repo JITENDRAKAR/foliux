@@ -134,6 +134,12 @@ class ManualPortfolioForm(forms.Form):
         required=False,
         widget=forms.DateInput(attrs={'class': 'form-control', 'type': 'date'})
     )
+    notes = forms.CharField(
+        label='NOTES',
+        required=False,
+        widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'placeholder': 'Optional: Why did you select this stock?'}),
+        help_text='Visible on hover in portfolio view'
+    )
 
 class EditLotForm(forms.Form):
     quantity = forms.IntegerField(

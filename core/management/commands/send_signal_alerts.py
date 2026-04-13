@@ -4,8 +4,9 @@ from django.core.mail import send_mail
 from django.template.loader import render_to_string
 from django.utils.html import strip_tags
 from django.conf import settings
+from django.utils import timezone
 from core.models import SignalNotificationState
-from core.utils import get_recommendations
+from core.utils import get_recommendations, get_portfolio_summary_metrics
 import logging
 
 logger = logging.getLogger(__name__)
@@ -31,20 +32,12 @@ class Command(BaseCommand):
                 if not hasattr(user, 'profile') or not user.email:
                     continue  # Skip users without profiles or emails
 
-                # Get Current Recommendation Totals
-                recommendations, realized_profits, strategy_stocks = get_recommendations(user)
-                
-                # Replicate exactly the context_processors / dashboard logic
-                # Include items currently in portfolio OR P&L Buybacks
-                user_signals = [
-                    r for r in recommendations 
-                    if r.get('in_portfolio', False) or (r.get('action') == 'BUY' and r.get('realized_profit', 0) > 0)
-                ]
-                
-                current_buy = sum(1 for r in user_signals if r.get('action') == 'BUY')
-                current_reduce = sum(1 for r in user_signals if r.get('action') == 'REDUCE')
-                current_sell = sum(1 for r in user_signals if r.get('action') == 'SELL')
-                total_current = current_buy + current_reduce + current_sell
+                # Get Current Metrics via consolidated utility
+                metrics = get_portfolio_summary_metrics(user)
+                current_buy = metrics['buy_count']
+                current_reduce = metrics['reduce_count']
+                current_sell = metrics['sell_count']
+                total_current = metrics['total_count']
 
                 # Get or Create Notification State
                 state, created = SignalNotificationState.objects.get_or_create(
@@ -67,11 +60,17 @@ class Command(BaseCommand):
 
                 if (has_changed or force) and total_current > 0:
                     # Prepare Email Template
-                    subject = "Action Required: Your Portfolio Signal Alerts Have Changed"
-                    site_url = getattr(settings, 'SITE_URL', 'https://npits.in') # Use live domain
+                    subject = f"Alert: Portfolio Signal Change Detected - {timezone.now().strftime('%d %b %Y')}"
+                    site_url = getattr(settings, 'SITE_URL', 'https://npits.in')
                     
                     context = {
                         'user': user,
+                        'today': timezone.now(),
+                        'portfolio_value': metrics['portfolio_value'],
+                        'initial_capital': metrics['initial_capital'],
+                        'unrealized_pnl': metrics['unrealized_pnl'],
+                        'total_realized': metrics['total_realized'],
+                        'liabilities': metrics['liabilities'],
                         'buy_count': current_buy,
                         'reduce_count': current_reduce,
                         'sell_count': current_sell,
@@ -79,14 +78,14 @@ class Command(BaseCommand):
                         'site_url': site_url
                     }
 
-                    html_message = render_to_string('emails/signal_alert.html', context)
+                    html_message = render_to_string('emails/daily_portfolio_summary.html', context)
                     plain_message = strip_tags(html_message)
 
                     # Send Email
                     send_mail(
                         subject=subject,
                         message=plain_message,
-                        from_email=f"Net Profit <{settings.EMAIL_HOST_USER}>",
+                        from_email=f"NPITS <{settings.EMAIL_HOST_USER}>",
                         recipient_list=[user.email],
                         html_message=html_message,
                         fail_silently=False,

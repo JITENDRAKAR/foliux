@@ -225,27 +225,27 @@
           {% comment %} Navigation: Full menu visible to all users. Portfolio link shown only before login. {% endcomment %}
 {% comment %} Navigation: Full menu visible to all users. Portfolio link shown only before login. {% endcomment %}
 <li class="nav-item">
-    <a class="nav-link" href="{% url 'strategy' %}{% if is_family_view %}?user_id={{ target_user.id }}{% endif %}">Strategy</a>
+    <a class="nav-link" href="{% url 'strategy' %}{% if is_family_view %}?user_id={{ target_user.id }}{% elif is_consolidated %}?user_id=consolidated{% endif %}">Strategy</a>
 </li>
 <li class="nav-item">
-    <a class="nav-link nav-item-dashboard" href="{% url 'dashboard' %}{% if is_family_view %}?user_id={{ target_user.id }}{% endif %}">Stock Etf</a>
+    <a class="nav-link nav-item-dashboard" href="{% url 'dashboard' %}{% if is_family_view %}?user_id={{ target_user.id }}{% elif is_consolidated %}?user_id=consolidated{% endif %}">Stock Etf</a>
 </li>
 <li class="nav-item">
-    <a class="nav-link" href="{% url 'mf_dashboard' %}{% if is_family_view %}?user_id={{ target_user.id }}{% endif %}">MF Cue</a>
+    <a class="nav-link" href="{% url 'mf_dashboard' %}{% if is_family_view %}?user_id={{ target_user.id }}{% elif is_consolidated %}?user_id=consolidated{% endif %}">MF Cue</a>
 </li>
 <li class="nav-item">
-    <a class="nav-link" href="{% url 'coin_dashboard' %}{% if is_family_view %}?user_id={{ target_user.id }}{% endif %}">Coin</a>
+    <a class="nav-link" href="{% url 'coin_dashboard' %}{% if is_family_view %}?user_id={{ target_user.id }}{% elif is_consolidated %}?user_id=consolidated{% endif %}">Coin</a>
 </li>
 <li class="nav-item">
-    <a class="nav-link" href="{% url 'nps_dashboard' %}{% if is_family_view %}?user_id={{ target_user.id }}{% endif %}">NPS Cue</a>
+    <a class="nav-link" href="{% url 'nps_dashboard' %}{% if is_family_view %}?user_id={{ target_user.id }}{% elif is_consolidated %}?user_id=consolidated{% endif %}">NPS Cue</a>
 </li>
 <li class="nav-item">
-    <a class="nav-link" href="{% url 'ipo' %}{% if is_family_view %}?user_id={{ target_user.id }}{% endif %}">IPO</a>
+    <a class="nav-link" href="{% url 'ipo' %}{% if is_family_view %}?user_id={{ target_user.id }}{% elif is_consolidated %}?user_id=consolidated{% endif %}">IPO</a>
 </li>
 
 {% if user.is_authenticated %}
     <li class="nav-item">
-        <a class="nav-link nav-item-dashboard" href="{% url 'portfolio' %}{% if is_family_view %}?user_id={{ target_user.id }}{% endif %}">
+        <a class="nav-link nav-item-dashboard" href="{% url 'portfolio' %}{% if is_family_view %}?user_id={{ target_user.id }}{% elif is_consolidated %}?user_id=consolidated{% endif %}">
             Portfolio
             {% if action_count and action_count > 0 %}
               <span class="badge-fbi" title="Your action is needed!">{{ action_count }}</span>
@@ -298,9 +298,25 @@
     </div>
     {% endif %}
 
-    {% if is_family_view %}
+    {% if is_family_view or is_consolidated %}
     <div class="row justify-content-center mb-4">
       <div class="col-md-12">
+        {% if is_consolidated %}
+        <div class="alert alert-primary border-0 shadow-sm d-flex justify-content-between align-items-center mb-0" style="border-radius: 12px; background: rgba(37, 99, 235, 0.1); backdrop-filter: blur(8px);">
+            <div class="d-flex align-items-center">
+              <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px;">
+                <i class="fas fa-layer-group"></i>
+              </div>
+              <div>
+                <h6 class="mb-0 fw-bold">Consolidated Family Portfolio</h6>
+                <p class="text-muted small mb-0">Aggregate view across all linked accounts. Management is disabled.</p>
+              </div>
+            </div>
+            <a href="{{ request.path }}" class="btn btn-primary btn-sm rounded-pill px-4 fw-bold">
+              <i class="fas fa-user me-2"></i>Stop Consolidation
+            </a>
+          </div>
+        {% else %}
         <div class="alert alert-info border-0 shadow-sm d-flex justify-content-between align-items-center mb-0" style="border-radius: 12px; background: rgba(59, 130, 246, 0.1); backdrop-filter: blur(8px);">
           <div class="d-flex align-items-center">
             <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px;">
@@ -308,13 +324,14 @@
             </div>
             <div>
               <h6 class="mb-0 fw-bold">Viewing {{ target_user.profile.full_name|default:target_user.username }}'s Portfolio</h6>
-              <p class="text-muted small mb-0">Family view mode is active. Operations are read-only.</p>
+              <p class="text-muted small mb-0">Family view mode is active. You can manage assets on behalf of this account.</p>
             </div>
           </div>
           <a href="{{ request.path }}" class="btn btn-primary btn-sm rounded-pill px-4 fw-bold">
-            <i class="fas fa-arrow-left me-2"></i>Back to My Portfolio
+            <i class="fas fa-user me-2"></i>Switch to My Account
           </a>
         </div>
+        {% endif %}
       </div>
     </div>
     {% endif %}
@@ -348,6 +365,7 @@
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   {% block extra_js %}{% endblock %}
+  {% include 'core/chatbot.html' %}
 </body>
 
 </html>

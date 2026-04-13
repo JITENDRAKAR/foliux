@@ -1,0 +1,22 @@
+{
+  "twaName": "NPITS",
+  "launcherName": "NPITS",
+  "host": "npits.in",
+  "startUrl": "/",
+  "themeColor": "#0d6efd",
+  "navigationColor": "#000000",
+  "backgroundColor": "#ffffff",
+  "enableNotifications": true,
+  "packageId": "in.npits.twa",
+  "signingKey": {
+    "path": "./android.keystore",
+    "alias": "android"
+  },
+  "appVersionCode": 1,
+  "appVersionName": "1.0.0",
+  "generatorApp": "bubblewrap-cli",
+  "webManifestUrl": "https://npits.in/static/manifest.json",
+  "fallbackType": "customtabs",
+  "display": "standalone",
+  "orientation": "any"
+}

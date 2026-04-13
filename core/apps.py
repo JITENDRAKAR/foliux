@@ -7,39 +7,55 @@ class CoreConfig(AppConfig):
 
     def ready(self):
         import os
+        import sys
         from django.core.management import call_command
-        
+
+        # Avoid starting the scheduler when running management commands (like migrate, check, etc.)
+        if any(cmd in sys.argv for cmd in ['makemigrations', 'migrate', 'collectstatic', 'check', 'shell', 'test']):
+            return
+
         def run_alerts():
             try:
                 call_command('send_signal_alerts')
             except Exception as e:
                 print(f"Error running signal alerts: {e}")
 
-        # Ensure scheduler only runs once in the main process
-        if os.environ.get('RUN_MAIN') == 'true' or os.environ.get('SERVER_SOFTWARE', '').startswith('gunicorn'):
+        # Helper to avoid heavy imports at startup
+        def scheduled_sync():
             from .utils import perform_sync
-            from .views import _auto_update_mf, _auto_update_coin, _auto_update_nps
+            perform_sync()
+
+        def scheduled_mf():
+            from .views import _auto_update_mf
+            _auto_update_mf()
+
+        def scheduled_coin():
+            from .views import _auto_update_coin
+            _auto_update_coin()
+
+        def scheduled_nps():
+            from .views import _auto_update_nps
+            _auto_update_nps()
+
+        # Ensure scheduler runs in appropriate environments
+        is_manage_py = 'manage.py' in sys.argv[0]
+        is_runserver = 'runserver' in sys.argv
+        is_main_process = os.environ.get('RUN_MAIN') == 'true'
+        is_gunicorn = os.environ.get('SERVER_SOFTWARE', '').startswith('gunicorn')
+        is_iis = os.environ.get('SERVER_SOFTWARE', '').startswith('Microsoft-IIS') or os.environ.get('WSGI_HANDLER')
+
+        if (is_runserver and is_main_process) or is_gunicorn or (not is_runserver and (is_iis or not is_manage_py)):
             from apscheduler.schedulers.background import BackgroundScheduler
             
             scheduler = BackgroundScheduler()
-            scheduler.add_job(perform_sync, 'interval', minutes=5, id='gsheet_sync_job', replace_existing=True)
-            scheduler.add_job(_auto_update_mf, 'interval', minutes=30, id='auto_update_mf', replace_existing=True)
-            scheduler.add_job(_auto_update_coin, 'interval', minutes=30, id='auto_update_coin', replace_existing=True)
-            scheduler.add_job(_auto_update_nps, 'interval', minutes=30, id='auto_update_nps', replace_existing=True)
+            scheduler.add_job(scheduled_sync, 'interval', minutes=5, id='gsheet_sync_job', replace_existing=True)
+            scheduler.add_job(scheduled_mf, 'interval', minutes=30, id='auto_update_mf', replace_existing=True)
+            scheduler.add_job(scheduled_coin, 'interval', minutes=30, id='auto_update_coin', replace_existing=True)
+            scheduler.add_job(scheduled_nps, 'interval', minutes=30, id='auto_update_nps', replace_existing=True)
             scheduler.add_job(run_alerts, 'cron', hour=10, minute=0, id='daily_signal_alerts', replace_existing=True)
-            scheduler.start()
-            print("Background scheduler started for sync and auto updates (5m interval).")
-        elif not os.environ.get('RUN_MAIN'):
-            # Fallback for other environments like IIS
-            from .utils import perform_sync
-            from .views import _auto_update_mf, _auto_update_coin, _auto_update_nps
-            from apscheduler.schedulers.background import BackgroundScheduler
             
-            scheduler = BackgroundScheduler()
-            scheduler.add_job(perform_sync, 'interval', minutes=5, id='gsheet_sync_job', replace_existing=True)
-            scheduler.add_job(_auto_update_mf, 'interval', minutes=30, id='auto_update_mf', replace_existing=True)
-            scheduler.add_job(_auto_update_coin, 'interval', minutes=30, id='auto_update_coin', replace_existing=True)
-            scheduler.add_job(_auto_update_nps, 'interval', minutes=30, id='auto_update_nps', replace_existing=True)
-            scheduler.add_job(run_alerts, 'cron', hour=10, minute=0, id='daily_signal_alerts_iis', replace_existing=True)
-            scheduler.start()
-            print("Background scheduler started (IIS/Generic) with auto updates (5m interval).")
+            try:
+                scheduler.start()
+                print(f"Background scheduler started (Env: {'IIS' if is_iis else 'Other'}) with auto updates.")
+            except Exception as e:
+                print(f"Failed to start scheduler: {e}")

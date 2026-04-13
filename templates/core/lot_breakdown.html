@@ -9,7 +9,7 @@
             <div>
                 <nav aria-label="breadcrumb">
                     <ol class="breadcrumb mb-1">
-                        <li class="breadcrumb-item"><a href="{% url 'dashboard' %}{% if is_family_view %}?user_id={{ target_user.id }}{% endif %}"
+                        <li class="breadcrumb-item"><a href="{% url 'dashboard' %}{% if is_family_view %}?user_id={{ target_user.id }}{% elif is_consolidated %}?user_id=consolidated{% endif %}"
                                 class="text-decoration-none text-muted">Dashboard</a></li>
                         <li class="breadcrumb-item active" aria-current="page">Lot Breakdown</li>
                     </ol>
@@ -18,9 +18,9 @@
                     <span class="text-primary">{{ instrument.symbol }}</span> <span class="text-muted fw-light">Lot
                         Breakdown</span>
                 </h2>
-                <p class="text-muted mb-0">Detailed First-In, First-Out (FIFO) view of your active holdings.</p>
+                <p class="text-muted mb-0">{% if is_consolidated %}Detailed Family View (FIFO).{% else %}Detailed First-In, First-Out (FIFO) view of your active holdings.{% endif %}</p>
             </div>
-            <a href="{% url 'dashboard' %}{% if is_family_view %}?user_id={{ target_user.id }}{% endif %}" class="btn btn-outline-primary rounded-pill px-4">
+            <a href="{% url 'dashboard' %}{% if is_family_view %}?user_id={{ target_user.id }}{% elif is_consolidated %}?user_id=consolidated{% endif %}" class="btn btn-outline-primary rounded-pill px-4">
                 <i class="fas fa-arrow-left me-2"></i>Dashboard
             </a>
         </div>
@@ -81,6 +81,9 @@
                     <thead class="bg-light border-0">
                         <tr>
                             <th class="ps-4 text-uppercase small fw-bold text-muted border-0">Purchase Date</th>
+                            {% if is_consolidated %}
+                            <th class="text-uppercase small fw-bold text-muted border-0">Owner</th>
+                            {% endif %}
                             <th class="text-uppercase small fw-bold text-muted border-0">Holding Period</th>
                             <th class="text-uppercase small fw-bold text-muted text-end border-0">Quantity</th>
                             <th class="text-uppercase small fw-bold text-muted text-end border-0">Buy Price</th>
@@ -91,11 +94,13 @@
                     </thead>
                     <tbody class="border-0">
                         {% for lot in lots %}
-                        <tr>
                             <td class="ps-4">
                                 <div class="fw-bold">{{ lot.date|date:"d M Y" }}</div>
                                 <div class="text-muted extra-small">Lot ID: #{{ lot.id }}</div>
                             </td>
+                            {% if is_consolidated %}
+                            <td><span class="badge bg-soft-blue text-primary border">{{ lot.owner }}</span></td>
+                            {% endif %}
                             <td>
                                 <span class="badge rounded-pill bg-light text-dark fw-normal border">
                                     {{ lot.days_held }} days
@@ -116,7 +121,7 @@
                             </td>
                             <td class="text-center">
                                 <div class="btn-group">
-                                    {% if not is_family_view %}
+                                    {% if not is_family_view and not is_consolidated %}
                                     <a href="{% url 'edit_lot' lot.id %}"
                                         class="btn btn-sm btn-light border rounded-pill me-2" title="Edit Lot">
                                         <i class="fas fa-edit text-primary"></i>
@@ -127,7 +132,7 @@
                                         <i class="fas fa-trash text-danger"></i>
                                     </a>
                                     {% else %}
-                                    <span class="text-muted small"><i class="fas fa-lock"></i></span>
+                                    <span class="text-muted small"><i class="fas fa-lock opacity-50"></i></span>
                                     {% endif %}
                                 </div>
                             </td>

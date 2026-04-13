@@ -488,6 +488,52 @@
 {% block content %}
 {% csrf_token %}
 <div class="container py-5">
+    <!-- Family Switcher -->
+    {% if linked_family or is_family_view %}
+    <div class="d-flex justify-content-between align-items-center mb-4 p-3 bg-white rounded-4 shadow-sm border">
+        <div class="d-flex align-items-center">
+            <div class="bg-primary bg-opacity-10 text-primary rounded-circle p-2 me-3">
+                <i class="fas fa-users-cog"></i>
+            </div>
+            <div>
+                <span class="text-muted small d-block">Viewing Data of:</span>
+                <span class="fw-bold fs-5">
+                    {% if is_family_view %}
+                        {{ target_user.profile.full_name|default:target_user.username }}
+                    {% elif is_consolidated %}
+                        Combined Family Portfolio
+                    {% else %}
+                        My Account
+                    {% endif %}
+                </span>
+            </div>
+        </div>
+        <div class="dropdown">
+            <button class="btn btn-outline-primary dropdown-toggle fw-bold" type="button" data-bs-toggle="dropdown">
+                Switch Portfolio
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end shadow border-0 rounded-3">
+                <li><a class="dropdown-item {% if not is_family_view and not is_consolidated %}active{% endif %}" href="{% url 'strategy' %}">Self (Personal)</a></li>
+                {% if linked_family %}
+                <li class="dropdown-divider"></li>
+                <li class="dropdown-header small text-muted text-uppercase">Family Members</li>
+                {% for link in linked_family %}
+                <li>
+                    <a class="dropdown-item {% if is_family_view and target_user.id == link.family_user.id %}active{% endif %}" 
+                       href="{% url 'strategy' %}?user_id={{ link.family_user.id }}">
+                        {{ link.family_user.profile.full_name|default:link.family_user.username }}
+                    </a>
+                </li>
+                {% endfor %}
+                {% endif %}
+                <li class="dropdown-divider"></li>
+                <li><a class="dropdown-item {% if is_consolidated %}active{% endif %}" href="{% url 'strategy' %}?user_id=consolidated"><i class="fas fa-layer-group me-2"></i>Consolidated View</a></li>
+                <li class="dropdown-divider"></li>
+                <li><a class="dropdown-item small" href="{% url 'edit_profile' %}"><i class="fas fa-plus me-2"></i>Link New Family ID</a></li>
+            </ul>
+        </div>
+    </div>
+    {% endif %}
     <!-- Hero Section -->
     <div class="hero-section animate__animated animate__fadeIn">
         <div class="row align-items-center g-5">
