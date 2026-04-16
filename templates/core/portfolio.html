@@ -217,8 +217,7 @@
                         </div>
                     {% endif %}
                     <div class="live-badge">
-                        <span class="live-dot"></span>
-                        Live Portfolio Status
+                        🎯 Goal – ₹{{ target_user.profile.financial_goal|inr_format }}
                     </div>
                     {% if action_count and action_count > 0 %}
                     <a href="#actionable-signals" class="action-badge animate__animated animate__headShake animate__infinite" style="--animate-duration: 5s;">

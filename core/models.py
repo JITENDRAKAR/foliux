@@ -86,10 +86,14 @@ class Profile(models.Model):
     initial_investment_limit = models.DecimalField(max_digits=15, decimal_places=2, default=15000.00)
     mf_investment_limit = models.DecimalField(max_digits=15, decimal_places=2, default=100000.00)
     coin_investment_limit = models.DecimalField(max_digits=15, decimal_places=2, default=15000.00)
+    equity_profit_expectation = models.DecimalField(max_digits=10, decimal_places=2, default=22.00)
+    mf_profit_expectation = models.DecimalField(max_digits=10, decimal_places=2, default=22.00)
+    coin_profit_expectation = models.DecimalField(max_digits=10, decimal_places=2, default=22.00)
     equity_fixed_charge = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, null=True, blank=True)
     equity_brokerage_pct = models.DecimalField(max_digits=10, decimal_places=4, default=0.0200, null=True, blank=True) # Percentage (e.g., 0.02%)
     intraday_fixed_charge = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, null=True, blank=True)
     intraday_brokerage_pct = models.DecimalField(max_digits=10, decimal_places=4, default=0.0200, null=True, blank=True) # Percentage (e.g., 0.2%)
+    financial_goal = models.DecimalField(max_digits=20, decimal_places=2, default=10000000.00)
 
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
@@ -871,3 +875,14 @@ class ChatbotKnowledge(models.Model):
     class Meta:
         verbose_name = "Chatbot Knowledge"
         verbose_name_plural = "Chatbot Knowledge Base"
+
+class HiddenSignal(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='hidden_signals')
+    instrument = models.ForeignKey(Instrument, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('user', 'instrument')
+
+    def __str__(self):
+        return f"{self.user.username} - Hidden: {self.instrument.symbol}"

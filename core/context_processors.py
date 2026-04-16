@@ -25,9 +25,11 @@ def signal_info(request):
         mf_sell = 0
         mf_reduce = 0
         mf_limit = target_user.profile.mf_investment_limit
+        mf_profit_target = float(target_user.profile.mf_profit_expectation)
         mf_holdings = MFPortfolio.objects.filter(user=target_user)
         for h in mf_holdings:
-            if h.pnl_percentage >= 22:
+            # Suppress SELL if Realized Profit > Current Investment
+            if h.pnl_percentage >= mf_profit_target and h.realized_profit <= h.invested_amount:
                 mf_sell += 1
             
             target = mf_limit + h.realized_profit
@@ -42,9 +44,11 @@ def signal_info(request):
         coin_sell = 0
         coin_reduce = 0
         coin_limit = target_user.profile.coin_investment_limit
+        coin_profit_target = float(target_user.profile.coin_profit_expectation)
         coin_holdings = CoinPortfolio.objects.filter(user=target_user)
         for h in coin_holdings:
-            if h.pnl_percentage >= 22:
+            # Suppress SELL if Realized Profit > Current Investment
+            if h.pnl_percentage >= coin_profit_target and h.realized_profit <= h.invested_amount:
                 coin_sell += 1
             
             target = coin_limit + h.realized_profit

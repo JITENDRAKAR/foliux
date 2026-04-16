@@ -802,7 +802,7 @@
                     </div>
                     <div class="rule-item">
                         <i class="fas fa-sign-out-alt"></i>
-                        <span><strong>Exit:</strong> +22% Profit. 98% reinvested, 2% for costs.</span>
+                        <span><strong>Exit:</strong> +22% Profit target AND Realized Profit ≤ Investment. 98% reinvested, 2% for costs. If RL PFT > Investment, system continues averaging.</span>
                     </div>
 
                     {% if flexi_stocks %}
@@ -859,7 +859,7 @@
                     </div>
                     <div class="rule-item">
                         <i class="fas fa-bullseye"></i>
-                        <span><strong>Exit:</strong> +22% Target or RSI oversold filter.</span>
+                        <span><strong>Exit:</strong> +22% Target (only if Realized Profit ≤ Investment) or RSI oversold filter.</span>
                     </div>
 
                     {% if quant_stocks %}
@@ -916,7 +916,7 @@
                     </div>
                     <div class="rule-item">
                         <i class="fas fa-fire"></i>
-                        <span><strong>Exit:</strong> +22% Total Profit or Trend reversal.</span>
+                        <span><strong>Exit:</strong> +22% Total Profit (only if Realized Profit ≤ Investment) or Trend reversal.</span>
                     </div>
 
                     {% if pyramid_stocks %}
@@ -973,7 +973,7 @@
                     </div>
                     <div class="rule-item">
                         <i class="fas fa-history"></i>
-                        <span><strong>Exit:</strong> Target +22% realized profit triggers shift.</span>
+                        <span><strong>Exit:</strong> Target +22% realized profit (only if RL PFT ≤ Investment) triggers shift.</span>
                     </div>
 
                     {% if growth_stocks %}

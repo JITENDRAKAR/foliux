@@ -227,6 +227,15 @@
                                     <div class="col-md-6">{{ form.coin_investment_limit|as_crispy_field }}</div>
                                 </div>
                             </div>
+
+                            <div class="form-section shadow-sm">
+                                <h5 class="section-header">Profit Expectations (%)</h5>
+                                <div class="row g-3">
+                                    <div class="col-12">{{ form.equity_profit_expectation|as_crispy_field }}</div>
+                                    <div class="col-md-6">{{ form.mf_profit_expectation|as_crispy_field }}</div>
+                                    <div class="col-md-6">{{ form.coin_profit_expectation|as_crispy_field }}</div>
+                                </div>
+                            </div>
                         </div>
 
                         <div class="col-md-5">
@@ -253,6 +262,12 @@
                                     <i class="fas fa-lock me-2"></i>Change Password
                                 </a>
                                 <a href="{% url 'dashboard' %}" class="btn btn-link text-muted fw-bold text-decoration-none">Cancel & Return</a>
+                            </div>
+
+                            <div class="form-section shadow-sm mt-4">
+                                <h5 class="section-header">Financial Goal</h5>
+                                {{ form.financial_goal|as_crispy_field }}
+                                <small class="text-muted">Target amount for your investment journey.</small>
                             </div>
                         </div>
                     </div>
@@ -343,6 +358,30 @@
                             <p class="text-muted mb-0">No family accounts linked yet. Add one to manage their portfolios.</p>
                         </div>
                         {% endif %}
+                    </div>
+                </div>
+
+                <hr class="my-5 opacity-10">
+                <div class="hidden-signals-section">
+                    <h5 class="fw-bold mb-4">Hidden Buying Signals</h5>
+                    <div class="row g-3">
+                        {% for hidden in hidden_signals %}
+                        <div class="col-md-4">
+                            <div class="p-3 bg-white border rounded-4 d-flex align-items-center justify-content-between shadow-sm">
+                                <div>
+                                    <div class="fw-bold">{{ hidden.instrument.symbol }}</div>
+                                    <div class="text-muted small">{{ hidden.instrument.name|truncatechars:25 }}</div>
+                                </div>
+                                <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3" onclick="unhideSignal('{{ hidden.instrument.id }}')">
+                                    <i class="fas fa-eye me-1"></i> Unhide
+                                </button>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <div class="col-12 text-center py-4 bg-light rounded-4 border border-dashed text-muted">
+                            <p class="mb-0">No signals hidden.</p>
+                        </div>
+                        {% endfor %}
                     </div>
                 </div>
             </div>
@@ -484,5 +523,33 @@
             fullViewModal.show();
         }
     });
+
+    function unhideSignal(instrumentId) {
+        if (!confirm('Are you sure you want to unhide this signal?')) return;
+        
+        fetch('/api/toggle-hidden-signal/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify({
+                instrument_id: instrumentId,
+                action: 'unhide'
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'ok') {
+                location.reload();
+            } else {
+                alert('Error: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred. Please try again.');
+        });
+    }
 </script>
 {% endblock %}

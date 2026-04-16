@@ -630,8 +630,10 @@ def mf_dashboard(request):
     for h in mf_holdings:
         h.active_sip = active_sips.get(h.fund_id)
         h.advice = []
-        if h.pnl_percentage >= 22:
-            h.advice.append({'type': 'SELL', 'reason': f'Target 22% reached ({float(h.pnl_percentage):.2f}%)'})
+        mf_profit_target = float(target_user.profile.mf_profit_expectation)
+        # Suppress SELL if Realized Profit > Current Investment (keep averaging instead)
+        if h.pnl_percentage >= mf_profit_target and h.realized_profit <= h.invested_amount:
+            h.advice.append({'type': 'SELL', 'reason': f'Target {mf_profit_target}% reached ({float(h.pnl_percentage):.2f}%)'})
         
         target = mf_limit + h.realized_profit
         if h.invested_amount < target:
@@ -955,8 +957,10 @@ def coin_dashboard(request):
     coin_limit = target_user.profile.coin_investment_limit
     for h in coin_holdings:
         h.advice = []
-        if h.pnl_percentage >= 22:
-            h.advice.append({'type': 'SELL', 'reason': f'Profit {float(h.pnl_percentage):.2f}% >= 22%'})
+        coin_profit_target = float(target_user.profile.coin_profit_expectation)
+        # Suppress SELL if Realized Profit > Current Investment (keep averaging instead)
+        if h.pnl_percentage >= coin_profit_target and h.realized_profit <= h.invested_amount:
+            h.advice.append({'type': 'SELL', 'reason': f'Profit {float(h.pnl_percentage):.2f}% >= {coin_profit_target}%'})
         
         # Crypto target: user defined (default 15k)
         target = coin_limit + h.realized_profit
@@ -1284,9 +1288,11 @@ def portfolio(request):
     mf_buy_count = 0
     mf_redemption_count = 0
     mf_reduce_count = 0
+    mf_profit_target = float(target_user.profile.mf_profit_expectation)
     mf_limit = target_user.profile.mf_investment_limit
     for h in mf_holdings:
-        if h.pnl_percentage >= 22:
+        # Suppress SELL if Realized Profit > Current Investment
+        if h.pnl_percentage >= mf_profit_target and h.realized_profit <= h.invested_amount:
             mf_redemption_count += 1
             
         target = mf_limit + h.realized_profit
@@ -1299,9 +1305,11 @@ def portfolio(request):
     coin_buy_count = 0
     coin_sell_count = 0
     coin_reduce_count = 0
+    coin_profit_target = float(target_user.profile.coin_profit_expectation)
     coin_limit = target_user.profile.coin_investment_limit
     for h in coin_holdings:
-        if h.pnl_percentage >= 22:
+        # Suppress SELL if Realized Profit > Current Investment
+        if h.pnl_percentage >= coin_profit_target and h.realized_profit <= h.invested_amount:
             coin_sell_count += 1
         
         # Crypto target: user defined (default 15k)
@@ -1561,6 +1569,13 @@ def add_portfolio_item(request):
             else:
                 ltp = ltp_data or avg_cost
 
+            # Calculate Brokerage for BUY
+            profile, _ = Profile.objects.get_or_create(user=target_user)
+            fixed_charge = profile.equity_fixed_charge or Decimal('0')
+            pct_charge = profile.equity_brokerage_pct or Decimal('0')
+            total_brokerage = Decimal(str(fixed_charge)) + (Decimal(str(avg_cost)) * Decimal(str(quantity)) * Decimal(str(pct_charge)) / 100)
+            price_with_brokerage = ((Decimal(str(avg_cost)) * Decimal(str(quantity))) + total_brokerage) / Decimal(str(quantity))
+
             # Create Transaction record
             Transaction.objects.create(
                 user=target_user,
@@ -1568,7 +1583,7 @@ def add_portfolio_item(request):
                 transaction_type='BUY',
                 quantity=quantity,
                 remaining_quantity=quantity,
-                price=avg_cost,
+                price=price_with_brokerage,
                 date=transaction_date
             )
 
@@ -1580,7 +1595,7 @@ def add_portfolio_item(request):
             
             # Update Weighted Average Cost for Portfolio summary
             current_total_cost = Decimal(str(portfolio.quantity)) * portfolio.avg_cost
-            new_total_cost = Decimal(str(quantity)) * Decimal(str(avg_cost))
+            new_total_cost = Decimal(str(quantity)) * price_with_brokerage
             total_quantity = portfolio.quantity + quantity
             
             new_avg_cost = (current_total_cost + new_total_cost) / Decimal(str(total_quantity))
@@ -1660,6 +1675,13 @@ def upload_portfolio(request):
                             messages.warning(request, f"Skipped '{symbol}': Not in verified database.")
                             continue
 
+                        # Calculate Brokerage for BUY
+                        upload_profile, _ = Profile.objects.get_or_create(user=target_user)
+                        fixed_charge = upload_profile.equity_fixed_charge or Decimal('0')
+                        pct_charge = upload_profile.equity_brokerage_pct or Decimal('0')
+                        total_brokerage = Decimal(str(fixed_charge)) + (Decimal(str(avg)) * Decimal(str(qty)) * Decimal(str(pct_charge)) / 100)
+                        price_with_brokerage = ((Decimal(str(avg)) * Decimal(str(qty))) + total_brokerage) / Decimal(str(qty))
+
                         # Create Transaction record for each row (lot preservation)
                         Transaction.objects.create(
                             user=request.user,
@@ -1667,7 +1689,7 @@ def upload_portfolio(request):
                             transaction_type='BUY',
                             quantity=qty,
                             remaining_quantity=qty,
-                            price=avg,
+                            price=price_with_brokerage,
                             date=timezone.now().date()
                         )
 
@@ -1675,13 +1697,13 @@ def upload_portfolio(request):
                         if clean_symbol not in aggregated_data:
                             aggregated_data[clean_symbol] = {
                                 'qty': qty,
-                                'total_cost': Decimal(str(qty)) * Decimal(str(avg)),
+                                'total_cost': Decimal(str(qty)) * price_with_brokerage,
                                 'ltp': ltp,
                                 'instrument': inst
                             }
                         else:
                             aggregated_data[clean_symbol]['qty'] += qty
-                            aggregated_data[clean_symbol]['total_cost'] += Decimal(str(qty)) * Decimal(str(avg))
+                            aggregated_data[clean_symbol]['total_cost'] += Decimal(str(qty)) * price_with_brokerage
                             # Update LTP only if we have a non-zero one
                             if ltp > 0:
                                 aggregated_data[clean_symbol]['ltp'] = ltp
@@ -2032,10 +2054,14 @@ def edit_profile(request):
     linked_family = FamilyLink.objects.filter(user=request.user, is_verified=True).select_related('family_user__profile')
     pending_family = FamilyLink.objects.filter(user=request.user, is_verified=False).select_related('family_user__profile')
     
+    # Get hidden signals
+    hidden_signals = profile.user.hidden_signals.all().select_related('instrument')
+    
     return render(request, 'core/edit_profile.html', {
         'form': form,
         'linked_family': linked_family,
-        'pending_family': pending_family
+        'pending_family': pending_family,
+        'hidden_signals': hidden_signals
     })
 
 @login_required
@@ -3935,6 +3961,23 @@ def backtest_strategy_api(request):
             if diff <= 35: return 0.92
             return 0.97
 
+        def get_factor_i_val(pe):
+            """PE Factor - same logic as portfolio get_factor_i()."""
+            if pe is None or pe == 0: return 0.3
+            pe = float(pe)
+            if pe < 0: return 0.3333333333
+            if pe == 50: return 1.0
+            if pe > 50: return 50.0 / pe
+            return 1.0
+
+        # Fetch current PE ratio from yfinance (used as constant factor through simulation)
+        try:
+            ticker_info = t.info
+            pe_ratio = ticker_info.get('trailingPE') or ticker_info.get('forwardPE') or 0
+        except Exception:
+            pe_ratio = 0
+        factor_i = get_factor_i_val(pe_ratio)
+
         realized_profit = 0
         quantity = 0
         avg_cost = 0
@@ -3970,7 +4013,8 @@ def backtest_strategy_api(request):
                 current_val = quantity * price
                 unrealized_pct = ((current_val - invested_val) / invested_val) * 100
                 
-                if unrealized_pct >= 22.0:
+                # Suppress SELL if Realized Profit > Current Investment (keep averaging instead)
+                if unrealized_pct >= 22.0 and realized_profit <= invested_val:
                     sell_proceeds = current_val
                     profit = sell_proceeds - invested_val
                     
@@ -3981,10 +4025,10 @@ def backtest_strategy_api(request):
                     quantity = 0
                     avg_cost = 0
 
-            # Calculate Buy Gap based on Strategy rules
+            # Calculate Buy Gap based on Strategy rules (matching portfolio formula)
             current_invested = quantity * avg_cost
-            target_investment = (max_inv * get_factor_j_val(price, h52)) + realized_profit
-            buy_gap = target_investment - current_invested
+            target_investment = (realized_profit * 0.93 - current_invested) + (max_inv * get_factor_j_val(price, h52) * factor_i)
+            buy_gap = target_investment
             
             if buy_gap > 3000:
                 buy_qty = int(buy_gap // price)
@@ -4200,3 +4244,26 @@ def chatbot_response(request):
             return JsonResponse({'reply': f"Error: {str(e)}"}, status=500)
             
     return JsonResponse({'error': 'POST required'}, status=405)
+
+@login_required
+@csrf_exempt
+def toggle_hidden_signal(request):
+    if request.method == 'POST':
+        import json as _json
+        try:
+            body = _json.loads(request.body)
+            instrument_id = body.get('instrument_id')
+            action_type = body.get('action') # 'hide' or 'unhide'
+            
+            from core.models import Instrument, HiddenSignal
+            inst = get_object_or_404(Instrument, id=instrument_id)
+            
+            if action_type == 'hide':
+                HiddenSignal.objects.get_or_create(user=request.user, instrument=inst)
+                return JsonResponse({'status': 'ok', 'message': f'Hidden {inst.symbol} from buying signals.'})
+            elif action_type == 'unhide':
+                HiddenSignal.objects.filter(user=request.user, instrument=inst).delete()
+                return JsonResponse({'status': 'ok', 'message': f'Unhidden {inst.symbol}.'})
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
+    return JsonResponse({'status': 'error', 'message': 'POST required'}, status=405)

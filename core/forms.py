@@ -50,8 +50,10 @@ class ProfileForm(forms.ModelForm):
             'full_name', 'profile_picture', 'mobile_number', 'date_of_birth', 'gender', 
             'investor_type', 'initial_investment_limit',
             'mf_investment_limit', 'coin_investment_limit',
+            'equity_profit_expectation', 'mf_profit_expectation', 'coin_profit_expectation',
             'equity_fixed_charge', 'equity_brokerage_pct',
-            'intraday_fixed_charge', 'intraday_brokerage_pct'
+            'intraday_fixed_charge', 'intraday_brokerage_pct',
+            'financial_goal'
         ]
         labels = {
             'full_name': 'Full Name',
@@ -63,10 +65,14 @@ class ProfileForm(forms.ModelForm):
             'initial_investment_limit': 'Maximum Investment per Stock/ETF',
             'mf_investment_limit': 'Maximum Investment per Mutual Fund',
             'coin_investment_limit': 'Maximum Investment for Coin (Crypto)',
+            'equity_profit_expectation': 'Profit Expectation per Stock/ETF (%)',
+            'mf_profit_expectation': 'Profit Expectation per Mutual Fund (%)',
+            'coin_profit_expectation': 'Profit Expectation for Coin (Crypto) (%)',
             'equity_fixed_charge': 'Delivery Fixed Charge (0.0)',
             'equity_brokerage_pct': 'Delivery Brokerage Charge (%)',
             'intraday_fixed_charge': 'Intraday Fixed Charge (0.0)',
             'intraday_brokerage_pct': 'Intraday Brokerage Charge (%)',
+            'financial_goal': 'Financial Goal',
         }
         widgets = {
             'full_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Enter your full name'}),
@@ -77,10 +83,14 @@ class ProfileForm(forms.ModelForm):
             'initial_investment_limit': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'mf_investment_limit': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'coin_investment_limit': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'equity_profit_expectation': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'mf_profit_expectation': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'coin_profit_expectation': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'equity_fixed_charge': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'equity_brokerage_pct': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.001'}),
             'intraday_fixed_charge': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'intraday_brokerage_pct': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.001'}),
+            'financial_goal': forms.NumberInput(attrs={'class': 'form-control', 'step': '1'}),
         }
 
 class EmailOrMobileAuthenticationForm(AuthenticationForm):

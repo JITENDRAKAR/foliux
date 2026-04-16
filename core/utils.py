@@ -804,9 +804,12 @@ def get_recommendations(user, is_consolidated=False):
         
         buy_gap_formula = (realized_profit * 0.93 - invested) + (initial_inv * factor_j * factor_i)
         
-        if unrealized_pct >= 22:
+        profit_target = float(profile.equity_profit_expectation)
+        # Suppress SELL if Realized Profit > Current Investment (keep averaging instead)
+        can_sell = realized_profit <= invested
+        if unrealized_pct >= profit_target and can_sell:
             action = "SELL"
-            reason = f"Pft {unrealized_pct:.2f}% >= 22%"
+            reason = f"Pft {unrealized_pct:.2f}% >= {profit_target}%"
         elif -3000 <= buy_gap_formula <= 3000:
             action = "HOLD"
             reason = f"TgtCap: {buy_gap_formula:.0f}"
@@ -898,6 +901,7 @@ def get_recommendations(user, is_consolidated=False):
                 'reduce_gap': round(reduce_gap, 2),
                 'realized_profit': realized_profit,
                 'in_portfolio': False,
+                'instrument_id': inst.id,
             })
         
     # Add Strategy symbols not in portfolio or P&L
@@ -949,7 +953,18 @@ def get_recommendations(user, is_consolidated=False):
                 'reduce_gap': round(reduce_gap, 2),
                 'realized_profit': 0,
                 'in_portfolio': False,
+                'instrument_id': inst.id if inst else None,
             })
+            
+    # Filter out Hidden Signals (only for BUY signals where quantity is 0)
+    from core.models import HiddenSignal
+    hidden_ids = set(HiddenSignal.objects.filter(user=user).values_list('instrument_id', flat=True))
+    
+    if hidden_ids:
+        recommendations = [
+            r for r in recommendations
+            if not (r.get('instrument_id') in hidden_ids and r.get('quantity', 0) == 0 and r.get('action') == 'BUY')
+        ]
             
     return recommendations, realized_profits, strategy_stocks
 def get_target_user(request):

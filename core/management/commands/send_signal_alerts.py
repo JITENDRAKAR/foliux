@@ -9,6 +9,8 @@ from core.models import SignalNotificationState
 from core.utils import get_recommendations, get_portfolio_summary_metrics
 import logging
 
+from django.db import transaction
+
 logger = logging.getLogger(__name__)
 User = get_user_model()
 
@@ -32,73 +34,76 @@ class Command(BaseCommand):
                 if not hasattr(user, 'profile') or not user.email:
                     continue  # Skip users without profiles or emails
 
-                # Get Current Metrics via consolidated utility
-                metrics = get_portfolio_summary_metrics(user)
-                current_buy = metrics['buy_count']
-                current_reduce = metrics['reduce_count']
-                current_sell = metrics['sell_count']
-                total_current = metrics['total_count']
+                # Use a transaction and select_for_update to prevent duplicate processing by multiple workers
+                with transaction.atomic():
+                    # Get Current Metrics via consolidated utility
+                    metrics = get_portfolio_summary_metrics(user)
+                    current_buy = metrics['buy_count']
+                    current_reduce = metrics['reduce_count']
+                    current_sell = metrics['sell_count']
+                    total_current = metrics['total_count']
 
-                # Get or Create Notification State
-                state, created = SignalNotificationState.objects.get_or_create(
-                    user=user,
-                    defaults={
-                        'last_buy_count': current_buy,
-                        'last_reduce_count': current_reduce,
-                        'last_sell_count': current_sell
-                    }
-                )
-
-                # Has anything changed?
-                # If newly created, we technically haven't sent them an email before, so we MIGHT want to send an initial one.
-                # However, to avoid spamming everyone on day 1, we only trigger on ACTUAL changes.
-                has_changed = (
-                    state.last_buy_count != current_buy or 
-                    state.last_reduce_count != current_reduce or 
-                    state.last_sell_count != current_sell
-                )
-
-                if (has_changed or force) and total_current > 0:
-                    # Prepare Email Template
-                    subject = f"Alert: Portfolio Signal Change Detected - {timezone.now().strftime('%d %b %Y')}"
-                    site_url = getattr(settings, 'SITE_URL', 'https://npits.in')
-                    
-                    context = {
-                        'user': user,
-                        'today': timezone.now(),
-                        'portfolio_value': metrics['portfolio_value'],
-                        'initial_capital': metrics['initial_capital'],
-                        'unrealized_pnl': metrics['unrealized_pnl'],
-                        'total_realized': metrics['total_realized'],
-                        'liabilities': metrics['liabilities'],
-                        'buy_count': current_buy,
-                        'reduce_count': current_reduce,
-                        'sell_count': current_sell,
-                        'total_count': total_current,
-                        'site_url': site_url
-                    }
-
-                    html_message = render_to_string('emails/daily_portfolio_summary.html', context)
-                    plain_message = strip_tags(html_message)
-
-                    # Send Email
-                    send_mail(
-                        subject=subject,
-                        message=plain_message,
-                        from_email=f"NPITS <{settings.EMAIL_HOST_USER}>",
-                        recipient_list=[user.email],
-                        html_message=html_message,
-                        fail_silently=False,
+                    # Get or Create Notification State and Lock it
+                    state, created = SignalNotificationState.objects.select_for_update().get_or_create(
+                        user=user,
+                        defaults={
+                            'last_buy_count': current_buy,
+                            'last_reduce_count': current_reduce,
+                            'last_sell_count': current_sell
+                        }
                     )
 
-                    # Update State Tracking
-                    state.last_buy_count = current_buy
-                    state.last_reduce_count = current_reduce
-                    state.last_sell_count = current_sell
-                    state.save()
-                    
-                    emails_sent += 1
-                    self.stdout.write(self.style.SUCCESS(f'Successfully sent signal alert to {user.email}'))
+                    # Has anything changed?
+                    has_changed = (
+                        state.last_buy_count != current_buy or 
+                        state.last_reduce_count != current_reduce or 
+                        state.last_sell_count != current_sell
+                    )
+
+                    if (has_changed or force) and total_current > 0:
+                        # Prepare Email Template
+                        subject = f"Alert: Portfolio Signal Change Detected - {timezone.now().strftime('%d %b %Y')}"
+                        site_url = getattr(settings, 'SITE_URL', 'https://npits.in')
+                        
+                        context = {
+                            'user': user,
+                            'today': timezone.now(),
+                            'portfolio_value': metrics['portfolio_value'],
+                            'initial_capital': metrics['initial_capital'],
+                            'unrealized_pnl': metrics['unrealized_pnl'],
+                            'total_realized': metrics['total_realized'],
+                            'liabilities': metrics['liabilities'],
+                            'buy_count': current_buy,
+                            'reduce_count': current_reduce,
+                            'sell_count': current_sell,
+                            'total_count': total_current,
+                            'site_url': site_url
+                        }
+
+                        html_message = render_to_string('emails/daily_portfolio_summary.html', context)
+                        plain_message = strip_tags(html_message)
+
+                        # Update State Tracking IMMEDIATELY inside the transaction
+                        # This ensures other workers see the update before we even spend time sending the mail
+                        state.last_buy_count = current_buy
+                        state.last_reduce_count = current_reduce
+                        state.last_sell_count = current_sell
+                        state.save()
+
+                        # Send Email
+                        # If send_mail fails, the transaction will rollback, resetting the state counts
+                        # and allowing a retry (or the next worker) to process it.
+                        send_mail(
+                            subject=subject,
+                            message=plain_message,
+                            from_email=f"NPITS <{settings.EMAIL_HOST_USER}>",
+                            recipient_list=[user.email],
+                            html_message=html_message,
+                            fail_silently=False,
+                        )
+
+                        emails_sent += 1
+                        self.stdout.write(self.style.SUCCESS(f'Successfully sent signal alert to {user.email}'))
                     
             except Exception as e:
                 logger.error(f"Failed to process signal alerts for {user.username}: {e}")

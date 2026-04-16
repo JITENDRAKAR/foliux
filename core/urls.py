@@ -115,4 +115,5 @@ urlpatterns = [
     
     path('.well-known/assetlinks.json', views.assetlinks_json, name='assetlinks_json'),
     path('chatbot-response/', views.chatbot_response, name='chatbot_response'),
+    path('api/toggle-hidden-signal/', views.toggle_hidden_signal, name='toggle_hidden_signal'),
 ]
