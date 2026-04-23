@@ -31,7 +31,7 @@ SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure--0n$=_7ut8th3(
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DJANGO_DEBUG', 'True') == 'True'
 
-ALLOWED_HOSTS = ['npits.in', 'www.npits.in', 'localhost', '127.0.0.1']
+ALLOWED_HOSTS = ['npits.in', 'www.npits.in', 'localhost', '127.0.0.1','158.220.101.59']
 
 # Correctly identify host when behind a proxy
 USE_X_FORWARDED_HOST = True
@@ -55,7 +55,7 @@ CSRF_TRUSTED_ORIGINS = [
 ]
 
 # Security settings for HTTPS
-SECURE_SSL_REDIRECT = not DEBUG
+SECURE_SSL_REDIRECT = False
 SECURE_HSTS_SECONDS = 31536000 # 1 year
 SECURE_HSTS_INCLUDE_SUBDOMAINS = True
 SECURE_HSTS_PRELOAD = True
@@ -63,8 +63,8 @@ SECURE_HSTS_PRELOAD = True
 CSRF_COOKIE_SAMESITE = 'Lax'
 SESSION_COOKIE_SAMESITE = 'Lax'
 CSRF_COOKIE_HTTPONLY = False   # Must be readable by the browser
-CSRF_COOKIE_SECURE = not DEBUG      # Enabled for HTTPS
-SESSION_COOKIE_SECURE = not DEBUG   # Enabled for HTTPS
+CSRF_COOKIE_SECURE = True      # Enabled for HTTPS
+SESSION_COOKIE_SECURE = True   # Enabled for HTTPS
 CSRF_COOKIE_DOMAIN = None      # Don't restrict to a specific domain
 
 
@@ -129,7 +129,6 @@ TEMPLATES = [
                 'django.contrib.messages.context_processors.messages',
                 'core.context_processors.signal_info',
                 'core.context_processors.family_context',
-                'core.context_processors.ipo_info',
             ],
         },
     },
@@ -139,29 +138,31 @@ WSGI_APPLICATION = 'investment_advisory.wsgi.application'
 
 
 # Database
-USE_LOCAL_DB = os.environ.get('USE_LOCAL_DB', 'False') == 'True'
+# https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-if USE_LOCAL_DB:
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
-        }
+DATABASES = {
+    'default': dj_database_url.config(
+        default='sqlite:///' + os.path.join(BASE_DIR, 'db.sqlite3')
+    )
+}
+
+
+
+# settings.py
+
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.mysql",
+        "NAME": "FOLIUX",
+        "USER": "foliux",
+        "PASSWORD": "Test@123",
+        "HOST": "127.0.0.1",
+        "PORT": "3306",
+        "OPTIONS": {
+            "init_command": "SET sql_mode='STRICT_TRANS_TABLES'",
+        },
     }
-else:
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.mysql",
-            "NAME": os.environ.get("DB_NAME", "FOLIUX"),
-            "USER": os.environ.get("DB_USER", "foliux"),
-            "PASSWORD": os.environ.get("DB_PASSWORD", "Test@123"),
-            "HOST": os.environ.get("DB_HOST", "158.220.101.59"),
-            "PORT": os.environ.get("DB_PORT", "3306"),
-            "OPTIONS": {
-                "init_command": "SET sql_mode='STRICT_TRANS_TABLES'",
-            },
-        }
-    }
+}
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
@@ -295,8 +296,8 @@ EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
-EMAIL_HOST_USER = 'foliuxits@gmail.com'
-EMAIL_HOST_PASSWORD = 'ohxu ntbh lyxw sukx'
+EMAIL_HOST_USER = 'netprofit.i.t.s@gmail.com'
+EMAIL_HOST_PASSWORD = 'vdhddqssiroxpfnx'
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 EMAIL_USE_SSL = False
 

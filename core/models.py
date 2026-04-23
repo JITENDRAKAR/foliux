@@ -190,14 +190,14 @@ def protect_password_on_social_link(request, sociallogin, **kwargs):
         logger.info(f"Social account linked/updated for {user.username}. Provider: {sociallogin.account.provider}")
 class OTP(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    code = EncryptedCharField(max_length=6)
+    code = EncryptedCharField(max_length=255)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def is_valid(self):
         from django.utils import timezone
         import datetime
-        # Valid for 10 minutes
-        return self.created_at >= timezone.now() - datetime.timedelta(minutes=10)
+        # Valid for 20 minutes
+        return self.created_at >= timezone.now() - datetime.timedelta(minutes=20)
 
     def __str__(self):
         return f"OTP for {self.user.username} - {self.code}"
@@ -223,11 +223,11 @@ class Transaction(models.Model):
 class SignupOTP(models.Model):
     """OTP sent to an email address BEFORE a user account is created."""
     email = EncryptedEmailField()
-    code = EncryptedCharField(max_length=6)
+    code = EncryptedCharField(max_length=255)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def is_valid(self):
-        return self.created_at >= timezone.now() - timedelta(minutes=10)
+        return self.created_at >= timezone.now() - timedelta(minutes=20)
 
     def __str__(self):
         return f"SignupOTP for {self.email} - {self.code}"

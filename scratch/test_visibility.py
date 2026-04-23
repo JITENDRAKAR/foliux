@@ -2,7 +2,7 @@ import os
 import sys
 import django
 
-sys.path.append(r'c:\inetpub\wwwroot\NPITS')
+sys.path.append(r'.')
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'investment_advisory.settings')
 django.setup()
 

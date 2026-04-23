@@ -809,7 +809,7 @@ def get_recommendations(user, is_consolidated=False):
         can_sell = realized_profit <= invested
         if unrealized_pct >= profit_target and can_sell:
             action = "SELL"
-            reason = f"Pft {unrealized_pct:.2f}% >= {profit_target}%"
+            reason = f"Pft > {profit_target}%"
         elif -3000 <= buy_gap_formula <= 3000:
             action = "HOLD"
             reason = f"TgtCap: {buy_gap_formula:.0f}"
@@ -884,6 +884,13 @@ def get_recommendations(user, is_consolidated=False):
             buy_gap = buy_gap_formula if action == 'BUY' else 0
             reduce_gap = abs(buy_gap_formula) if action == 'REDUCE' else 0
 
+            # Day Change Calculations
+            absolute_change = float(inst.price_change or 0)
+            previous_close = float(inst.previous_close or 0)
+            if previous_close <= 0:
+                previous_close = ltp - absolute_change
+            day_change_pct = (absolute_change / previous_close * 100) if previous_close > 0 else 0
+
             recommendations.append({
                 'symbol': symbol,
                 'name': inst.name,
@@ -895,7 +902,7 @@ def get_recommendations(user, is_consolidated=False):
                 'unrealized_pnl': 0,
                 'pnl_percent': 0,
                 'day_change': 0,
-                'day_change_pct': 0,
+                'day_change_pct': round(day_change_pct, 2),
                 'action': action,
                 'buy_gap': round(buy_gap, 2),
                 'reduce_gap': round(reduce_gap, 2),
@@ -936,6 +943,13 @@ def get_recommendations(user, is_consolidated=False):
             buy_gap = buy_gap_formula if action == 'BUY' else 0
             reduce_gap = abs(buy_gap_formula) if action == 'REDUCE' else 0
 
+            # Day Change Calculations
+            absolute_change = float(inst.price_change or 0) if inst else 0
+            previous_close = float(inst.previous_close or 0) if inst else 0
+            if inst and previous_close <= 0:
+                previous_close = ltp - absolute_change
+            day_change_pct = (absolute_change / previous_close * 100) if previous_close > 0 else 0
+
             recommendations.append({
                 'symbol': symbol,
                 'name': inst.name if inst else symbol,
@@ -947,7 +961,7 @@ def get_recommendations(user, is_consolidated=False):
                 'unrealized_pnl': 0,
                 'pnl_percent': 0,
                 'day_change': 0,
-                'day_change_pct': 0,
+                'day_change_pct': round(day_change_pct, 2),
                 'action': action,
                 'buy_gap': round(buy_gap, 2),
                 'reduce_gap': round(reduce_gap, 2),

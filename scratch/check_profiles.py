@@ -3,7 +3,7 @@ import sys
 import django
 
 # Add the project root to sys.path
-sys.path.append(r'c:\inetpub\wwwroot\NPITS')
+sys.path.append(r'.')
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'investment_advisory.settings')
 django.setup()

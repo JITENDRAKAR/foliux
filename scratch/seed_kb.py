@@ -7,15 +7,15 @@ django.setup()
 from core.models import ChatbotKnowledge
 
 kb = {
-    "what is": "NPITS (Net Profit Investment Tracking System) is a rules-based financial platform designed for disciplined wealth creation. It helps you manage multiple asset classes with precision using FIFO accounting.",
-    "npits": "NPITS is your central hub for investment management. It uses data-driven signals to remove emotions from investing, focusing on automated 'Buy' and 'Sell' advice.",
-    "foliux": "FOLIUX is the premium branding for NPITS, representing our professional-grade suite of investment tracking tools and advanced strategy simulations.",
-    "security": "NPITS prioritizes your data security. Your sensitive investment data is encrypted (using Fernet encryption), and we use secure OTP-based authentication for logins and family linking.",
+    "what is": "FOLIUX (Net Profit Investment Tracking System) is a rules-based financial platform designed for disciplined wealth creation. It helps you manage multiple asset classes with precision using FIFO accounting.",
+    "foliux": "FOLIUX is your central hub for investment management. It uses data-driven signals to remove emotions from investing, focusing on automated 'Buy' and 'Sell' advice.",
+    "foliux": "FOLIUX is the premium branding for FOLIUX, representing our professional-grade suite of investment tracking tools and advanced strategy simulations.",
+    "security": "FOLIUX prioritizes your data security. Your sensitive investment data is encrypted (using Fernet encryption), and we use secure OTP-based authentication for logins and family linking.",
     "how to add": "You can add items by clicking 'Add Instrument' on any dashboard. For stocks, you can also use 'Buy Stock' to add a single lot or 'Upload Portfolio' for bulk entry.",
     "upload": "To upload in bulk, go to the Stock Dashboard and click 'Upload Portfolio'. We support .csv and .xlsx files from major brokers like Zerodha, Groww, etc.",
     "excel": "You can download your portfolio as an Excel file using the 'Export' button on the Stock Dashboard for offline analysis.",
-    "google sheets": "NPITS can sync with Google Sheets for real-time data ingestion. Check the 'Sync' options on the dashboard for more details.",
-    "fifo": "NPITS uses First-In-First-Out (FIFO) logic to track individual stock lots. This ensures accurate P&L calculation and tax planning by matching your oldest buys with your sales.",
+    "google sheets": "FOLIUX can sync with Google Sheets for real-time data ingestion. Check the 'Sync' options on the dashboard for more details.",
+    "fifo": "FOLIUX uses First-In-First-Out (FIFO) logic to track individual stock lots. This ensures accurate P&L calculation and tax planning by matching your oldest buys with your sales.",
     "lots": "Lot-based tracking means every purchase of a stock is treated separately. This helps you see the profit of each specific entry instead of just a consolidated average.",
     "signals": "Signals are rule-based indicators: 'BUY' (price is low/attractive), 'SELL' (target reached), 'HOLD' (maintain position), and 'REDUCE' (over-allocation detected).",
     "rules": "Our rules are based on predefined strategies like the 5% Index Strategy. These signals help you stay disciplined and avoid emotional trading.",
@@ -37,9 +37,9 @@ kb = {
     "otp": "We use OTPs for secure actions like registration, password resets, and linking family accounts for maximum security.",
     "contact": "For support or bug reports, please reach out to the platform administrator via the support email in the footer.",
     "help": "You can ask me about: how to add stocks, how signals work, what is FIFO, how to link family, or details about MF and NPS modules.",
-    "hello": "Hello! I am your NPITS Assistant. How can I help you manage your wealth today?",
-    "hi": "Hi there! Welcome to NPITS. I'm here to help you navigate your portfolio and strategies.",
-    "thanks": "You're welcome! Happy investing with NPITS.",
+    "hello": "Hello! I am your FOLIUX Assistant. How can I help you manage your wealth today?",
+    "hi": "Hi there! Welcome to FOLIUX. I'm here to help you navigate your portfolio and strategies.",
+    "thanks": "You're welcome! Happy investing with FOLIUX.",
 }
 
 for q, a in kb.items():

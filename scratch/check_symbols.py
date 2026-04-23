@@ -4,7 +4,7 @@ import django
 from django.test import RequestFactory
 from django.contrib.auth.models import User
 
-sys.path.append(r'c:\inetpub\wwwroot\NPITS')
+sys.path.append(r'.')
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'investment_advisory.settings')
 django.setup()
 

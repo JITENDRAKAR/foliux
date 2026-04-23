@@ -24,7 +24,9 @@ from .models import (
     SignupOTP, MarketTicker, Strategy, MutualFund, MFPortfolio, MFTransaction,
     Coin, CoinPortfolio, CoinTransaction,
     NPSFund, NPSPortfolio, NPSTransaction, FixedAsset, OtherAsset,
-    Loan, LoanPayment, IPO, ChatbotKnowledge
+    Loan, LoanPayment, IPO, ChatbotKnowledge, Watchlist, Dividend,
+    InvestmentGoal, SignalNotificationState, FamilyLink, FinancialYearData,
+    MFSIP, PortfolioValueHistory, HiddenSignal
 )
 from .forms import (
     UploadFileForm, PortfolioForm, ManualPortfolioForm, 
@@ -135,7 +137,7 @@ def forgot_password(request):
         form = ForgotPasswordForm(request.POST)
         if form.is_valid():
             email = form.cleaned_data['email']
-            user = User.objects.get(email=email)
+            user = User.objects.get(email__iexact=email)
             
             # Generate 6-digit OTP
             code = str(random.randint(100000, 999999))
@@ -172,14 +174,24 @@ def verify_otp(request):
         form = VerifyOTPForm(request.POST)
         if form.is_valid():
             otp_code = form.cleaned_data['otp']
-            user = User.objects.get(email=email)
-            otp_obj = OTP.objects.filter(user=user, code=otp_code).first()
+            user = User.objects.get(email__iexact=email)
+            # Fetch latest OTP for user (code is encrypted, so we compare in memory)
+            otp_obj = OTP.objects.filter(user=user).order_by('-created_at').first()
             
-            if otp_obj and otp_obj.is_valid():
-                request.session['otp_verified'] = True
-                return redirect('reset_password')
+            if otp_obj:
+                stored_code = str(otp_obj.code).strip()
+                input_code = str(otp_code).strip()
+                is_expired = not otp_obj.is_valid()
+                
+                if stored_code == input_code and not is_expired:
+                    request.session['otp_verified'] = True
+                    return redirect('reset_password')
+                else:
+                    logger.warning(f"OTP verification failed for {email}: Match={stored_code == input_code}, Expired={is_expired}")
             else:
-                messages.error(request, "Invalid or expired code.")
+                logger.warning(f"No OTP found for user {email}")
+            
+            messages.error(request, "Invalid or expired code.")
     else:
         form = VerifyOTPForm()
     return render(request, 'registration/verify_otp.html', {'form': form})
@@ -1914,7 +1926,7 @@ def send_signup_otp(request):
     # Send email
     try:
         send_mail(
-            subject='Your NPITS Registration Code',
+            subject='Your FOLIUX Registration Code',
             message=(
                 f'Your 6-digit verification code is: {code}\n\n'
                 f'This code is valid for 10 minutes.\n\n'
@@ -1950,11 +1962,13 @@ def verify_signup_otp(request):
     if not email or not code:
         return JsonResponse({'status': 'error', 'message': 'Email and OTP are required.'}, status=400)
 
-    # Lookup SignupOTP by iterating (email and code are encrypted)
+    # Lookup SignupOTP by iterating (fields are encrypted, but we filter by time to optimize)
     otp_obj = None
-    all_signup_otps = SignupOTP.objects.all()
-    for o in all_signup_otps:
-        if o.email and o.email.lower() == email and o.code == code:
+    ten_mins_ago = timezone.now() - timedelta(minutes=10)
+    recent_signup_otps = SignupOTP.objects.filter(created_at__gte=ten_mins_ago).order_by('-created_at')
+    
+    for o in recent_signup_otps:
+        if o.email and str(o.email).lower() == str(email) and str(o.code) == str(code):
             otp_obj = o
             break
 
@@ -1998,8 +2012,8 @@ def register(request):
             # Send Welcome Email
             try:
                 send_mail(
-                    subject='Welcome to NPITS',
-                    message=f'Hi {user.email},\n\nWelcome to Net Profit Investment Tracking System. Thank you for registering with us.\n\nBest Regards,\nNPITS Team',
+                    subject='Welcome to FOLIUX',
+                    message=f'Hi {user.email},\n\nWelcome to FOLIUX Investment Tracking System. Thank you for registering with us.\n\nBest Regards,\nFOLIUX Team',
                     from_email=settings.EMAIL_HOST_USER,
                     recipient_list=[user.email],
                     fail_silently=False,
@@ -2114,7 +2128,7 @@ def link_family_id(request):
         
         # Send OTP
         try:
-            subject = "Family Account Linking Request - NPITS"
+            subject = "Family Account Linking Request - FOLIUX"
             requester_name = request.user.profile.full_name or request.user.email
             message = f"User {requester_name} has requested to link your portfolio as a family member. \n\nYour verification code is: {code}\n\nPlease provide this code to them if you wish to authorize the link. This allows them to view and manage your portfolio data separately from theirs."
             send_mail(subject, message, settings.EMAIL_HOST_USER, [target_user.email])
@@ -2563,9 +2577,20 @@ def lot_breakdown(request, instrument_id):
     
     # Enrich lots with days held and unrealized P&L
     live_ltps = fetch_live_ltp()
-    ltp = Decimal(str(live_ltps.get(inst.symbol.upper(), 0))) or Decimal('0')
+    ltp = Decimal(str(live_ltps.get(inst.symbol.upper(), 0)))
     
-    enriched_lots = []
+    # Fallback: if live LTP is 0, try Instrument.last_price, then Portfolio stored ltp
+    if not ltp or ltp <= 0:
+        ltp = inst.last_price or Decimal('0')
+    if not ltp or ltp <= 0:
+        portfolio = Portfolio.objects.filter(user=target_user, instrument=inst).first()
+        if portfolio:
+            ltp = portfolio.ltp or Decimal('0')
+    
+    # --- Build unified timeline: BUY lots + SELL records ---
+    unified_records = []
+    
+    # Add active BUY lots
     for lot in lots:
         days_held = (timezone.now().date() - lot.date).days
         current_value = Decimal(str(lot.remaining_quantity)) * ltp
@@ -2573,28 +2598,73 @@ def lot_breakdown(request, instrument_id):
         pnl = current_value - buy_value
         pnl_pct = (pnl / buy_value * 100) if buy_value else 0
         
-        enriched_lots.append({
+        unified_records.append({
+            'type': 'BUY',
             'id': lot.id,
             'owner': lot.user.profile.full_name or lot.user.username,
+            'sort_date': lot.date,
             'date': lot.date,
             'quantity': lot.remaining_quantity,
             'price': lot.price,
             'days_held': days_held,
             'ltp': ltp,
-            'unrealized_pnl': pnl,
-            'pnl_pct': pnl_pct
+            'pnl': pnl,
+            'pnl_pct': pnl_pct,
         })
-        
-    total_quantity = sum(l['quantity'] for l in enriched_lots)
-    total_invested = sum(Decimal(str(l['quantity'])) * l['price'] for l in enriched_lots)
+    
+    # Summary stats for BUY
+    total_quantity = sum(r['quantity'] for r in unified_records)
+    total_invested = sum(Decimal(str(r['quantity'])) * r['price'] for r in unified_records)
     avg_cost = total_invested / Decimal(str(total_quantity)) if total_quantity > 0 else 0
+    
+    # Fetch SELL records from PnLStatement
+    if is_consolidated:
+        sell_records = PnLStatement.objects.filter(
+            user_id__in=user_ids,
+            instrument=inst,
+        ).order_by('-exit_date').select_related('user__profile')
+    else:
+        sell_records = PnLStatement.objects.filter(
+            user=target_user,
+            instrument=inst,
+        ).order_by('-exit_date').select_related('user__profile')
+    
+    total_sell_quantity = 0
+    total_realized_pnl = Decimal('0')
+    for sr in sell_records:
+        holding_days = (sr.exit_date - sr.entry_date).days if sr.entry_date else None
+        pnl_pct = (sr.realized_profit / sr.buy_value * 100) if sr.buy_value else 0
+        sell_price = sr.sell_value / Decimal(str(sr.quantity)) if sr.quantity else Decimal('0')
+        buy_price = sr.buy_value / Decimal(str(sr.quantity)) if sr.quantity else Decimal('0')
+        unified_records.append({
+            'type': 'SELL',
+            'id': sr.id,
+            'owner': sr.user.profile.full_name or sr.user.username,
+            'sort_date': sr.exit_date,
+            'date': sr.exit_date,
+            'entry_date': sr.entry_date,
+            'quantity': sr.quantity,
+            'price': sell_price,
+            'buy_price': buy_price,
+            'pnl': sr.realized_profit,
+            'pnl_pct': pnl_pct,
+            'holding_days': holding_days,
+        })
+        total_sell_quantity += sr.quantity
+        total_realized_pnl += sr.realized_profit
+    
+    # Sort unified list by date descending (newest first)
+    unified_records.sort(key=lambda r: r['sort_date'], reverse=True)
     
     context = {
         'instrument': inst,
-        'lots': enriched_lots,
+        'records': unified_records,
+        'ltp': ltp,
         'total_quantity': total_quantity,
         'total_invested': total_invested,
         'avg_cost': avg_cost,
+        'total_sell_quantity': total_sell_quantity,
+        'total_realized_pnl': total_realized_pnl,
         'is_consolidated': is_consolidated,
         'is_family_view': is_family_view,
         'target_user': target_user,
@@ -4086,7 +4156,7 @@ def backtest_strategy_api(request):
 @csrf_exempt
 def chatbot_response(request):
     """
-    Handle chatbot queries with a knowledge base about NPITS.
+    Handle chatbot queries with a knowledge base about FOLIUX.
     """
     if request.method == 'POST':
         try:
@@ -4095,17 +4165,16 @@ def chatbot_response(request):
             
             kb = {
                 # Platform Basics
-                "what is": "NPITS (Net Profit Investment Tracking System) is a rules-based financial platform designed for disciplined wealth creation. It helps you manage multiple asset classes with precision using FIFO accounting.",
-                "npits": "NPITS is your central hub for investment management. It uses data-driven signals to remove emotions from investing, focusing on automated 'Buy' and 'Sell' advice.",
-                "foliux": "FOLIUX is the premium branding for NPITS, representing our professional-grade suite of investment tracking tools and advanced strategy simulations.",
-                "security": "NPITS prioritizes your data security. Your sensitive investment data is encrypted (using Fernet encryption), and we use secure OTP-based authentication for logins and family linking.",
+                "what is": "FOLIUX (FOLIUX Investment Tracking System) is a rules-based financial platform designed for disciplined wealth creation. It helps you manage multiple asset classes with precision using FIFO accounting.",
+                "foliux": "FOLIUX is your central hub for investment management. It uses data-driven signals to remove emotions from investing, focusing on automated 'Buy' and 'Sell' advice.",
+                "security": "FOLIUX prioritizes your data security. Your sensitive investment data is encrypted (using Fernet encryption), and we use secure OTP-based authentication for logins and family linking.",
                 
                 # Portfolio & Data Management
                 "how to add": "You can add items by clicking 'Add Instrument' on any dashboard. For stocks, you can also use 'Buy Stock' to add a single lot or 'Upload Portfolio' for bulk entry.",
                 "upload": "To upload in bulk, go to the Stock Dashboard and click 'Upload Portfolio'. We support .csv and .xlsx files from major brokers like Zerodha, Groww, etc.",
                 "excel": "You can download your portfolio as an Excel file using the 'Export' button on the Stock Dashboard for offline analysis.",
-                "google sheets": "NPITS can sync with Google Sheets for real-time data ingestion. Check the 'Sync' options on the dashboard for more details.",
-                "fifo": "NPITS uses First-In-First-Out (FIFO) logic to track individual stock lots. This ensures accurate P&L calculation and tax planning by matching your oldest buys with your sales.",
+                "google sheets": "FOLIUX can sync with Google Sheets for real-time data ingestion. Check the 'Sync' options on the dashboard for more details.",
+                "fifo": "FOLIUX uses First-In-First-Out (FIFO) logic to track individual stock lots. This ensures accurate P&L calculation and tax planning by matching your oldest buys with your sales.",
                 "lots": "Lot-based tracking means every purchase of a stock is treated separately. This helps you see the profit of each specific entry instead of just a consolidated average.",
                 
                 # Signals & Strategy
@@ -4135,12 +4204,12 @@ def chatbot_response(request):
                 
                 # Contextual/Help
                 "help": "You can ask me about: how to add stocks, how signals work, what is FIFO, how to link family, or details about MF and NPS modules.",
-                "hello": "Hello! I am your NPITS Assistant. How can I help you manage your wealth today?",
-                "hi": "Hi there! Welcome to NPITS. I'm here to help you navigate your portfolio and strategies.",
-                "thanks": "You're welcome! Happy investing with NPITS.",
+                "hello": "Hello! I am your FOLIUX Assistant. How can I help you manage your wealth today?",
+                "hi": "Hi there! Welcome to FOLIUX. I'm here to help you navigate your portfolio and strategies.",
+                "thanks": "You're welcome! Happy investing with FOLIUX.",
             }
             
-            reply = "I'm sorry, I don't have a specific answer for that. NPITS is a rule-based investment system. You can ask about stocks, FIFO, signals, backtesting, or our asset modules like MF, NPS, and Loans."
+            reply = "I'm sorry, I don't have a specific answer for that. FOLIUX is a rule-based investment system. You can ask about stocks, FIFO, signals, backtesting, or our asset modules like MF, NPS, and Loans."
             
             # 1. SPECIAL CASE: Market Price Queries
             price_query_words = ['price', 'value', 'quote', 'rate', 'ltp', 'change', 'nifty', 'sensex', 'banknifty', '%', 'percentage']
@@ -4214,8 +4283,8 @@ def chatbot_response(request):
             # Send notification email to admin
             try:
                 user_info = f"User: {request.user.username} ({request.user.email})" if request.user.is_authenticated else "Guest User"
-                email_subject = f"NPITS Assistant Inquiry"
-                email_body = f"An inquiry was made to the NPITS Assistant.\n\n{user_info}\nQuestion: {user_message}\n\nProvided Answer: {reply}\n\nTimestamp: {timezone.now()}"
+                email_subject = f"FOLIUX Assistant Inquiry"
+                email_body = f"An inquiry was made to the FOLIUX Assistant.\n\n{user_info}\nQuestion: {user_message}\n\nProvided Answer: {reply}\n\nTimestamp: {timezone.now()}"
                 
                 import threading
                 def _run_send_mail():
@@ -4267,3 +4336,108 @@ def toggle_hidden_signal(request):
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
     return JsonResponse({'status': 'error', 'message': 'POST required'}, status=405)
+
+@login_required
+def request_reset_otp(request):
+    user = request.user
+    if not user.email:
+        messages.error(request, "No email address found for your account. Please update your profile first.")
+        return redirect('edit_profile')
+    
+    # Generate 6-digit OTP
+    code = str(random.randint(100000, 999999))
+    
+    # Save OTP
+    OTP.objects.filter(user=user).delete()
+    OTP.objects.create(user=user, code=code)
+    
+    # Send Email
+    try:
+        subject = "Account Reset Verification Code - FOLIUX"
+        message = f"You have requested to reset all data for your FOLIUX account ({user.email}).\n\nYour 6-digit verification code is: {code}\n\nThis code is valid for 10 minutes. If you did not request this, please ignore this email."
+        send_mail(subject, message, settings.EMAIL_HOST_USER, [user.email])
+        
+        request.session['resetting_user_id'] = user.id
+        messages.success(request, f"A 6-digit verification code has been sent to {user.email}")
+        return redirect('verify_reset_otp')
+    except Exception as e:
+        logger.error(f"Error sending reset OTP: {e}")
+        messages.error(request, "Failed to send verification code. Please try again later.")
+        return redirect('edit_profile')
+
+@login_required
+def verify_reset_otp(request):
+    user_id = request.session.get('resetting_user_id')
+    if not user_id or user_id != request.user.id:
+        return redirect('edit_profile')
+        
+    if request.method == 'POST':
+        otp_code = request.POST.get('otp', '').strip()
+        otp_obj = OTP.objects.filter(user=request.user).order_by('-created_at').first()
+        
+        if otp_obj and str(otp_obj.code) == str(otp_code) and otp_obj.is_valid():
+            # VERIFIED - Perform Reset
+            reset_account_data(request.user)
+            
+            # Cleanup session
+            del request.session['resetting_user_id']
+            OTP.objects.filter(user=request.user).delete()
+            
+            messages.success(request, "Your account has been reset to the initial signup state.")
+            return redirect('dashboard')
+        else:
+            messages.error(request, "Invalid or expired verification code.")
+    
+    return render(request, 'core/verify_reset_otp.html')
+
+def reset_account_data(user):
+    """Helper to delete all user-related data and reset profile to defaults."""
+    # List of models to clear (ForeignKey to user)
+    models_to_clear = [
+        Portfolio, PnLStatement, Transaction, Watchlist, Dividend,
+        InvestmentGoal, SignalNotificationState, FinancialYearData,
+        MFPortfolio, MFTransaction, CoinPortfolio, CoinTransaction,
+        NPSPortfolio, NPSTransaction, FixedAsset, OtherAsset,
+        Loan, MFSIP, PortfolioValueHistory, HiddenSignal
+    ]
+    
+    # Also FamilyLink (both sides)
+    FamilyLink.objects.filter(user=user).delete()
+    FamilyLink.objects.filter(family_user=user).delete()
+    
+    # Delete related records
+    for model in models_to_clear:
+        try:
+            model.objects.filter(user=user).delete()
+        except Exception as e:
+            logger.error(f"Error clearing {model.__name__} for user {user.username}: {e}")
+
+    # Reset Profile to defaults
+    try:
+        profile = user.profile
+        # Reset numeric fields to defaults from model definition
+        profile.investor_type = 'moderate'
+        profile.initial_investment_limit = 15000.00
+        profile.mf_investment_limit = 100000.00
+        profile.coin_investment_limit = 15000.00
+        profile.equity_profit_expectation = 22.00
+        profile.mf_profit_expectation = 22.00
+        profile.coin_profit_expectation = 22.00
+        profile.equity_fixed_charge = 0.00
+        profile.equity_brokerage_pct = 0.0200
+        profile.intraday_fixed_charge = 0.00
+        profile.intraday_brokerage_pct = 0.0200
+        profile.financial_goal = 10000000.00
+        
+        # Delete profile picture if exists
+        if profile.profile_picture:
+            try:
+                profile.profile_picture.delete(save=False)
+            except Exception:
+                pass
+            profile.profile_picture = None
+            
+        profile.save()
+    except Exception as e:
+        logger.error(f"Error resetting profile for user {user.username}: {e}")
+

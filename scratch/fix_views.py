@@ -1,6 +1,6 @@
 import os
 
-file_path = r"c:\inetpub\wwwroot\NPITS\core\views.py"
+file_path = r".\core\views.py"
 
 with open(file_path, 'r', encoding='utf-8') as f:
     lines = f.readlines()

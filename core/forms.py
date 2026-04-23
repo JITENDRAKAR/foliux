@@ -172,7 +172,7 @@ class ForgotPasswordForm(forms.Form):
 
     def clean_email(self):
         email = self.cleaned_data.get('email')
-        if not User.objects.filter(email=email).exists():
+        if not User.objects.filter(email__iexact=email).exists():
             raise forms.ValidationError("No user found with this email address.")
         return email
 
