@@ -1,7 +1,7 @@
 # NPITS GitHub Backup Script
 $ErrorActionPreference = "Stop"
 
-$ProjectDir = "c:\inetpub\wwwroot\NPITS"
+$ProjectDir = $PSScriptRoot
 $GitPath = "C:\Users\Unifi\AppData\Local\GitHubDesktop\app-3.5.6\resources\app\git\cmd\git.exe"
 
 Write-Host "Starting database dump..."

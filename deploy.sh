@@ -23,7 +23,12 @@ cd $PROJECT_DIR || { echo "❌ Directory $PROJECT_DIR not found"; exit 1; }
 echo -e "${BLUE}📥 Pulling latest changes from Git...${NC}"
 git pull foliux main
 
-# 2. Activate virtual environment
+# 2. Clear Python Cache (__pycache__)
+echo -e "${BLUE}🧹 Clearing Python bytecode cache...${NC}"
+find . -name "__pycache__" -type d -exec rm -rf {} +
+find . -name "*.pyc" -delete
+
+# 3. Activate virtual environment
 if [ -d "$VENV_PATH" ]; then
     echo -e "${BLUE}🐍 Activating virtual environment...${NC}"
     source "$VENV_PATH/bin/activate"
@@ -31,25 +36,26 @@ else
     echo -e "⚠️ Virtual environment not found at $VENV_PATH"
 fi
 
-# 3. Install dependencies
+# 4. Install dependencies
 echo -e "${BLUE}📦 Installing dependencies...${NC}"
 pip install -r requirements.txt
 
-# 4. Run database migrations
+# 5. Run database migrations
 echo -e "${BLUE}⚙️ Running database migrations...${NC}"
 python manage.py migrate --noinput
 
-# 5. Collect static files
+# 6. Collect static files
 echo -e "${BLUE}🎨 Collecting static files...${NC}"
 python manage.py collectstatic --noinput
 
-# 6. Restart the application service
+# 7. Restart the application service
 echo -e "${BLUE}🔄 Restarting application service ($SERVICE_NAME)...${NC}"
 if command -v systemctl >/dev/null 2>&1; then
+    sudo systemctl daemon-reload
     sudo systemctl restart $SERVICE_NAME
-    echo -e "${GREEN}✅ Service $SERVICE_NAME restarted.${NC}"
+    echo -e "${GREEN}✅ Service $SERVICE_NAME restarted and cache cleared.${NC}"
 else
     echo -e "⚠️ systemctl not found. Please restart your web server manually (e.g., Gunicorn/Nginx)."
 fi
 
-echo -e "${GREEN}✨ Deployment completed successfully!${NC}"
+echo -e "${GREEN}✨ Fresh deployment completed successfully!${NC}"
