@@ -53,9 +53,25 @@ echo -e "${BLUE}🔄 Restarting application service ($SERVICE_NAME)...${NC}"
 if command -v systemctl >/dev/null 2>&1; then
     sudo systemctl daemon-reload
     sudo systemctl restart $SERVICE_NAME
-    echo -e "${GREEN}✅ Service $SERVICE_NAME restarted and cache cleared.${NC}"
+    
+    # Verify if service is running
+    if systemctl is-active --quiet $SERVICE_NAME; then
+        echo -e "${GREEN}✅ Service $SERVICE_NAME is active.${NC}"
+    else
+        echo -e "❌ Service $SERVICE_NAME failed to start. Check logs with: journalctl -u $SERVICE_NAME"
+        exit 1
+    fi
 else
     echo -e "⚠️ systemctl not found. Please restart your web server manually (e.g., Gunicorn/Nginx)."
 fi
 
-echo -e "${GREEN}✨ Fresh deployment completed successfully!${NC}"
+# 8. Success Summary
+DEPLOY_TIME=$(date '+%Y-%m-%d %H:%M:%S')
+VERSION=$(git rev-parse --short HEAD)
+echo -e "\n${GREEN}==============================================${NC}"
+echo -e "${GREEN}✨ DEPLOYMENT SUCCESSFUL!${NC}"
+echo -e "${GREEN}==============================================${NC}"
+echo -e "${BLUE}🕒 Time: ${NC}$DEPLOY_TIME"
+echo -e "${BLUE}🔢 Version: ${NC}$VERSION"
+echo -e "${BLUE}🔗 Repository: ${NC}https://github.com/JITENDRAKAR/foliux"
+echo -e "${GREEN}==============================================${NC}\n"
