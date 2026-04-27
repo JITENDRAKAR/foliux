@@ -1431,81 +1431,70 @@
         </div>
     </div>
 
-    <!-- User Reviews Section -->
-    {% if reviews %}
+    <!-- User Reviews Section (Static for Git Sync) -->
     <div class="reviews-section animate-in animate-delay-2 mb-5">
         <div class="container">
             <div class="reviews-header text-center mb-5">
-            <h2>What Our Users Say</h2>
-            <p>Join investors engineering their wealth with NPITS.</p>
-        </div>
-        <div class="marquee-reviews-wrapper">
-            <div class="marquee-reviews-track" id="reviewTrack">
-                {% for review in reviews %}
-                <div class="review-slide">
-                    <div class="review-card">
-                        <div class="review-quote"><i class="fas fa-quote-right"></i></div>
-                        <p class="review-text">"{{ review.comment }}"</p>
-                        <div class="review-author">
-                            <div class="author-avatar">
-                                {{ review.user.profile.full_name|slice:":1"|default:review.user.username|slice:":1"|upper }}
-                            </div>
-                            <div class="author-info">
-                                <div class="d-flex align-items-center gap-2">
-                                    <h6>{{ review.user.profile.full_name|default:review.user.username }}</h6>
-                                    <div class="review-rating">
-                                        {% with ''|center:review.rating as range %}
-                                        {% for _ in range %}
+                <h2>What Our Users Say</h2>
+                <p>Join investors engineering their wealth with NPITS.</p>
+            </div>
+            <div class="marquee-reviews-wrapper">
+                <div class="marquee-reviews-track" id="reviewTrack">
+                    <!-- Review 1 -->
+                    <div class="review-slide">
+                        <div class="review-card">
+                            <div class="review-quote"><i class="fas fa-quote-right"></i></div>
+                            <p class="review-text">"So many mutual funds and stocks are not showing."</p>
+                            <div class="review-author">
+                                <div class="author-avatar">J</div>
+                                <div class="author-info">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <h6>Jitendra</h6>
+                                        <div class="review-rating">
                                             <i class="fas fa-star"></i>
-                                        {% endfor %}
-                                        {% endwith %}
+                                            <i class="fas fa-star"></i>
+                                            <i class="fas fa-star"></i>
+                                            <i class="fas fa-star"></i>
+                                            <i class="fas fa-star"></i>
+                                        </div>
                                     </div>
+                                    <span>Verified Investor</span>
                                 </div>
-                                <span>Verified Investor</span>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Clone for seamless loop -->
+                    <div class="review-slide">
+                        <div class="review-card">
+                            <div class="review-quote"><i class="fas fa-quote-right"></i></div>
+                            <p class="review-text">"So many mutual funds and stocks are not showing."</p>
+                            <div class="review-author">
+                                <div class="author-avatar">J</div>
+                                <div class="author-info">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <h6>Jitendra</h6>
+                                        <div class="review-rating">
+                                            <i class="fas fa-star"></i>
+                                            <i class="fas fa-star"></i>
+                                            <i class="fas fa-star"></i>
+                                            <i class="fas fa-star"></i>
+                                            <i class="fas fa-star"></i>
+                                        </div>
+                                    </div>
+                                    <span>Verified Investor</span>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
-                {% endfor %}
-                <!-- Clone first review for seamless loop -->
-                {% if reviews|length > 0 %}
-                <div class="review-slide">
-                    {% with reviews|first as review %}
-                    <div class="review-card">
-                        <div class="review-quote"><i class="fas fa-quote-right"></i></div>
-                        <p class="review-text">"{{ review.comment }}"</p>
-                        <div class="review-author">
-                            <div class="author-avatar">
-                                {{ review.user.profile.full_name|slice:":1"|default:review.user.username|slice:":1"|upper }}
-                            </div>
-                            <div class="author-info">
-                                <div class="d-flex align-items-center gap-2">
-                                    <h6>{{ review.user.profile.full_name|default:review.user.username }}</h6>
-                                    <div class="review-rating">
-                                        {% with ''|center:review.rating as range %}
-                                        {% for _ in range %}
-                                            <i class="fas fa-star"></i>
-                                        {% endfor %}
-                                        {% endwith %}
-                                    </div>
-                                </div>
-                                <span>Verified Investor</span>
-                            </div>
-                        </div>
-                    </div>
-                    {% endwith %}
-                </div>
-                {% endif %}
+            </div>
+            <div class="text-center mt-5">
+                <a href="{% url 'feedback' %}" class="btn btn-review-outline">
+                    <i class="fas fa-pen-nib me-2"></i>Write a Review
+                </a>
             </div>
         </div>
-        <div class="text-center mt-5">
-            <a href="{% url 'feedback' %}" class="btn btn-review-outline">
-                <i class="fas fa-pen-nib me-2"></i>Write a Review
-            </a>
-        </div>
-        </div>
     </div>
-    {% endif %}
 </div>
 
 </div>
