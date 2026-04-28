@@ -253,6 +253,7 @@ from django.db.models import Sum, F
 from django.db.models.functions import Upper
 
 PORTFOLIO_HEADERS = ['Instrument', 'Quantity', 'Average Cost', 'LTP']
+# Optional headers: 'Date'
 PNL_HEADERS = ['Symbol', 'Quantity', 'Buy Value', 'Sell Value', 'Profit', 'Entry Date', 'Exit Date']
 
 STRATEGY_SYMBOLS = {
@@ -1744,9 +1745,12 @@ def upload_portfolio(request):
             df = handle_uploaded_file(request.FILES['file'])
             if df is not None:
                 # Strict Header Validation
-                uploaded_headers = list(df.columns)
-                if uploaded_headers != PORTFOLIO_HEADERS:
-                    messages.error(request, f"Header mismatch. Expected: {PORTFOLIO_HEADERS}. Got: {uploaded_headers}")
+                uploaded_headers = [h.strip() for h in df.columns]
+                required_headers = ['Instrument', 'Quantity', 'Average Cost', 'LTP']
+                missing_headers = [h for h in required_headers if h not in uploaded_headers]
+                
+                if missing_headers:
+                    messages.error(request, f"Missing required headers: {missing_headers}. Required: {required_headers}")
                     return redirect('upload_portfolio')
 
                 try:
@@ -1792,15 +1796,25 @@ def upload_portfolio(request):
                         total_brokerage = Decimal(str(fixed_charge)) + (Decimal(str(avg)) * Decimal(str(qty)) * Decimal(str(pct_charge)) / 100)
                         price_with_brokerage = ((Decimal(str(avg)) * Decimal(str(qty))) + total_brokerage) / Decimal(str(qty))
 
+                        # Capture Date if provided in CSV
+                        raw_date = row.get('Date')
+                        if pd.notna(raw_date):
+                            try:
+                                tx_date = pd.to_datetime(raw_date).date()
+                            except:
+                                tx_date = timezone.now().date()
+                        else:
+                            tx_date = timezone.now().date()
+
                         # Create Transaction record for each row (lot preservation)
                         Transaction.objects.create(
-                            user=request.user,
+                            user=target_user,
                             instrument=inst,
                             transaction_type='BUY',
                             quantity=qty,
                             remaining_quantity=qty,
                             price=price_with_brokerage,
-                            date=timezone.now().date()
+                            date=tx_date
                         )
 
                         # Aggregate data for Portfolio update
