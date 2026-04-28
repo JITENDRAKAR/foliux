@@ -2705,6 +2705,18 @@ def lot_breakdown(request, instrument_id):
     # --- Build unified timeline: BUY lots + SELL records ---
     unified_records = []
     
+    # 1. Total historical context
+    total_history_buy_qty = Transaction.objects.filter(
+        user_id__in=user_ids if is_consolidated else [target_user.id],
+        instrument=inst,
+        transaction_type='BUY'
+    ).aggregate(models.Sum('quantity'))['quantity__sum'] or 0
+    
+    total_history_sell_qty = PnLStatement.objects.filter(
+        user_id__in=user_ids if is_consolidated else [target_user.id],
+        instrument=inst,
+    ).aggregate(models.Sum('quantity'))['quantity__sum'] or 0
+
     # Add active BUY lots
     for lot in lots:
         days_held = (timezone.now().date() - lot.date).days
@@ -2748,11 +2760,18 @@ def lot_breakdown(request, instrument_id):
     
     total_sell_quantity = 0
     total_realized_pnl = Decimal('0')
+    total_pnl_buy_val = Decimal('0')
+    first_sell_date = None
+
     for sr in sell_records:
+        if first_sell_date is None or sr.exit_date < first_sell_date:
+            first_sell_date = sr.exit_date
+            
         holding_days = (sr.exit_date - sr.entry_date).days if sr.entry_date else None
         pnl_pct = (sr.realized_profit / sr.buy_value * 100) if sr.buy_value else 0
         sell_price = sr.sell_value / Decimal(str(sr.quantity)) if sr.quantity else Decimal('0')
         buy_price = sr.buy_value / Decimal(str(sr.quantity)) if sr.quantity else Decimal('0')
+        
         unified_records.append({
             'type': 'SELL',
             'id': sr.id,
@@ -2769,9 +2788,29 @@ def lot_breakdown(request, instrument_id):
         })
         total_sell_quantity += sr.quantity
         total_realized_pnl += sr.realized_profit
+        total_pnl_buy_val += sr.buy_value
     
+    # 2. Add System Adjustment Entry if sells > buys
+    if total_history_sell_qty > total_history_buy_qty:
+        discrepancy_qty = total_history_sell_qty - total_history_buy_qty
+        avg_buy_price = total_pnl_buy_val / Decimal(str(total_sell_quantity)) if total_sell_quantity > 0 else Decimal('0')
+        adj_date = (first_sell_date - timedelta(days=1)) if first_sell_date else date(2024, 1, 1)
+        
+        unified_records.append({
+            'type': 'SYSTEM',
+            'id': 'SYS-ADJ-001',
+            'owner': 'SYSTEM',
+            'sort_date': adj_date,
+            'date': adj_date,
+            'quantity': discrepancy_qty,
+            'price': avg_buy_price,
+            'note': 'System Entry (Original Buy Not Available – P&L Upload Adjustment)',
+            'pnl': 0, # Virtual entry has no pnl itself
+            'pnl_pct': 0,
+        })
+
     # Sort unified list by date descending (newest first)
-    unified_records.sort(key=lambda r: r['sort_date'], reverse=True)
+    unified_records.sort(key=lambda r: (r['sort_date'], 0 if r['type'] in ['BUY', 'SYSTEM'] else 1), reverse=True)
     
     context = {
         'instrument': inst,

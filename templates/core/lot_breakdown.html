@@ -96,6 +96,12 @@
                             <td class="ps-4">
                                 {% if rec.type == 'BUY' %}
                                 <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-2 rounded-pill">BUY</span>
+                                {% elif rec.type == 'SYSTEM' %}
+                                <span class="badge bg-warning-subtle text-warning border border-warning-subtle px-3 py-2 rounded-pill" 
+                                      data-bs-toggle="tooltip" 
+                                      title="Original buy data not available. Entry created to balance uploaded P&L.">
+                                    SYS ADJ
+                                </span>
                                 {% else %}
                                 <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-3 py-2 rounded-pill">SELL</span>
                                 {% endif %}
@@ -107,6 +113,9 @@
                                 {% endif %}
                                 {% if rec.type == 'BUY' %}
                                 <div class="text-muted extra-small">Lot #{{ rec.id }}</div>
+                                {% elif rec.type == 'SYSTEM' %}
+                                <div class="text-muted extra-small">{{ rec.id }}</div>
+                                <div class="text-muted extra-small text-truncate" style="max-width: 150px;" title="{{ rec.note }}">System Adjusted</div>
                                 {% endif %}
                             </td>
                             {% if is_consolidated %}
@@ -216,4 +225,15 @@
         font-weight: 500;
     }
 </style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl)
+        })
+    });
+</script>
 {% endblock %}
