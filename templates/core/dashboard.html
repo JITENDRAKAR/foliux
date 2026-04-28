@@ -265,10 +265,27 @@
                         </ul>
                     </div>
 
-                    <!-- 2. Add Manual Folio -->
-                    <a href="{% url 'add_portfolio_item' %}{% if is_family_view %}?user_id={{ target_user.id }}{% endif %}" class="btn btn-success btn-sm rounded-pill px-3 py-1">
-                        <i class="fas fa-keyboard me-1"></i>Add Manual Folio
-                    </a>
+                    <!-- 2. Sell Asset Dropdown -->
+                    <div class="dropdown">
+                        <button class="btn btn-outline-danger btn-sm rounded-pill px-3 py-1 dropdown-toggle shadow-sm" type="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-minus-circle me-1"></i>Sell Asset
+                        </button>
+                        <ul class="dropdown-menu shadow border-0 rounded-3 p-2">
+                            <li class="dropdown-header text-uppercase small fw-bold text-danger">Exit Positions</li>
+                            <li><a class="dropdown-item py-2 rounded-2" href="#portfolio-table">
+                                <i class="fas fa-chart-line me-2 text-danger"></i>Stock / ETF</a>
+                            </li>
+                            <li><a class="dropdown-item py-2 rounded-2" href="{% url 'mf_dashboard' %}{% if is_family_view %}?user_id={{ target_user.id }}{% endif %}">
+                                <i class="fas fa-piggy-bank me-2 text-success"></i>Mutual Fund</a>
+                            </li>
+                            <li><a class="dropdown-item py-2 rounded-2" href="{% url 'coin_dashboard' %}{% if is_family_view %}?user_id={{ target_user.id }}{% endif %}">
+                                <i class="fab fa-bitcoin me-2 text-warning"></i>Crypto / Coin</a>
+                            </li>
+                            <li><a class="dropdown-item py-2 rounded-2" href="{% url 'nps_dashboard' %}{% if is_family_view %}?user_id={{ target_user.id }}{% endif %}">
+                                <i class="fas fa-university me-2 text-warning"></i>NPS Retirement</a>
+                            </li>
+                        </ul>
+                    </div>
                     {% endif %}
 
                     <!-- 4. History -->
