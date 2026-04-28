@@ -2728,8 +2728,10 @@ def lot_breakdown(request, instrument_id):
         })
     
     # Summary stats for BUY
-    total_quantity = sum(r['quantity'] for r in unified_records)
-    total_invested = sum(Decimal(str(r['quantity'])) * r['price'] for r in unified_records)
+    total_quantity = sum(r['quantity'] for r in unified_records if r['type'] == 'BUY')
+    total_invested = sum(Decimal(str(r['quantity'])) * r['price'] for r in unified_records if r['type'] == 'BUY')
+    total_unrealized_pnl = sum(r['pnl'] for r in unified_records if r['type'] == 'BUY')
+    total_unrealized_pnl_pct = (total_unrealized_pnl / total_invested * 100) if total_invested > 0 else 0
     avg_cost = total_invested / Decimal(str(total_quantity)) if total_quantity > 0 else 0
     
     # Fetch SELL records from PnLStatement
@@ -2777,6 +2779,8 @@ def lot_breakdown(request, instrument_id):
         'ltp': ltp,
         'total_quantity': total_quantity,
         'total_invested': total_invested,
+        'total_unrealized_pnl': total_unrealized_pnl,
+        'total_unrealized_pnl_pct': total_unrealized_pnl_pct,
         'avg_cost': avg_cost,
         'total_sell_quantity': total_sell_quantity,
         'total_realized_pnl': total_realized_pnl,

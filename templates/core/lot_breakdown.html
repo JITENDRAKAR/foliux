@@ -25,51 +25,45 @@
             </a>
         </div>
 
-        <div class="row mb-4 h-100">
-            <!-- Summary Stats Cards -->
-            <div class="col-6 col-md-3 mb-3">
-                <div class="card border-0 shadow-sm h-100 bg-primary text-white overflow-hidden"
-                    style="min-height: 120px;">
-                    <div class="card-body d-flex flex-column justify-content-center position-relative">
-                        <i class="fas fa-layer-group position-absolute opacity-10"
-                            style="font-size: 5rem; right: -10px; top: 10px;"></i>
-                        <div class="small text-uppercase opacity-75 fw-bold mb-1">Holding Qty</div>
-                        <h2 class="mb-0 fw-bold">{{ total_quantity }}</h2>
+        <!-- Compact Summary Stats Bar -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="bg-white p-4 rounded-4 shadow-sm border d-flex flex-wrap gap-md-5 gap-3 align-items-center animate__animated animate__fadeInUp">
+                    <!-- Main Highlight: Unrealized P&L -->
+                    <div class="pe-md-4 border-end-md">
+                        <div class="text-uppercase extra-small fw-bold text-muted mb-1">Unrealized P&L</div>
+                        <div class="h3 mb-0 fw-bold {% if total_unrealized_pnl >= 0 %}text-success{% else %}text-danger{% endif %}">
+                            {% if total_unrealized_pnl >= 0 %}+{% endif %}₹{{ total_unrealized_pnl|floatformat:2 }}
+                            <span class="h6 fw-bold mb-0">({{ total_unrealized_pnl_pct|floatformat:2 }}%)</span>
+                        </div>
+                        <p class="text-muted extra-small mb-0">Current holding performance</p>
                     </div>
-                </div>
-            </div>
-            <div class="col-6 col-md-3 mb-3">
-                <div class="card border-0 shadow-sm h-100 bg-dark text-white overflow-hidden"
-                    style="min-height: 120px;">
-                    <div class="card-body d-flex flex-column justify-content-center position-relative">
-                        <i class="fas fa-wallet position-absolute opacity-10"
-                            style="font-size: 5rem; right: -10px; top: 10px;"></i>
-                        <div class="small text-uppercase opacity-75 fw-bold mb-1">Total Invested</div>
-                        <h2 class="mb-0 fw-bold">&#8377;{{ total_invested|floatformat:2 }}</h2>
-                    </div>
-                </div>
-            </div>
-            <div class="col-6 col-md-3 mb-3">
-                <div class="card border-0 shadow-sm h-100 bg-white overflow-hidden" style="min-height: 120px;">
-                    <div class="card-body d-flex flex-column justify-content-center position-relative">
-                        <i class="fas fa-chart-line position-absolute text-success opacity-10"
-                            style="font-size: 5rem; right: -10px; top: 10px;"></i>
-                        <div class="small text-uppercase text-muted fw-bold mb-1">LTP / Avg Cost</div>
-                        <h2 class="mb-0 fw-bold text-success">&#8377;{{ ltp|floatformat:2 }}</h2>
-                        <div class="small text-muted">Avg: &#8377;{{ avg_cost|floatformat:2 }}</div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-6 col-md-3 mb-3">
-                <div class="card border-0 shadow-sm h-100 overflow-hidden" style="min-height: 120px;">
-                    <div class="card-body d-flex flex-column justify-content-center position-relative">
-                        <i class="fas fa-chart-pie position-absolute opacity-10 {% if total_realized_pnl >= 0 %}text-success{% else %}text-danger{% endif %}"
-                            style="font-size: 5rem; right: -10px; top: 10px;"></i>
-                        <div class="small text-uppercase text-muted fw-bold mb-1">Realized P&L</div>
-                        <h2 class="mb-0 fw-bold {% if total_realized_pnl >= 0 %}text-success{% else %}text-danger{% endif %}">
-                            {% if total_realized_pnl >= 0 %}+{% endif %}&#8377;{{ total_realized_pnl|floatformat:2 }}
-                        </h2>
-                        <div class="small text-muted">Sold: {{ total_sell_quantity }} units</div>
+
+                    <!-- Secondary Stats -->
+                    <div class="d-flex flex-wrap gap-md-5 gap-3 flex-grow-1">
+                        <div>
+                            <div class="text-uppercase extra-small fw-bold text-muted mb-1">Holding Qty</div>
+                            <div class="fw-bold text-dark">{{ total_quantity }} <span class="text-muted fw-normal small">Units</span></div>
+                        </div>
+                        <div>
+                            <div class="text-uppercase extra-small fw-bold text-muted mb-1">Total Invested</div>
+                            <div class="fw-bold text-dark">₹{{ total_invested|floatformat:2 }}</div>
+                        </div>
+                        <div>
+                            <div class="text-uppercase extra-small fw-bold text-muted mb-1">LTP / Avg Cost</div>
+                            <div class="small fw-bold text-primary">
+                                ₹{{ ltp|floatformat:2 }} 
+                                <span class="text-muted fw-normal mx-1">/</span> 
+                                <span class="text-muted fw-normal">₹{{ avg_cost|floatformat:2 }}</span>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="text-uppercase extra-small fw-bold text-muted mb-1">Realized P&L</div>
+                            <div class="small fw-bold {% if total_realized_pnl >= 0 %}text-success{% else %}text-danger{% endif %}">
+                                {% if total_realized_pnl >= 0 %}+{% endif %}₹{{ total_realized_pnl|floatformat:2 }}
+                            </div>
+                            <div class="extra-small text-muted">{{ total_sell_quantity }} Units Sold</div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -188,6 +182,11 @@
 <style>
     .extra-small {
         font-size: 0.7rem;
+    }
+    @media (min-width: 768px) {
+        .border-end-md {
+            border-right: 1px solid #dee2e6 !important;
+        }
     }
     .table thead th {
         position: sticky;
