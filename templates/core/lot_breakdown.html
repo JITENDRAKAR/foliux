@@ -25,47 +25,47 @@
             </a>
         </div>
 
-        <!-- Compact Summary Stats Bar -->
-        <div class="row mb-4">
-            <div class="col-12">
-                <div class="bg-white p-4 rounded-4 shadow-sm border d-flex flex-wrap gap-md-5 gap-3 align-items-center animate__animated animate__fadeInUp">
-                    <!-- Main Highlight: Unrealized P&L -->
-                    <div class="pe-md-4 border-end-md">
-                        <div class="text-uppercase extra-small fw-bold text-muted mb-1">Unrealized P&L</div>
-                        <div class="h3 mb-0 fw-bold {% if total_unrealized_pnl >= 0 %}text-success{% else %}text-danger{% endif %}">
-                            {% if total_unrealized_pnl >= 0 %}+{% endif %}₹{{ total_unrealized_pnl|floatformat:2 }}
-                            <span class="h6 fw-bold mb-0">({{ total_unrealized_pnl_pct|floatformat:2 }}%)</span>
-                        </div>
-                        <p class="text-muted extra-small mb-0">Current holding performance</p>
-                    </div>
-
-                    <!-- Secondary Stats -->
-                    <div class="d-flex flex-wrap gap-md-5 gap-3 flex-grow-1">
-                        <div>
-                            <div class="text-uppercase extra-small fw-bold text-muted mb-1">Holding Qty</div>
-                            <div class="fw-bold text-dark">{{ total_quantity }} <span class="text-muted fw-normal small">Units</span></div>
-                        </div>
-                        <div>
-                            <div class="text-uppercase extra-small fw-bold text-muted mb-1">Total Invested</div>
-                            <div class="fw-bold text-dark">₹{{ total_invested|floatformat:2 }}</div>
-                        </div>
-                        <div>
-                            <div class="text-uppercase extra-small fw-bold text-muted mb-1">LTP / Avg Cost</div>
-                            <div class="small fw-bold text-primary">
-                                ₹{{ ltp|floatformat:2 }} 
-                                <span class="text-muted fw-normal mx-1">/</span> 
-                                <span class="text-muted fw-normal">₹{{ avg_cost|floatformat:2 }}</span>
-                            </div>
-                        </div>
-                        <div>
-                            <div class="text-uppercase extra-small fw-bold text-muted mb-1">Realized P&L</div>
-                            <div class="small fw-bold {% if total_realized_pnl >= 0 %}text-success{% else %}text-danger{% endif %}">
-                                {% if total_realized_pnl >= 0 %}+{% endif %}₹{{ total_realized_pnl|floatformat:2 }}
-                            </div>
-                            <div class="extra-small text-muted">{{ total_sell_quantity }} Units Sold</div>
-                        </div>
-                    </div>
-                </div>
+        <!-- Compact Summary Stats Bar (Table-aligned Layout) -->
+        <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4 animate__animated animate__fadeInUp">
+            <div class="table-responsive">
+                <table class="table align-middle mb-0">
+                    <thead class="bg-light border-0">
+                        <tr>
+                            <th class="ps-4 text-uppercase extra-small fw-bold text-muted border-0" style="width: 35%;">Unrealized P&L</th>
+                            <th class="text-uppercase extra-small fw-bold text-muted border-0 text-center">Holding Qty</th>
+                            <th class="text-uppercase extra-small fw-bold text-muted border-0 text-center">Total Invested</th>
+                            <th class="text-uppercase extra-small fw-bold text-muted border-0 text-center">LTP / Avg Cost</th>
+                            <th class="pe-4 text-uppercase extra-small fw-bold text-muted border-0 text-end" style="width: 20%;">P&L (Realized)</th>
+                        </tr>
+                    </thead>
+                    <tbody class="border-0">
+                        <tr>
+                            <td class="ps-4 border-0">
+                                <div class="h5 mb-0 fw-bold {% if total_unrealized_pnl >= 0 %}text-success{% else %}text-danger{% endif %}">
+                                    {% if total_unrealized_pnl >= 0 %}+{% endif %}₹{{ total_unrealized_pnl|floatformat:2 }}
+                                    <span class="small fw-normal">({{ total_unrealized_pnl_pct|floatformat:2 }}%)</span>
+                                </div>
+                                <p class="text-muted extra-small mb-0">Current holding performance</p>
+                            </td>
+                            <td class="text-center border-0">
+                                <div class="small fw-bold text-dark">{{ total_quantity }} <span class="text-muted fw-normal">Units</span></div>
+                            </td>
+                            <td class="text-center border-0">
+                                <div class="small fw-bold text-dark">₹{{ total_invested|floatformat:2 }}</div>
+                            </td>
+                            <td class="text-center border-0">
+                                <div class="small fw-bold text-primary">₹{{ ltp|floatformat:2 }}</div>
+                                <div class="text-muted extra-small">Avg: ₹{{ avg_cost|floatformat:2 }}</div>
+                            </td>
+                            <td class="pe-4 text-end border-0">
+                                <div class="small fw-bold {% if total_realized_pnl >= 0 %}text-success{% else %}text-danger{% endif %}">
+                                    {% if total_realized_pnl >= 0 %}+{% endif %}₹{{ total_realized_pnl|floatformat:2 }}
+                                </div>
+                                <div class="extra-small text-muted">{{ total_sell_quantity }} Units Sold</div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
         </div>
 
@@ -99,7 +99,7 @@
                                 {% elif rec.type == 'SYSTEM' %}
                                 <span class="badge bg-warning-subtle text-warning border border-warning-subtle px-3 py-2 rounded-pill" 
                                       data-bs-toggle="tooltip" 
-                                      title="Original buy data not available. Entry created to balance uploaded P&L.">
+                                      title="Original buy data not available. Entry created to balance uploaded Realized P&L">
                                     SYS ADJ
                                 </span>
                                 {% else %}

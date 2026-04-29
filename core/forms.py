@@ -115,7 +115,6 @@ class ManualPortfolioForm(forms.Form):
         widget=forms.TextInput(attrs={
             'class': 'form-control', 
             'placeholder': 'Search company name...',
-            'id': 'id_company_name',
             'autocomplete': 'off'
         })
     )
@@ -125,7 +124,6 @@ class ManualPortfolioForm(forms.Form):
         widget=forms.TextInput(attrs={
             'class': 'form-control', 
             'placeholder': 'Symbol will auto-fill',
-            'id': 'id_symbol',
             'readonly': 'readonly'
         })
     )
@@ -149,6 +147,45 @@ class ManualPortfolioForm(forms.Form):
         required=False,
         widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'placeholder': 'Optional: Why did you select this stock?'}),
         help_text='Visible on hover in portfolio view'
+    )
+
+class ManualSellForm(forms.Form):
+    company_name = forms.CharField(
+        label='COMPANY NAME',
+        widget=forms.TextInput(attrs={
+            'class': 'form-control', 
+            'placeholder': 'Search company name to sell...',
+            'autocomplete': 'off'
+        })
+    )
+    symbol = forms.CharField(
+        label='STOCK SYMBOL (AUTO-FILLED)',
+        max_length=20, 
+        widget=forms.TextInput(attrs={
+            'class': 'form-control', 
+            'placeholder': 'Symbol will auto-fill',
+            'readonly': 'readonly'
+        })
+    )
+    quantity = forms.IntegerField(
+        label='QUANTITY TO SELL',
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Enter Quantity to sell'})
+    )
+    price = forms.DecimalField(
+        label='SELL PRICE',
+        max_digits=10, 
+        decimal_places=2, 
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'placeholder': 'Enter Sell Price'})
+    )
+    date = forms.DateField(
+        label='EXIT DATE',
+        required=False,
+        widget=forms.DateInput(attrs={'class': 'form-control', 'type': 'date'})
+    )
+    notes = forms.CharField(
+        label='NOTES (OPTIONAL)',
+        required=False,
+        widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'placeholder': 'Why are you selling?'}),
     )
 
 class EditLotForm(forms.Form):

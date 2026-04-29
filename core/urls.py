@@ -13,13 +13,16 @@ urlpatterns = [
     path('register/verify-otp/', views.verify_signup_otp, name='verify_signup_otp'),
     path('upload/portfolio/', views.upload_portfolio, name='upload_portfolio'),
     path('export/portfolio/', views.export_portfolio, name='export_portfolio'),
-    path('portfolio/add/', views.add_portfolio_item, name='add_portfolio_item'),
+    path('portfolio/add-manual/', views.add_portfolio_item, name='add_portfolio_item'),
+    path('portfolio/sell-manual/', views.sell_portfolio_item, name='sell_portfolio_item'),
+    path('portfolio/upload/', views.upload_portfolio, name='upload_portfolio'),
     path('portfolio/add-cost/', views.upload_portfolio, name='add_folio_cost'), # Mapping to upload for now
     path('watchlist/', views.watchlist, name='watchlist'),
     path('watchlist/add/', views.add_to_watchlist_api, name='add_to_watchlist_api'),
     path('watchlist/remove/', views.remove_from_watchlist_api, name='remove_from_watchlist_api'),
 
     path('upload/pnl/', views.upload_pnl, name='upload_pnl'),
+    path('upload/rpnl/', views.upload_pnl, name='upload_rpnl'),
     path('portfolio/edit/<int:pk>/', views.edit_portfolio_item, name='edit_portfolio_item'),
     path('portfolio/delete/<int:pk>/', views.delete_portfolio_item, name='delete_portfolio_item'),
     path('portfolio/buy/', views.buy_stock, name='buy_stock'),

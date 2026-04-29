@@ -24,8 +24,8 @@
     }
 
     .autocomplete-item:hover {
-        background-color: #f8f9fa;
-        color: var(--primary-color);
+        background-color: #fff5f5;
+        color: #dc3545;
     }
     
     .table-bulk-entry td {
@@ -55,11 +55,10 @@
         const attachAutocomplete = (row) => {
             const companyInput = row.querySelector('input[id$="-company_name"]');
             const symbolInput = row.querySelector('input[id$="-symbol"]');
-            const priceInput = row.querySelector('input[id$="-avg_cost"]');
+            const priceInput = row.querySelector('input[id$="-price"]');
             
             if (!companyInput) return;
 
-            // Create results div if not exists
             let resultsDiv = row.querySelector('.autocomplete-results');
             if (!resultsDiv) {
                 resultsDiv = document.createElement('div');
@@ -113,19 +112,16 @@
             const firstRow = tableBody.querySelector('tr');
             const newRow = firstRow.cloneNode(true);
 
-            // Update indices
             const nameRegex = new RegExp(`form-(\\d+)-`, 'g');
             const idRegex = new RegExp(`id_form-(\\d+)-`, 'g');
 
             newRow.innerHTML = newRow.innerHTML.replace(nameRegex, `form-${rowCount}-`);
             newRow.innerHTML = newRow.innerHTML.replace(idRegex, `id_form-${rowCount}-`);
 
-            // Clear inputs
             newRow.querySelectorAll('input, textarea').forEach(input => {
                 input.value = '';
             });
             
-            // Remove any existing autocomplete results
             const oldResults = newRow.querySelector('.autocomplete-results');
             if (oldResults) oldResults.remove();
 
@@ -135,7 +131,6 @@
             attachAutocomplete(newRow);
         });
 
-        // Initial attachment
         document.querySelectorAll('.table-bulk-entry tbody tr').forEach(attachAutocomplete);
     });
 </script>
@@ -148,8 +143,8 @@
             <div class="card shadow-sm border-0">
                 <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
                     <div>
-                        <h5 class="mb-0 fw-bold"><i class="fas fa-plus-circle me-2 text-primary"></i>Bulk Add Stocks</h5>
-                        <p class="text-muted small mb-0">Add rows as needed to populate your portfolio.</p>
+                        <h5 class="mb-0 fw-bold"><i class="fas fa-minus-circle me-2 text-danger"></i>Bulk Sell Stocks</h5>
+                        <p class="text-muted small mb-0">Add rows as needed to record multiple sales.</p>
                     </div>
                     <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary btn-sm">
                         <i class="fas fa-times me-1"></i>Close
@@ -166,9 +161,9 @@
                                     <tr>
                                         <th style="width: 25%;">Company Name</th>
                                         <th style="width: 15%;">Symbol</th>
-                                        <th style="width: 12%;">Quantity</th>
-                                        <th style="width: 12%;">Avg. Cost (₹)</th>
-                                        <th style="width: 15%;">Purchase Date</th>
+                                        <th style="width: 12%;">Qty to Sell</th>
+                                        <th style="width: 12%;">Sell Price (₹)</th>
+                                        <th style="width: 15%;">Exit Date</th>
                                         <th>Notes</th>
                                     </tr>
                                 </thead>
@@ -196,9 +191,9 @@
                                             {% endif %}
                                         </td>
                                         <td>
-                                            {{ form.avg_cost }}
-                                            {% if form.avg_cost.errors %}
-                                                <div class="text-danger x-small">{{ form.avg_cost.errors }}</div>
+                                            {{ form.price }}
+                                            {% if form.price.errors %}
+                                                <div class="text-danger x-small">{{ form.price.errors }}</div>
                                             {% endif %}
                                         </td>
                                         <td>
@@ -220,16 +215,16 @@
                         </div>
 
                         <div class="p-3 bg-white border-top">
-                            <button type="button" id="add-row-btn" class="btn btn-outline-primary btn-sm rounded-pill">
+                            <button type="button" id="add-row-btn" class="btn btn-outline-danger btn-sm rounded-pill">
                                 <i class="fas fa-plus me-1"></i>Add Another Row
                             </button>
                         </div>
 
                         <div class="p-4 bg-light border-top d-flex justify-content-end gap-2">
                             <a href="{% url 'dashboard' %}" class="btn btn-light border px-4">Cancel</a>
-                            <button type="submit" class="btn btn-primary px-5 fw-bold">
-                                <i class="fas fa-save me-2"></i>Save All Assets
-                            </button>
+                            <button type="submit" class="btn btn-danger px-5 fw-bold">
+                                <i class="fas fa-check-circle me-2"></i>Confirm Bulk Sell
+                              </button>
                         </div>
                     </form>
                 </div>

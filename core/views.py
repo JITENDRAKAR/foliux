@@ -29,7 +29,7 @@ from .models import (
     MFSIP, PortfolioValueHistory, HiddenSignal, UserReview
 )
 from .forms import (
-    UploadFileForm, PortfolioForm, ManualPortfolioForm, 
+    UploadFileForm, PortfolioForm, ManualPortfolioForm, ManualSellForm,
     CustomUserCreationForm, ProfileForm, ForgotPasswordForm, 
     VerifyOTPForm, SetPasswordForm, EditLotForm,
     LoanForm, LoanPaymentForm, UserReviewForm
@@ -255,6 +255,7 @@ from django.db.models.functions import Upper
 PORTFOLIO_HEADERS = ['Instrument', 'Quantity', 'Average Cost', 'LTP']
 # Optional headers: 'Date'
 PNL_HEADERS = ['Symbol', 'Quantity', 'Buy Value', 'Sell Value', 'Profit', 'Entry Date', 'Exit Date']
+TRADE_HEADERS = ['Symbol', 'Trade Date', 'Trade Type', 'Quantity', 'Price']
 
 STRATEGY_SYMBOLS = {
     'flexi': {
@@ -1655,83 +1656,91 @@ def search_instruments(request):
 
 @login_required
 def add_portfolio_item(request):
+    from django.forms import formset_factory
+    from .utils import execute_stock_buy, resolve_instrument
+    
+    StockFormSet = formset_factory(ManualPortfolioForm, extra=1)
+    target_user, is_family_view, is_consolidated = get_target_user(request)
+    
     if request.method == 'POST':
-        target_user, is_family_view, is_consolidated = get_target_user(request)
-        form = ManualPortfolioForm(request.POST)
-        if form.is_valid():
-            symbol = form.cleaned_data['symbol'].strip().upper()
-            quantity = form.cleaned_data['quantity']
-            avg_cost = form.cleaned_data['avg_cost']
-            transaction_date = form.cleaned_data.get('date') or timezone.now().date()
-            notes = form.cleaned_data.get('notes')
-
-            # Get Instrument (must be verified)
-            try:
-                inst = Instrument.objects.get(symbol__iexact=symbol, is_verified=True)
-            except Instrument.DoesNotExist:
-                messages.error(request, f"'{symbol}' is not a verified instrument in our database.")
-                return render(request, 'core/add_portfolio.html', {'form': form, 'title': 'Add Stock Manually'})
-
-            # Try to get initial LTP from live data if possible
-            live_ltps = fetch_live_ltp()
-            ltp_data = live_ltps.get(symbol)
-            if isinstance(ltp_data, tuple):
-                ltp = ltp_data[0]
+        formset = StockFormSet(request.POST)
+        if formset.is_valid():
+            success_count = 0
+            for form in formset:
+                if form.cleaned_data:
+                    symbol = form.cleaned_data.get('symbol', '').strip().upper()
+                    quantity = form.cleaned_data.get('quantity')
+                    avg_cost = form.cleaned_data.get('avg_cost')
+                    date = form.cleaned_data.get('date')
+                    notes = form.cleaned_data.get('notes')
+                    
+                    if symbol and quantity and avg_cost:
+                        inst = resolve_instrument(symbol)
+                        if inst:
+                            execute_stock_buy(target_user, inst, quantity, avg_cost, date, notes)
+                            success_count += 1
+            
+            if success_count > 0:
+                messages.success(request, f"Successfully added {success_count} assets to {target_user.username if is_family_view else 'account'}.")
+                url = redirect('dashboard').url
+                if is_family_view:
+                    url += f"?user_id={target_user.id}"
+                return redirect(url)
             else:
-                ltp = ltp_data or avg_cost
-
-            # Calculate Brokerage for BUY
-            profile, _ = Profile.objects.get_or_create(user=target_user)
-            fixed_charge = profile.equity_fixed_charge or Decimal('0')
-            pct_charge = profile.equity_brokerage_pct or Decimal('0')
-            total_brokerage = Decimal(str(fixed_charge)) + (Decimal(str(avg_cost)) * Decimal(str(quantity)) * Decimal(str(pct_charge)) / 100)
-            price_with_brokerage = ((Decimal(str(avg_cost)) * Decimal(str(quantity))) + total_brokerage) / Decimal(str(quantity))
-
-            # Create Transaction record
-            Transaction.objects.create(
-                user=target_user,
-                instrument=inst,
-                transaction_type='BUY',
-                quantity=quantity,
-                remaining_quantity=quantity,
-                price=price_with_brokerage,
-                date=transaction_date
-            )
-
-            portfolio, created = Portfolio.objects.get_or_create(
-                user=target_user, 
-                instrument=inst,
-                defaults={'quantity': 0, 'avg_cost': Decimal('0'), 'ltp': ltp}
-            )
-            
-            # Update Weighted Average Cost for Portfolio summary
-            current_total_cost = Decimal(str(portfolio.quantity)) * portfolio.avg_cost
-            new_total_cost = Decimal(str(quantity)) * price_with_brokerage
-            total_quantity = portfolio.quantity + quantity
-            
-            new_avg_cost = (current_total_cost + new_total_cost) / Decimal(str(total_quantity))
-            
-            portfolio.quantity = total_quantity
-            portfolio.avg_cost = new_avg_cost
-            # Only update LTP if it was 0 or just created
-            if created or not portfolio.ltp or portfolio.ltp == 0:
-                portfolio.ltp = ltp
-            
-            if notes:
-                portfolio.notes = notes
-            portfolio.save()
-            messages.success(request, f"Successfully added/updated {symbol} in {target_user.username if is_family_view else 'account'}.")
-            url = redirect('dashboard').url
-            if is_family_view:
-                url += f"?user_id={target_user.id}"
-            return redirect(url)
+                messages.warning(request, "No valid assets were entered.")
     else:
-        target_user, is_family_view, is_consolidated = get_target_user(request)
-        form = ManualPortfolioForm()
+        formset = StockFormSet()
         
     return render(request, 'core/add_portfolio.html', {
-        'form': form, 
-        'title': 'Add Stock Manually',
+        'formset': formset, 
+        'title': 'Add Stocks (Bulk)',
+        'is_family_view': is_family_view,
+        'target_user': target_user
+    })
+
+@login_required
+def sell_portfolio_item(request):
+    from django.forms import formset_factory
+    from .utils import execute_stock_sell, resolve_instrument
+    
+    SellFormSet = formset_factory(ManualSellForm, extra=1)
+    target_user, is_family_view, is_consolidated = get_target_user(request)
+    
+    if request.method == 'POST':
+        formset = SellFormSet(request.POST)
+        if formset.is_valid():
+            success_count = 0
+            for form in formset:
+                if form.cleaned_data:
+                    symbol = form.cleaned_data.get('symbol', '').strip().upper()
+                    quantity = form.cleaned_data.get('quantity')
+                    price = form.cleaned_data.get('price')
+                    exit_date = form.cleaned_data.get('date')
+                    notes = form.cleaned_data.get('notes')
+
+                    if symbol and quantity and price:
+                        inst = resolve_instrument(symbol)
+                        if inst:
+                            try:
+                                execute_stock_sell(target_user, inst, quantity, price, exit_date)
+                                success_count += 1
+                            except Exception as e:
+                                messages.error(request, f"Error selling {symbol}: {str(e)}")
+            
+            if success_count > 0:
+                messages.success(request, f"Successfully sold {success_count} assets from {target_user.username if is_family_view else 'account'}.")
+                url = redirect('dashboard').url
+                if is_family_view:
+                    url += f"?user_id={target_user.id}"
+                return redirect(url)
+            else:
+                messages.warning(request, "No valid sales were recorded.")
+    else:
+        formset = SellFormSet()
+        
+    return render(request, 'core/sell_portfolio.html', {
+        'formset': formset, 
+        'title': 'Sell Stocks (Bulk)',
         'is_family_view': is_family_view,
         'target_user': target_user
     })
@@ -1873,7 +1882,7 @@ def upload_portfolio(request):
         form = UploadFileForm()
     return render(request, 'core/upload.html', {
         'form': form, 
-        'title': 'Upload Portfolio',
+        'title': 'Portfolio',
         'is_family_view': is_family_view,
         'target_user': target_user
     })
@@ -1935,68 +1944,181 @@ def export_portfolio(request):
 
 def upload_pnl(request):
     target_user, is_family_view, is_consolidated = get_target_user(request)
+    url_name = request.resolver_match.url_name
+    
     if request.method == 'POST':
         form = UploadFileForm(request.POST, request.FILES)
         if form.is_valid():
             df = handle_uploaded_file(request.FILES['file'])
             if df is not None:
-                # Strict Header Validation
-                uploaded_headers = list(df.columns)
-                if uploaded_headers != PNL_HEADERS:
-                    messages.error(request, "No matched with Sample Header of data.")
-                    return redirect('upload_pnl')
+                uploaded_headers = [h.strip() for h in df.columns]
+                
+                # Header Selection based on URL
+                is_trade_format = (url_name == 'upload_pnl')
+                expected_headers = TRADE_HEADERS if is_trade_format else PNL_HEADERS
+                
+                # Check if uploaded headers match the expected headers (relaxed check: check if all expected are present)
+                missing_headers = [h for h in expected_headers if h not in uploaded_headers]
+                if missing_headers:
+                    messages.error(request, f"Header mismatch. Missing: {missing_headers}. Expected: {expected_headers}")
+                    return redirect(url_name)
 
                 count = 0
-                for _, row in df.iterrows():
-                    symbol = row.get('Symbol')
-                    qty = clean_numeric(row.get('Quantity'), to_int=True)
-                    sell_val = clean_numeric(row.get('Sell Value'))
-                    buy_val = clean_numeric(row.get('Buy Value'))
-                    profit = clean_numeric(row.get('Profit'))
-                    entry_date = row.get('Entry Date')
-                    exit_date = row.get('Exit Date')
-                    
-                    # Basic validation
-                    if symbol and qty and profit:
-                        # Get Instrument (must be verified)
+                if is_trade_format:
+                    # Logic for TRADE format: Symbol, Trade Date, Trade Type, Quantity, Price
+                    # We process these sequentially to build/reduce portfolio and calculate PnL
+                    for _, row in df.iterrows():
+                        symbol = str(row.get('Symbol')).strip().upper()
+                        trade_date = row.get('Trade Date')
+                        trade_type = str(row.get('Trade Type')).strip().upper()
+                        qty = clean_numeric(row.get('Quantity'), to_int=True)
+                        price = clean_numeric(row.get('Price'))
+                        
+                        if not (symbol and trade_date and trade_type and qty and price):
+                            continue
+                            
                         from core.utils import resolve_instrument
-                        inst = resolve_instrument(symbol.strip())
+                        inst = resolve_instrument(symbol)
                         if not inst:
                             messages.warning(request, f"Skipped '{symbol}': Not in verified database.")
                             continue
-                        
-                        # Duplicate prevention: Symbol + Quantity + Sell Value
-                        exists = PnLStatement.objects.filter(
-                            user=target_user,
-                            instrument=inst,
-                            quantity=qty,
-                            sell_value=sell_val
+                            
+                        # Date Parsing
+                        try:
+                            dt = pd.to_datetime(trade_date).date()
+                        except:
+                            continue
+                            
+                        # Duplicate prevention
+                        exists = Transaction.objects.filter(
+                            user=target_user, instrument=inst, transaction_type=trade_type,
+                            quantity=qty, price=price, date=dt
                         ).exists()
-                        
-                        if not exists:
-                            PnLStatement.objects.create(
-                                user=target_user,
-                                instrument=inst,
-                                quantity=qty,
-                                buy_value=buy_val or 0,
-                                sell_value=sell_val or 0,
-                                realized_profit=profit,
-                                entry_date=pd.to_datetime(entry_date).date() if entry_date and str(entry_date).lower() != 'nan' else None,
-                                exit_date=pd.to_datetime(exit_date).date() if exit_date and str(exit_date).lower() != 'nan' else None
+                        if exists:
+                            continue
+                            
+                        if trade_type == 'BUY':
+                            # Record Buy Transaction
+                            Transaction.objects.create(
+                                user=target_user, instrument=inst, transaction_type='BUY',
+                                quantity=qty, remaining_quantity=qty, price=price, date=dt
                             )
+                            # Update Portfolio
+                            p_item, _ = Portfolio.objects.get_or_create(
+                                user=target_user, instrument=inst,
+                                defaults={'quantity': 0, 'avg_cost': 0, 'ltp': 0}
+                            )
+                            new_total_qty = p_item.quantity + qty
+                            new_total_cost = (Decimal(str(p_item.quantity)) * Decimal(str(p_item.avg_cost))) + (Decimal(str(qty)) * Decimal(str(price)))
+                            p_item.quantity = new_total_qty
+                            p_item.avg_cost = new_total_cost / Decimal(str(new_total_qty)) if new_total_qty > 0 else 0
+                            p_item.save()
                             count += 1
-                messages.success(request, f"{count} P&L records uploaded for {target_user.username if is_family_view else 'account'}.")
+                            
+                        elif trade_type == 'SELL':
+                            # Record Sell Transaction and Calculate PnL via FIFO
+                            buy_lots = Transaction.objects.filter(
+                                user=target_user, instrument=inst, transaction_type='BUY', remaining_quantity__gt=0
+                            ).order_by('date', 'created_at')
+                            
+                            rem_to_sell = qty
+                            total_buy_val = Decimal('0')
+                            earliest_buy_date = None
+                            
+                            for lot in buy_lots:
+                                if rem_to_sell <= 0: break
+                                
+                                consume = min(lot.remaining_quantity, rem_to_sell)
+                                total_buy_val += consume * lot.price
+                                if earliest_buy_date is None: earliest_buy_date = lot.date
+                                
+                                lot.remaining_quantity -= consume
+                                lot.save()
+                                rem_to_sell -= consume
+                            
+                            sell_val = Decimal(str(qty)) * Decimal(str(price))
+                            profit = sell_val - total_buy_val
+                            
+                            # Create PnL Entry
+                            PnLStatement.objects.create(
+                                user=target_user, instrument=inst,
+                                quantity=qty, buy_value=total_buy_val, sell_value=sell_val,
+                                realized_profit=profit, entry_date=earliest_buy_date, exit_date=dt
+                            )
+                            
+                            # Create Transaction
+                            Transaction.objects.create(
+                                user=target_user, instrument=inst, transaction_type='SELL',
+                                quantity=qty, price=price, date=dt
+                            )
+                            
+                            # Update Portfolio
+                            p_item = Portfolio.objects.filter(user=target_user, instrument=inst).first()
+                            if p_item:
+                                p_item.quantity = max(0, p_item.quantity - qty)
+                                if p_item.quantity == 0:
+                                    p_item.delete()
+                                else:
+                                    # Recalculate avg cost based on remaining lots
+                                    rem_lots = Transaction.objects.filter(
+                                        user=target_user, instrument=inst, transaction_type='BUY', remaining_quantity__gt=0
+                                    )
+                                    rem_qty = sum(l.remaining_quantity for l in rem_lots)
+                                    rem_cost = sum(l.remaining_quantity * l.price for l in rem_lots)
+                                    p_item.avg_cost = rem_cost / rem_qty if rem_qty > 0 else 0
+                                    p_item.save()
+                            count += 1
+                else:
+                    # Logic for RPNL format (Pre-calculated PnL records)
+                    for _, row in df.iterrows():
+                        symbol = row.get('Symbol')
+                        qty = clean_numeric(row.get('Quantity'), to_int=True)
+                        sell_val = clean_numeric(row.get('Sell Value'))
+                        buy_val = clean_numeric(row.get('Buy Value'))
+                        profit = clean_numeric(row.get('Profit'))
+                        entry_date = row.get('Entry Date')
+                        exit_date = row.get('Exit Date')
+                        
+                        if symbol and qty and profit:
+                            from core.utils import resolve_instrument
+                            inst = resolve_instrument(symbol.strip())
+                            if not inst:
+                                messages.warning(request, f"Skipped '{symbol}': Not in verified database.")
+                                continue
+                            
+                            exists = PnLStatement.objects.filter(
+                                user=target_user, instrument=inst, quantity=qty, sell_value=sell_val
+                            ).exists()
+                            
+                            if not exists:
+                                PnLStatement.objects.create(
+                                    user=target_user, instrument=inst, quantity=qty,
+                                    buy_value=buy_val or 0, sell_value=sell_val or 0, realized_profit=profit,
+                                    entry_date=pd.to_datetime(entry_date).date() if entry_date and str(entry_date).lower() != 'nan' else None,
+                                    exit_date=pd.to_datetime(exit_date).date() if exit_date and str(exit_date).lower() != 'nan' else None
+                                )
+                                count += 1
+                
+                messages.success(request, f"{count} records processed for {target_user.username if is_family_view else 'account'}.")
                 url = redirect('dashboard').url
                 if is_family_view:
                     url += f"?user_id={target_user.id}"
                 return redirect(url)
     else:
         form = UploadFileForm()
+    
+    # Determine which sample file to offer
+    sample_base_name = 'sample_pnl' if request.resolver_match.url_name == 'upload_pnl' else 'sample_rpnl'
+    sample_csv = f'samples/{sample_base_name}.csv'
+    sample_xlsx = f'samples/{sample_base_name}.xlsx'
+    
     return render(request, 'core/upload.html', {
         'form': form, 
-        'title': 'Upload P&L Statement',
+        'title': 'P&L' if url_name == 'upload_pnl' else 'Realized P&L',
         'is_family_view': is_family_view,
-        'target_user': target_user
+        'target_user': target_user,
+        'sample_csv': sample_csv,
+        'sample_xlsx': sample_xlsx
     })
 
 @csrf_exempt
@@ -2375,126 +2497,25 @@ def buy_stock(request):
 def sell_stock(request):
     if request.method == 'POST':
         target_user, is_family_view, is_consolidated = get_target_user(request)
-        symbol = request.POST.get('symbol').strip().upper()
-        quantity_to_sell = int(request.POST.get('quantity'))
-        price = Decimal(request.POST.get('price'))
+        symbol = request.POST.get('symbol', '').strip().upper()
+        quantity_to_sell = int(request.POST.get('quantity', 0))
+        price = Decimal(request.POST.get('price', '0'))
         exit_date_str = request.POST.get('exit_date')
-        exit_date = pd.to_datetime(exit_date_str).date() if exit_date_str else timezone.now().date()
         
-        inst = get_object_or_404(Instrument, symbol__iexact=symbol, is_verified=True)
-        portfolio = get_object_or_404(Portfolio, user=target_user, instrument=inst)
-        
-        if quantity_to_sell > portfolio.quantity:
-            messages.error(request, f"Insufficient quantity to sell. Target has {portfolio.quantity} units.")
-            return redirect('dashboard')
+        from .utils import execute_stock_sell
+        try:
+            inst = get_object_or_404(Instrument, symbol__iexact=symbol, is_verified=True)
+            profit, is_intraday = execute_stock_sell(target_user, inst, quantity_to_sell, price, exit_date_str)
             
-        # Unified Priority Logic: Intraday (Same Day) First, then FIFO (Older Lots)
-        total_buy_value = Decimal('0')
-        remaining_to_deduct = quantity_to_sell
-        first_entry_date = None
-        is_intraday = False
-
-        # 1. Gather all active BUYS for this instrument
-        all_buys = Transaction.objects.filter(
-            user=target_user,
-            instrument=inst,
-            transaction_type='BUY',
-            remaining_quantity__gt=0
-        ).order_by('date', 'created_at')
-
-        # 2. Prioritize Same-Day (Intraday) Lots
-        intraday_lots = [tx for tx in all_buys if tx.date == exit_date]
-        other_lots = [tx for tx in all_buys if tx.date != exit_date]
-
-        # Use Intraday lots first
-        for tx in intraday_lots:
-            if remaining_to_deduct <= 0:
-                break
-            is_intraday = True # Mark as intraday if we use any same-day lot
-            if first_entry_date is None:
-                first_entry_date = tx.date
+            messages.success(request, f"Sold {quantity_to_sell} units of {symbol} for {target_user.username if is_family_view else 'account'}. Profit: {profit}")
+        except Exception as e:
+            messages.error(request, str(e))
             
-            deduct = min(tx.remaining_quantity, remaining_to_deduct)
-            total_buy_value += Decimal(str(deduct)) * tx.price
-            tx.remaining_quantity -= deduct
-            tx.save()
-            remaining_to_deduct -= deduct
-
-        # 3. Use other lots (FIFO) if still needed
-        for tx in other_lots:
-            if remaining_to_deduct <= 0:
-                break
-            if first_entry_date is None:
-                first_entry_date = tx.date
-            
-            deduct = min(tx.remaining_quantity, remaining_to_deduct)
-            total_buy_value += Decimal(str(deduct)) * tx.price
-            tx.remaining_quantity -= deduct
-            tx.save()
-            remaining_to_deduct -= deduct
-            
-        # Calculate Brokerage for SELL
-        profile, _ = Profile.objects.get_or_create(user=target_user)
-        if is_intraday:
-            fixed_charge = profile.intraday_fixed_charge or Decimal('0')
-            pct_charge = profile.intraday_brokerage_pct or Decimal('0')
-        else:
-            fixed_charge = profile.equity_fixed_charge or Decimal('0')
-            pct_charge = profile.equity_brokerage_pct or Decimal('0')
-            
-        sell_brokerage = Decimal(str(fixed_charge)) + (price * Decimal(str(quantity_to_sell)) * Decimal(str(pct_charge)) / 100)
-        sell_value_gross = Decimal(str(quantity_to_sell)) * price
-        sell_value_net = sell_value_gross - sell_brokerage
-        
-        profit = sell_value_net - total_buy_value
-        
-        # Record Sell Transaction
-        Transaction.objects.create(
-            user=target_user,
-            instrument=inst,
-            transaction_type='SELL',
-            quantity=quantity_to_sell,
-            price=price,
-            date=exit_date
-        )
-        
-        # Record in PnLStatement
-        PnLStatement.objects.create(
-            user=target_user,
-            instrument=inst,
-            entry_date=first_entry_date,
-            quantity=quantity_to_sell,
-            buy_value=total_buy_value,
-            sell_value=sell_value_net,
-            realized_profit=profit,
-            exit_date=exit_date
-        )
-        
-        # Update Portfolio
-        portfolio.quantity -= quantity_to_sell
-        if portfolio.quantity <= 0:
-            portfolio.delete()
-        else:
-            # Recalculate average cost based on remaining lots
-            remaining_lots = Transaction.objects.filter(
-                user=target_user,
-                instrument=inst,
-                transaction_type='BUY',
-                remaining_quantity__gt=0
-            )
-            if remaining_lots.exists():
-                total_qty = sum(l.remaining_quantity for l in remaining_lots)
-                total_cost = sum(Decimal(str(l.remaining_quantity)) * l.price for l in remaining_lots)
-                portfolio.avg_cost = total_cost / Decimal(str(total_qty))
-            
-            # Save the updated quantity and (potentially) avg_cost
-            portfolio.save()
-            
-        messages.success(request, f"Sold {quantity_to_sell} units of {symbol} for {target_user.username if is_family_view else 'account'}. Profit: {profit}")
         url = redirect('dashboard').url
         if is_family_view:
             url += f"?user_id={target_user.id}"
         return redirect(url)
+    return redirect('dashboard')
 def get_current_financial_year():
     now = timezone.now().date()
     # Standard Indian Financial Year starts April 1.

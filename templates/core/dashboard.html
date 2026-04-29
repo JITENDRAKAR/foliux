@@ -209,7 +209,7 @@
         <div class="card shadow-sm">
             <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center border-bottom">
                 <div>
-                    <h5 class="mb-0 fw-bold">Upload portfolio and P&L
+                    <h5 class="mb-0 fw-bold">Upload P&L and Portfolio
                         {% if current_strategy %}
                         <span class="badge bg-primary ms-2" style="font-size: 0.8rem; vertical-align: middle;">
                             {% if current_strategy == 'flexi' %}FlexiMultiInvest
@@ -248,31 +248,35 @@
                 </div>
             </div>
             <div class="card-body">
-                <div class="d-flex flex-wrap gap-2 mb-4">
-                    {% if not is_consolidated %}
-                    <!-- Combined Upload Dropdown -->
+                <div class="d-flex flex-wrap gap-3 mb-4 align-items-center">
+                    <!-- 1. Add New Asset -->
                     <div class="dropdown">
-                        <button class="btn btn-primary btn-sm rounded-pill px-3 py-1 dropdown-toggle shadow-sm" type="button" data-bs-toggle="dropdown">
-                            <i class="fas fa-cloud-upload-alt me-1"></i>Upload
+                        <button class="btn btn-dark btn-sm rounded-pill px-3 py-1 fw-bold shadow-sm" type="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-plus-circle me-1 text-warning"></i>Add New Asset
                         </button>
-                        <ul class="dropdown-menu shadow border-0 rounded-3">
-                            <li><a class="dropdown-item py-2" href="{% url 'upload_portfolio' %}{% if is_family_view %}?user_id={{ target_user.id }}{% endif %}">
-                                <i class="fas fa-list-alt me-2 text-primary"></i>Add Folio CSV</a>
-                            </li>
-                            <li><a class="dropdown-item py-2" href="{% url 'upload_pnl' %}{% if is_family_view %}?user_id={{ target_user.id }}{% endif %}">
-                                <i class="fas fa-file-invoice-dollar me-2 text-success"></i>Upload P&L Statement</a>
-                            </li>
+                        <ul class="dropdown-menu shadow-lg border-0 rounded-3 p-2" style="min-width: 200px;">
+                            <li class="dropdown-header text-uppercase small fw-bold text-primary">Financial Assets</li>
+                            <li><a class="dropdown-item py-2 rounded-2" href="{% url 'add_portfolio_item' %}{% if is_family_view %}?user_id={{ target_user.id }}{% endif %}"><i class="fas fa-chart-line me-2 text-primary"></i>Stock / ETF</a></li>
+                            <li><a class="dropdown-item py-2 rounded-2" href="{% url 'mf_dashboard' %}{% if is_family_view %}?user_id={{ target_user.id }}{% endif %}"><i class="fas fa-piggy-bank me-2 text-success"></i>Mutual Fund</a></li>
+                            <li><a class="dropdown-item py-2 rounded-2" href="{% url 'add_nps' %}{% if is_family_view %}?user_id={{ target_user.id }}{% endif %}"><i class="fas fa-university me-2 text-warning"></i>NPS Retirement</a></li>
+                            <li><a class="dropdown-item py-2 rounded-2" href="{% url 'add_fd' %}{% if is_family_view %}?user_id={{ target_user.id }}{% endif %}"><i class="fas fa-file-invoice-dollar me-2 text-info"></i>FD / RD / PPF</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li class="dropdown-header text-uppercase small fw-bold text-danger">Real Assets & Others</li>
+                            <li><a class="dropdown-item py-2 rounded-2" href="{% url 'add_other_asset' %}{% if is_family_view %}?user_id={{ target_user.id }}{% endif %}"><i class="fas fa-home me-2 text-danger"></i>Plot / Flat / Gold</a></li>
+                            <li><a class="dropdown-item py-2 rounded-2" href="{% url 'add_coin' %}{% if is_family_view %}?user_id={{ target_user.id }}{% endif %}"><i class="fab fa-bitcoin me-2 text-warning"></i>Crypto / Coin</a></li>
+                            <li><a class="dropdown-item py-2 rounded-2" href="{% url 'add_loan' %}{% if is_family_view %}?user_id={{ target_user.id }}{% endif %}"><i class="fas fa-hand-holding-usd me-2 text-secondary"></i>Loans / Liabilities</a></li>
                         </ul>
                     </div>
 
-                    <!-- 2. Sell Asset Dropdown -->
+                    {% if not is_consolidated %}
+                    <!-- 2. Sell Assets -->
                     <div class="dropdown">
                         <button class="btn btn-outline-danger btn-sm rounded-pill px-3 py-1 dropdown-toggle shadow-sm" type="button" data-bs-toggle="dropdown">
-                            <i class="fas fa-minus-circle me-1"></i>Sell Asset
+                            <i class="fas fa-minus-circle me-1"></i>Sell Assets
                         </button>
                         <ul class="dropdown-menu shadow border-0 rounded-3 p-2">
                             <li class="dropdown-header text-uppercase small fw-bold text-danger">Exit Positions</li>
-                            <li><a class="dropdown-item py-2 rounded-2" href="#portfolio-table">
+                            <li><a class="dropdown-item py-2 rounded-2" href="{% url 'sell_portfolio_item' %}{% if is_family_view %}?user_id={{ target_user.id }}{% endif %}">
                                 <i class="fas fa-chart-line me-2 text-danger"></i>Stock / ETF</a>
                             </li>
                             <li><a class="dropdown-item py-2 rounded-2" href="{% url 'mf_dashboard' %}{% if is_family_view %}?user_id={{ target_user.id }}{% endif %}">
@@ -288,38 +292,12 @@
                     </div>
                     {% endif %}
 
-                    <!-- 4. History -->
+                    <!-- 3. History -->
                     <a href="{% url 'transaction_history' %}{% if is_family_view %}?user_id={{ target_user.id }}{% elif is_consolidated %}?user_id=consolidated{% endif %}" class="btn btn-outline-primary btn-sm rounded-pill px-3 py-1">
                         <i class="fas fa-history me-1"></i>History
                     </a>
 
-                    <!-- 5. Samples Dropdown -->
-                    <div class="dropdown">
-                        <button class="btn btn-light btn-sm rounded-pill border dropdown-toggle px-3 py-1" type="button" data-bs-toggle="dropdown">
-                            <i class="fas fa-download me-1"></i>Samples
-                        </button>
-                        <ul class="dropdown-menu shadow border-0">
-                            <li class="dropdown-header">Templates</li>
-                            <li><a class="dropdown-item py-2" href="{% static 'samples/sample_portfolio.csv' %}" download>Folio CSV</a></li>
-                            <li><a class="dropdown-item py-2" href="{% static 'samples/sample_pnl.csv' %}" download>P&L CSV</a></li>
-                        </ul>
-                    </div>
-
-                    <!-- 6. Signals Dropdown -->
-                    <div class="dropup">
-                        <button class="btn btn-outline-warning btn-sm rounded-pill border-warning dropdown-toggle px-3 py-1 fw-bold" type="button" data-bs-toggle="dropdown">
-                            <i class="fas fa-bell me-1"></i>Signals
-                        </button>
-                        <ul class="dropdown-menu shadow border-0 signals-dropdown-menu">
-                            <li><button class="dropdown-item" onclick="filterPortfolio('SELL');"><i class="fas fa-arrow-trend-up text-danger me-2"></i><span class="text-danger small fw-bold">SELL</span> ({{ sell_recommendations|length }})</button></li>
-                            <li><button class="dropdown-item" onclick="filterPortfolio('BUY');"><i class="fas fa-cart-plus text-success me-2"></i><span class="text-success small fw-bold">BUY</span> ({{ buy_recommendations|length }})</button></li>
-                            <li><button class="dropdown-item" onclick="filterPortfolio('REDUCE');"><i class="fas fa-arrow-trend-down text-warning me-2"></i><span class="text-warning small fw-bold">REDUCE</span> ({{ reduce_sigs|length }})</button></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><button class="dropdown-item" onclick="filterPortfolio('ALL');"><i class="fas fa-list me-2"></i>All Folio</button></li>
-                        </ul>
-                    </div>
-
-                    <!-- 7. Export Dropdown -->
+                    <!-- 4. Export -->
                     <div class="dropdown">
                         <button class="btn btn-light btn-sm rounded-pill border dropdown-toggle px-3 py-1" type="button" data-bs-toggle="dropdown">
                             <i class="fas fa-file-export me-1"></i>Export
@@ -329,27 +307,42 @@
                         </ul>
                     </div>
 
-                    <!-- 8. Watchlist -->
+                    <!-- 5. Watchlist -->
                     <a href="{% url 'watchlist' %}{% if is_family_view %}?user_id={{ target_user.id }}{% endif %}" class="btn btn-outline-info btn-sm rounded-pill border-info px-3 py-1">
                         <i class="fas fa-eye me-1 text-primary"></i>Watchlist
                     </a>
 
-                    <!-- 9. Portfolio Hub (Quick Add) -->
-                    <div class="dropdown ms-auto">
-                        <button class="btn btn-dark btn-sm rounded-pill px-3 py-1 fw-bold shadow-sm" type="button" data-bs-toggle="dropdown">
-                            <i class="fas fa-plus-circle me-1 text-warning"></i>Add New Asset
+                    {% if not is_consolidated %}
+                    <!-- 6. Upload -->
+                    <div class="dropdown">
+                        <button class="btn btn-primary btn-sm rounded-pill px-3 py-1 dropdown-toggle shadow-sm" type="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-cloud-upload-alt me-1"></i>Upload
                         </button>
-                        <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 rounded-3 p-2" style="min-width: 200px;">
-                            <li class="dropdown-header text-uppercase small fw-bold text-primary">Financial Assets</li>
-                            <li><a class="dropdown-item py-2 rounded-2" href="{% url 'add_portfolio_item' %}{% if is_family_view %}?user_id={{ target_user.id }}{% endif %}"><i class="fas fa-chart-line me-2 text-primary"></i>Stock / ETF</a></li>
-                            <li><a class="dropdown-item py-2 rounded-2" href="{% url 'mf_dashboard' %}{% if is_family_view %}?user_id={{ target_user.id }}{% endif %}"><i class="fas fa-piggy-bank me-2 text-success"></i>Mutual Fund</a></li>
-                            <li><a class="dropdown-item py-2 rounded-2" href="{% url 'add_nps' %}{% if is_family_view %}?user_id={{ target_user.id }}{% endif %}"><i class="fas fa-university me-2 text-warning"></i>NPS Retirement</a></li>
-                            <li><a class="dropdown-item py-2 rounded-2" href="{% url 'add_fd' %}{% if is_family_view %}?user_id={{ target_user.id }}{% endif %}"><i class="fas fa-file-invoice-dollar me-2 text-info"></i>FD / RD / PPF</a></li>
+                        <ul class="dropdown-menu shadow border-0 rounded-3">
+                            <li><a class="dropdown-item py-2" href="{% url 'upload_pnl' %}{% if is_family_view %}?user_id={{ target_user.id }}{% endif %}">
+                                <i class="fas fa-chart-line me-2 text-info"></i>P&L</a>
+                            </li>
+                            <li><a class="dropdown-item py-2" href="{% url 'upload_portfolio' %}{% if is_family_view %}?user_id={{ target_user.id }}{% endif %}">
+                                <i class="fas fa-list-alt me-2 text-primary"></i>Portfolio</a>
+                            </li>
+                            <li><a class="dropdown-item py-2" href="{% url 'upload_rpnl' %}{% if is_family_view %}?user_id={{ target_user.id }}{% endif %}">
+                                <i class="fas fa-file-invoice-dollar me-2 text-success"></i>Realized P&L</a>
+                            </li>
+                        </ul>
+                    </div>
+                    {% endif %}
+
+                    <!-- 7. Signal -->
+                    <div class="dropdown">
+                        <button class="btn btn-outline-warning btn-sm rounded-pill border-warning dropdown-toggle px-3 py-1 fw-bold" type="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-bell me-1"></i>Signal
+                        </button>
+                        <ul class="dropdown-menu shadow border-0 signals-dropdown-menu">
+                            <li><button class="dropdown-item" onclick="filterPortfolio('SELL');"><i class="fas fa-arrow-trend-up text-danger me-2"></i><span class="text-danger small fw-bold">SELL</span> ({{ sell_recommendations|length }})</button></li>
+                            <li><button class="dropdown-item" onclick="filterPortfolio('BUY');"><i class="fas fa-cart-plus text-success me-2"></i><span class="text-success small fw-bold">BUY</span> ({{ buy_recommendations|length }})</button></li>
+                            <li><button class="dropdown-item" onclick="filterPortfolio('REDUCE');"><i class="fas fa-arrow-trend-down text-warning me-2"></i><span class="text-warning small fw-bold">REDUCE</span> ({{ reduce_sigs|length }})</button></li>
                             <li><hr class="dropdown-divider"></li>
-                            <li class="dropdown-header text-uppercase small fw-bold text-danger">Real Assets & Others</li>
-                            <li><a class="dropdown-item py-2 rounded-2" href="{% url 'add_other_asset' %}{% if is_family_view %}?user_id={{ target_user.id }}{% endif %}"><i class="fas fa-home me-2 text-danger"></i>Plot / Flat / Gold</a></li>
-                            <li><a class="dropdown-item py-2 rounded-2" href="{% url 'add_coin' %}{% if is_family_view %}?user_id={{ target_user.id }}{% endif %}"><i class="fab fa-bitcoin me-2 text-warning"></i>Crypto / Coin</a></li>
-                            <li><a class="dropdown-item py-2 rounded-2" href="{% url 'add_loan' %}{% if is_family_view %}?user_id={{ target_user.id }}{% endif %}"><i class="fas fa-hand-holding-usd me-2 text-secondary"></i>Loans / Liabilities</a></li>
+                            <li><button class="dropdown-item" onclick="filterPortfolio('ALL');"><i class="fas fa-list me-2"></i>All Folio</button></li>
                         </ul>
                     </div>
                 </div>
