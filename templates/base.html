@@ -228,7 +228,7 @@
     <a class="nav-link" href="{% url 'strategy' %}{% if is_family_view %}?user_id={{ target_user.id }}{% elif is_consolidated %}?user_id=consolidated{% endif %}">Strategy</a>
 </li>
 <li class="nav-item">
-    <a class="nav-link nav-item-dashboard" href="{% url 'dashboard' %}{% if is_family_view %}?user_id={{ target_user.id }}{% elif is_consolidated %}?user_id=consolidated{% endif %}">Stock Etf</a>
+    <a class="nav-link nav-item-dashboard" href="{% url 'dashboard' %}{% if is_family_view %}?user_id={{ target_user.id }}{% elif is_consolidated %}?user_id=consolidated{% endif %}">StockETF</a>
 </li>
 <li class="nav-item">
     <a class="nav-link" href="{% url 'mf_dashboard' %}{% if is_family_view %}?user_id={{ target_user.id }}{% elif is_consolidated %}?user_id=consolidated{% endif %}">MF</a>

@@ -1172,6 +1172,9 @@ def execute_stock_sell(user, instrument, quantity_to_sell, price, exit_date=None
     elif isinstance(exit_date, str):
         exit_date = pd.to_datetime(exit_date).date()
         
+    if exit_date > timezone.now().date():
+        raise ValidationError("Exit date cannot be in the future.")
+        
     portfolio = Portfolio.objects.filter(user=user, instrument_id=instrument.id).first()
     if not portfolio or quantity_to_sell > portfolio.quantity:
         available = portfolio.quantity if portfolio else 0

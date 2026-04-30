@@ -863,6 +863,9 @@ def sell_mf_portfolio(request, pk):
             sell_price = Decimal(request.POST.get('price', '0'))
             sell_date_str = request.POST.get('date')
             sell_date = pd.to_datetime(sell_date_str).date() if sell_date_str else timezone.now().date()
+            if sell_date > timezone.now().date():
+                messages.error(request, "Date cannot be in the future.")
+                return redirect('mf_dashboard')
         except (ValueError, TypeError, InvalidOperation):
             messages.error(request, "Invalid numeric values provided.")
             return redirect('mf_dashboard')
@@ -1174,6 +1177,9 @@ def sell_coin(request, pk):
             sell_price = Decimal(request.POST.get('price', '0'))
             sell_date_str = request.POST.get('date')
             sell_date = pd.to_datetime(sell_date_str).date() if sell_date_str else timezone.now().date()
+            if sell_date > timezone.now().date():
+                messages.error(request, "Date cannot be in the future.")
+                return redirect('coin_dashboard')
         except (ValueError, TypeError, InvalidOperation):
             messages.error(request, "Invalid numeric values provided.")
             return redirect('coin_dashboard')
@@ -2436,6 +2442,9 @@ def buy_stock(request):
         notes = request.POST.get('notes', '').strip()
         
         transaction_date = pd.to_datetime(date_str).date() if date_str else timezone.now().date()
+        if transaction_date > timezone.now().date():
+            messages.error(request, "Date cannot be in the future.")
+            return redirect('dashboard')
         
         try:
             inst = Instrument.objects.get(symbol__iexact=symbol, is_verified=True)
@@ -3620,6 +3629,9 @@ def add_nps(request):
         avg_nav = Decimal(request.POST.get('avg_nav', '0'))
         date_str = request.POST.get('date')
         transaction_date = pd.to_datetime(date_str).date() if date_str else timezone.now().date()
+        if transaction_date > timezone.now().date():
+            messages.error(request, "Date cannot be in the future.")
+            return redirect('nps_dashboard')
         fund, _ = NPSFund.objects.get_or_create(name=fund_name)
         NPSTransaction.objects.create(
             user=target_user, fund=fund, transaction_type='BUY',
@@ -3654,6 +3666,9 @@ def sell_nps(request, pk):
         sell_price = Decimal(request.POST.get('price', '0'))
         date_str = request.POST.get('date')
         sell_date = pd.to_datetime(date_str).date() if date_str else timezone.now().date()
+        if sell_date > timezone.now().date():
+            messages.error(request, "Date cannot be in the future.")
+            return redirect('nps_dashboard')
         if units_to_sell > holding.units:
             messages.error(request, f"Insufficient units.")
             return redirect('nps_dashboard')
@@ -3823,6 +3838,9 @@ def add_fd(request):
             invested_amount = Decimal(request.POST.get('invested_amount', '0'))
             interest_rate = Decimal(request.POST.get('interest_rate', '0'))
             investment_date = pd.to_datetime(investment_date_str).date() if investment_date_str else timezone.now().date()
+            if investment_date > timezone.now().date():
+                messages.error(request, "Investment date cannot be in the future.")
+                return redirect('add_fd')
             maturity_date = pd.to_datetime(maturity_date_str).date() if maturity_date_str else None
         except (ValueError, TypeError, InvalidOperation):
             messages.error(request, "Invalid numeric or date values provided.")
@@ -3935,6 +3953,9 @@ def add_other_asset(request):
             current_value = Decimal(request.POST.get('current_value', '0'))
             monthly_rent = Decimal(request.POST.get('monthly_rent', '0'))
             purchase_date = pd.to_datetime(purchase_date_str).date() if purchase_date_str else timezone.now().date()
+            if purchase_date > timezone.now().date():
+                messages.error(request, "Purchase date cannot be in the future.")
+                return redirect('add_other_asset')
             holder_name = request.POST.get('holder_name', '').strip()
             asset_id = request.POST.get('asset_id', '').strip()
         except (ValueError, TypeError, InvalidOperation):
@@ -3976,7 +3997,11 @@ def edit_other_asset(request, pk):
             asset.current_value = Decimal(request.POST.get('current_value', str(asset.current_value)))
             asset.monthly_rent = Decimal(request.POST.get('monthly_rent', str(asset.monthly_rent)))
             if purchase_date_str:
-                asset.purchase_date = pd.to_datetime(purchase_date_str).date()
+                potential_date = pd.to_datetime(purchase_date_str).date()
+                if potential_date > timezone.now().date():
+                    messages.error(request, "Purchase date cannot be in the future.")
+                    return redirect('edit_other_asset', pk=pk)
+                asset.purchase_date = potential_date
             asset.holder_name = request.POST.get('holder_name', '').strip()
             asset.asset_id = request.POST.get('asset_id', '').strip()
         except (ValueError, TypeError, InvalidOperation):

@@ -149,6 +149,18 @@ class ManualPortfolioForm(forms.Form):
         help_text='Visible on hover in portfolio view'
     )
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        from django.utils import timezone
+        self.fields['date'].widget.attrs['max'] = timezone.now().date().isoformat()
+
+    def clean_date(self):
+        date = self.cleaned_data.get('date')
+        from django.utils import timezone
+        if date and date > timezone.now().date():
+            raise forms.ValidationError("Date cannot be in the future.")
+        return date
+
 class ManualSellForm(forms.Form):
     company_name = forms.CharField(
         label='COMPANY NAME',
@@ -188,6 +200,18 @@ class ManualSellForm(forms.Form):
         widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'placeholder': 'Why are you selling?'}),
     )
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        from django.utils import timezone
+        self.fields['date'].widget.attrs['max'] = timezone.now().date().isoformat()
+
+    def clean_date(self):
+        date = self.cleaned_data.get('date')
+        from django.utils import timezone
+        if date and date > timezone.now().date():
+            raise forms.ValidationError("Date cannot be in the future.")
+        return date
+
 class EditLotForm(forms.Form):
     quantity = forms.IntegerField(
         widget=forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Quantity'})
@@ -200,6 +224,18 @@ class EditLotForm(forms.Form):
     date = forms.DateField(
         widget=forms.DateInput(attrs={'class': 'form-control', 'type': 'date'})
     )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        from django.utils import timezone
+        self.fields['date'].widget.attrs['max'] = timezone.now().date().isoformat()
+
+    def clean_date(self):
+        date = self.cleaned_data.get('date')
+        from django.utils import timezone
+        if date and date > timezone.now().date():
+            raise forms.ValidationError("Date cannot be in the future.")
+        return date
 
 class ForgotPasswordForm(forms.Form):
     email = forms.EmailField(
