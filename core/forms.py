@@ -4,7 +4,7 @@ from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.contrib.auth.models import User
 
 class CustomUserCreationForm(UserCreationForm):
-    full_name = forms.CharField(max_length=100, required=True, label='Name')
+    full_name = forms.CharField(max_length=100, required=True, label='Name / Nick Name')
     email = forms.EmailField(required=True, label='Email ID')
     mobile_number = forms.CharField(max_length=15, required=True, label='Mobile Number')
 
@@ -56,7 +56,7 @@ class ProfileForm(forms.ModelForm):
             'financial_goal'
         ]
         labels = {
-            'full_name': 'Full Name',
+            'full_name': 'Name / Nick Name',
             'profile_picture': 'Profile Photo',
             'mobile_number': 'Mobile Number',
             'date_of_birth': 'Date of Birth',
@@ -75,7 +75,7 @@ class ProfileForm(forms.ModelForm):
             'financial_goal': 'Financial Goal',
         }
         widgets = {
-            'full_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Enter your full name'}),
+            'full_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'First name or nick name'}),
             'profile_picture': forms.ClearableFileInput(attrs={'class': 'form-control'}),
             'mobile_number': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Enter mobile number'}),
             'date_of_birth': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
