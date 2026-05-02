@@ -9,7 +9,7 @@ LIVE_DIR="/home/foliux"
 GIT_DIR="/home/foliux_git"
 VENV_PATH="$LIVE_DIR/venv"
 SERVICE_NAME="foliux"
-REPO_URL="https://github.com/JITENDRAKAR/foliux.git"
+REPO_URL="https://JITENDRAKAR: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@github.com/JITENDRAKAR/foliux.git"
 
 # Colors for output
 GREEN='\033[0;32m'
@@ -44,6 +44,9 @@ fi
 
 cd $GIT_DIR || exit 1
 OLD_VERSION=$(git rev-parse HEAD)
+
+# Ensure the remote URL uses the token for authentication
+git remote set-url origin $REPO_URL
 
 # Pull latest changes
 echo -e "${YELLOW}Pulling latest changes from GitHub...${NC}"
