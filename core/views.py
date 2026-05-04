@@ -302,7 +302,14 @@ def google_one_tap_login(request):
         if not request.POST.get('remember') == 'false':
             request.session.set_expiry(settings.SESSION_COOKIE_AGE)
 
-        return JsonResponse({'status': 'success', 'redirect_url': settings.LOGIN_REDIRECT_URL})
+        # Resolve redirect URL
+        from django.urls import reverse
+        try:
+            redirect_url = reverse(settings.LOGIN_REDIRECT_URL)
+        except:
+            redirect_url = '/'
+            
+        return JsonResponse({'status': 'success', 'redirect_url': redirect_url})
 
     except Exception as e:
         logger.error(f"Google One Tap Login Error: {e}")
