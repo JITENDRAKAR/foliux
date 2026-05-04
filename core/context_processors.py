@@ -142,3 +142,12 @@ def ipo_info(request):
     return {
         'active_ipo_count': active_ipo_count
     }
+
+def google_settings(request):
+    """
+    Context processor to provide Google Client ID to templates.
+    """
+    from django.conf import settings
+    return {
+        'GOOGLE_CLIENT_ID': getattr(settings, 'GOOGLE_CLIENT_ID', '')
+    }

@@ -222,6 +222,92 @@ def reset_password(request):
         form = SetPasswordForm()
     return render(request, 'registration/reset_password.html', {'form': form})
 
+@csrf_exempt
+def google_one_tap_login(request):
+    """
+    Backend handler for Google One Tap login.
+    Verifies the JWT token and authenticates/creates the user.
+    """
+    if request.method != 'POST':
+        return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=405)
+
+    credential = request.POST.get('credential')
+    if not credential:
+        return JsonResponse({'status': 'error', 'message': 'No credential provided'}, status=400)
+
+    try:
+        # Verify the token with Google's tokeninfo service
+        # Alternatively, use google-auth library if available: id_token.verify_oauth2_token
+        response = requests.get(f'https://oauth2.googleapis.com/tokeninfo?id_token={credential}', timeout=10)
+        
+        if response.status_code != 200:
+            return JsonResponse({'status': 'error', 'message': 'Invalid token'}, status=400)
+
+        id_info = response.json()
+
+        # Check AUD (Google Client ID)
+        if id_info.get('aud') != settings.GOOGLE_CLIENT_ID:
+            return JsonResponse({'status': 'error', 'message': 'Invalid audience'}, status=400)
+
+        email = id_info.get('email')
+        first_name = id_info.get('given_name', '')
+        last_name = id_info.get('family_name', '')
+        
+        if not email:
+            return JsonResponse({'status': 'error', 'message': 'Email not provided by Google'}, status=400)
+
+        # Get or Create User
+        user = User.objects.filter(email__iexact=email).first()
+        if not user:
+            # Create user if it doesn't exist
+            username = email.split('@')[0]
+            # Handle username collisions
+            base_username = username
+            counter = 1
+            while User.objects.filter(username=username).exists():
+                username = f"{base_username}{counter}"
+                counter += 1
+            
+            user = User.objects.create_user(
+                username=username,
+                email=email,
+                first_name=first_name,
+                last_name=last_name
+            )
+            # Create profile if needed (assuming Profile is created via signals, 
+            # but some systems might need manual creation if signals are not set up)
+            if not hasattr(user, 'profile'):
+                Profile.objects.create(user=user)
+        
+        # Link social account if using django-allauth
+        try:
+            from allauth.socialaccount.models import SocialAccount, SocialApp
+            from allauth.socialaccount.providers.google.provider import GoogleProvider
+            
+            social_app = SocialApp.objects.filter(provider=GoogleProvider.id).first()
+            if social_app:
+                SocialAccount.objects.get_or_create(
+                    user=user,
+                    provider=GoogleProvider.id,
+                    uid=id_info.get('sub'),
+                    defaults={'extra_data': id_info}
+                )
+        except (ImportError, Exception) as e:
+            logger.warning(f"Failed to link social account: {e}")
+
+        # Login User
+        login(request, user, backend='django.contrib.auth.backends.ModelBackend')
+        
+        # Ensure session age is honored
+        if not request.POST.get('remember') == 'false':
+            request.session.set_expiry(settings.SESSION_COOKIE_AGE)
+
+        return JsonResponse({'status': 'success', 'redirect_url': settings.LOGIN_REDIRECT_URL})
+
+    except Exception as e:
+        logger.error(f"Google One Tap Login Error: {e}")
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
 class CustomPasswordChangeView(PasswordChangeView):
     def get_form_class(self):
         # Determine if the user needs to set a password (no usable password or social account)

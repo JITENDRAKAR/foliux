@@ -30,6 +30,7 @@ urlpatterns = [
     
     # Custom Login View
     path('accounts/login/', auth_views.LoginView.as_view(authentication_form=EmailOrMobileAuthenticationForm), name='login'),
+    path('accounts/google/one-tap/', views.google_one_tap_login, name='google_one_tap_login'),
     path('strategy/', views.strategy, name='strategy'),
     path('profile/edit/', views.edit_profile, name='edit_profile'),
     path('profile/link-family/', views.link_family_id, name='link_family_id'),

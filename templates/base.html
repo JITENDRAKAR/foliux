@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+{% load socialaccount %}
 
 <head>
   <meta charset="UTF-8">
@@ -15,6 +16,8 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
   <!-- Animate.css -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
+  <!-- Google Identity Services -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
   <!-- Favicon -->
   {% load static %}
   <link rel="icon" type="image/png" href="{% static 'images/favicon.png' %}">
@@ -277,7 +280,7 @@
     </li>
 {% else %}
     <li class="nav-item">
-        <a class="nav-link" href="{% url 'login' %}">Login</a>
+        <a class="nav-link" href="{% if GOOGLE_CLIENT_ID %}{% provider_login_url 'google' %}{% else %}{% url 'login' %}{% endif %}" id="nav-login-link">Login</a>
     </li>
     <li class="nav-item ms-lg-2">
         <a class="btn btn-light btn-sm px-4 rounded-pill fw-bold" href="{% url 'register' %}" style="color: var(--primary-color);">Sign Up</a>
@@ -608,6 +611,51 @@
   </script>
   {% block extra_js %}{% endblock %}
   {% include 'core/chatbot.html' %}
+
+  {% if not user.is_authenticated and GOOGLE_CLIENT_ID %}
+  <script>
+    function handleCredentialResponse(response) {
+      const formData = new FormData();
+      formData.append('credential', response.credential);
+      
+      fetch('{% url "google_one_tap_login" %}', {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'X-CSRFToken': '{{ csrf_token }}'
+        }
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.status === 'success') {
+          window.location.href = data.redirect_url;
+        } else {
+          console.error('Login failed:', data.message);
+        }
+      })
+      .catch(err => console.error('Error:', err));
+    }
+
+    window.addEventListener('load', function() {
+      google.accounts.id.initialize({
+        client_id: "{{ GOOGLE_CLIENT_ID }}",
+        callback: handleCredentialResponse,
+        auto_select: true,
+        cancel_on_tap_outside: false
+      });
+      google.accounts.id.prompt(); 
+    });
+
+    // Handle Navbar Login Click
+    document.getElementById('nav-login-link')?.addEventListener('click', function(e) {
+      // If we want to trigger Google flow immediately instead of showing login page
+      {% if GOOGLE_CLIENT_ID %}
+        // For now, let it go to the redesigned login page which prioritizes Google,
+        // or we could trigger google.accounts.id.prompt() again or redirect.
+      {% endif %}
+    });
+  </script>
+  {% endif %}
 </body>
 
 </html>
