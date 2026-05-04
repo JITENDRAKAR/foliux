@@ -921,10 +921,19 @@ def get_recommendations(user, is_consolidated=False):
             
             buy_gap_formula = (realized_profit * 0.93) + (initial_inv * factor_j * factor_i)
             
-            if -3000 <= buy_gap_formula <= 3000: action = "HOLD"
-            elif buy_gap_formula > 3000: action = "BUY"
-            elif buy_gap_formula < -3000: action = "REDUCE"
-            else: action = "HOLD"
+            if -3000 <= buy_gap_formula <= 3000:
+                action = "HOLD"
+                reason = f"TgtCap: {buy_gap_formula:.0f}"
+            elif buy_gap_formula > 3000:
+                action = "BUY"
+                reason = f"TgtCap: {buy_gap_formula:.0f}"
+            elif buy_gap_formula < -3000:
+                action = "REDUCE"
+                reason = f"TgtCap: {buy_gap_formula:.0f}"
+            else:
+                action = "HOLD"
+                reason = "Stable"
+
 
             buy_gap = buy_gap_formula if action == 'BUY' else 0
             reduce_gap = abs(buy_gap_formula) if action == 'REDUCE' else 0
@@ -948,6 +957,7 @@ def get_recommendations(user, is_consolidated=False):
                 'day_change': round(absolute_change, 2),
                 'day_change_pct': round(day_change_pct, 2),
                 'action': action,
+                'reason': reason,
                 'buy_gap': round(buy_gap, 2),
                 'reduce_gap': round(reduce_gap, 2),
                 'realized_profit': realized_profit,
@@ -979,10 +989,19 @@ def get_recommendations(user, is_consolidated=False):
             
             buy_gap_formula = initial_inv * factor_j * factor_i
             
-            if -3000 <= buy_gap_formula <= 3000: action = "HOLD"
-            elif buy_gap_formula > 3000: action = "BUY"
-            elif buy_gap_formula < -3000: action = "REDUCE"
-            else: action = "HOLD"
+            if -3000 <= buy_gap_formula <= 3000:
+                action = "HOLD"
+                reason = f"TgtCap: {buy_gap_formula:.0f}"
+            elif buy_gap_formula > 3000:
+                action = "BUY"
+                reason = f"TgtCap: {buy_gap_formula:.0f}"
+            elif buy_gap_formula < -3000:
+                action = "REDUCE"
+                reason = f"TgtCap: {buy_gap_formula:.0f}"
+            else:
+                action = "HOLD"
+                reason = "Stable"
+
 
             buy_gap = buy_gap_formula if action == 'BUY' else 0
             reduce_gap = abs(buy_gap_formula) if action == 'REDUCE' else 0
@@ -1007,6 +1026,7 @@ def get_recommendations(user, is_consolidated=False):
                 'day_change': round(absolute_change, 2),
                 'day_change_pct': round(day_change_pct, 2),
                 'action': action,
+                'reason': reason,
                 'buy_gap': round(buy_gap, 2),
                 'reduce_gap': round(reduce_gap, 2),
                 'realized_profit': 0,
