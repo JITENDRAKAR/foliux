@@ -82,30 +82,25 @@
 
                 {% load socialaccount %}
                 <!-- Social login buttons -->
+                {% if GOOGLE_CLIENT_ID %}
                 <div class="mb-4">
                     <a href="{% url 'google_login' %}" class="btn btn-white w-100 social-btn shadow-sm py-3 mb-3" style="border: 1px solid #dadce0; border-radius: 8px; font-weight: 600; color: #3c4043; transition: all 0.2s;">
-                        <img src="https://upload.wikimedia.org/wikipedia/commons/5/53/Google_%22G%22_Logo.svg" alt="Google" style="width: 20px; height: 20px; margin-right: 12px;">
+                        <i class="fab fa-google" style="color: #4285F4; font-size: 1.2rem; margin-right: 12px;"></i>
                         Sign in with Google
                     </a>
                     
                     <div class="d-flex gap-2">
                         <a href="javascript:void(0)" class="social-btn social-btn-disabled flex-grow-1" style="font-size: 0.8rem; padding: 0.4rem;" title="Microsoft Login - Coming Soon">
-                            <svg width="14" height="14" viewBox="0 0 21 21" class="me-1">
-                                <rect x="1" y="1" width="9" height="9" fill="#f25022" />
-                                <rect x="11" y="1" width="9" height="9" fill="#7fba00" />
-                                <rect x="1" y="11" width="9" height="9" fill="#00a4ef" />
-                                <rect x="11" y="11" width="9" height="9" fill="#ffb900" />
-                            </svg>
+                            <i class="fab fa-microsoft me-2" style="color: #00a4ef;"></i>
                             Microsoft
                         </a>
                         <a href="javascript:void(0)" class="social-btn social-btn-disabled flex-grow-1" style="font-size: 0.8rem; padding: 0.4rem;" title="Facebook Login - Coming Soon">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="#1877F2" class="me-1">
-                                <path d="M24 12.073C24 5.405 18.627 0 12 0S0 5.405 0 12.073C0 18.1 4.388 23.094 10.125 24v-8.437H7.078v-3.49h3.047V9.41c0-3.025 1.792-4.697 4.533-4.697 1.312 0 2.686.236 2.686.236v2.97h-1.513c-1.491 0-1.956.932-1.956 1.887v2.267h3.328l-.532 3.49h-2.796V24C19.612 23.094 24 18.1 24 12.073z" />
-                            </svg>
+                            <i class="fab fa-facebook me-2" style="color: #1877F2;"></i>
                             Facebook
                         </a>
                     </div>
                 </div>
+                {% endif %}
 
                 <div class="or-divider"><span>or sign in with email/mobile</span></div>
 
