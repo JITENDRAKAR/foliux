@@ -42,7 +42,15 @@ GENDER_CHOICES = [
 ]
 
 class ProfileForm(forms.ModelForm):
-    gender = forms.ChoiceField(choices=GENDER_CHOICES, widget=forms.Select(attrs={'class': 'form-control'}), required=False)
+    gender = forms.ChoiceField(choices=GENDER_CHOICES, widget=forms.Select(attrs={'class': 'form-control'}), required=True)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Mark mandatory fields for profile completion
+        mandatory = ['full_name', 'mobile_number', 'date_of_birth', 'profile_picture']
+        for field in mandatory:
+            if field in self.fields:
+                self.fields[field].required = True
 
     class Meta:
         model = Profile

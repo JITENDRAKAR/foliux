@@ -269,7 +269,9 @@
                     <i class="fas fa-user-alt small"></i>
                 </div>
             {% endif %}
-            <span><strong>{{ user.profile.full_name|default:user.username }}</strong></span>
+            <span {% if not user.profile.is_complete %}style="color: #ff4d4d !important;" title="Please complete your profile"{% endif %}>
+                <strong>{{ user.profile.full_name|default:user.username }}</strong>
+            </span>
         </a>
     </li>
     <li class="nav-item ms-2">

@@ -126,6 +126,21 @@ class Profile(models.Model):
     def __str__(self):
         return f"{self.user.username}'s Profile"
 
+    @property
+    def is_complete(self):
+        """Check if all mandatory profile fields are filled."""
+        mandatory_fields = [
+            self.full_name,
+            self.mobile_number,
+            self.date_of_birth,
+            self.gender,
+        ]
+        if not all(mandatory_fields):
+            return False
+        if not self.profile_picture:
+            return False
+        return True
+
     def get_max_investment(self, strategy_key):
         """Return maximum investment per stock/ETF for the given strategy based on investor_type.
         strategy_key corresponds to the keys used in STRATEGY_SHEET_TABS (flexi, quant, pyramid, growth).
