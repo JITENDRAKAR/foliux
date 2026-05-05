@@ -512,7 +512,7 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label small fw-bold text-muted" id="modalDateLabel">Date</label>
-                        <input type="date" name="date" id="modalDate" class="form-control" value="{% now 'Y-m-d' %}" max="{% now 'Y-m-d' %}">
+                        <input type="date" name="date" id="modalDate" class="form-control" value="{{ today_str }}" max="{{ today_str }}">
                     </div>
                     <div class="mb-3" id="notesFieldContainer">
                         <label class="form-label small fw-bold text-muted">Notes (Optional)</label>

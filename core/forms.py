@@ -160,12 +160,12 @@ class ManualPortfolioForm(forms.Form):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         from django.utils import timezone
-        self.fields['date'].widget.attrs['max'] = timezone.now().date().isoformat()
+        self.fields['date'].widget.attrs['max'] = timezone.localdate().isoformat()
 
     def clean_date(self):
         date = self.cleaned_data.get('date')
         from django.utils import timezone
-        if date and date > timezone.now().date():
+        if date and date > timezone.localdate():
             raise forms.ValidationError("Date cannot be in the future.")
         return date
 
@@ -211,12 +211,12 @@ class ManualSellForm(forms.Form):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         from django.utils import timezone
-        self.fields['date'].widget.attrs['max'] = timezone.now().date().isoformat()
+        self.fields['date'].widget.attrs['max'] = timezone.localdate().isoformat()
 
     def clean_date(self):
         date = self.cleaned_data.get('date')
         from django.utils import timezone
-        if date and date > timezone.now().date():
+        if date and date > timezone.localdate():
             raise forms.ValidationError("Date cannot be in the future.")
         return date
 
@@ -236,12 +236,12 @@ class EditLotForm(forms.Form):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         from django.utils import timezone
-        self.fields['date'].widget.attrs['max'] = timezone.now().date().isoformat()
+        self.fields['date'].widget.attrs['max'] = timezone.localdate().isoformat()
 
     def clean_date(self):
         date = self.cleaned_data.get('date')
         from django.utils import timezone
-        if date and date > timezone.now().date():
+        if date and date > timezone.localdate():
             raise forms.ValidationError("Date cannot be in the future.")
         return date
 

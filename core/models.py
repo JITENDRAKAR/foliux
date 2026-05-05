@@ -90,9 +90,9 @@ class Profile(models.Model):
     mf_profit_expectation = models.DecimalField(max_digits=10, decimal_places=2, default=22.00)
     coin_profit_expectation = models.DecimalField(max_digits=10, decimal_places=2, default=22.00)
     equity_fixed_charge = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, null=True, blank=True)
-    equity_brokerage_pct = models.DecimalField(max_digits=10, decimal_places=4, default=0.0200, null=True, blank=True) # Percentage (e.g., 0.02%)
+    equity_brokerage_pct = models.DecimalField(max_digits=10, decimal_places=4, default=0.2000, null=True, blank=True) # Percentage (e.g., 0.2%)
     intraday_fixed_charge = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, null=True, blank=True)
-    intraday_brokerage_pct = models.DecimalField(max_digits=10, decimal_places=4, default=0.0200, null=True, blank=True) # Percentage (e.g., 0.2%)
+    intraday_brokerage_pct = models.DecimalField(max_digits=10, decimal_places=4, default=0.2000, null=True, blank=True) # Percentage (e.g., 0.2%)
     financial_goal = models.DecimalField(max_digits=20, decimal_places=2, default=10000000.00)
 
     def save(self, *args, **kwargs):
@@ -959,7 +959,7 @@ class IPO(models.Model):
     @property
     def status(self):
         from django.utils import timezone
-        today = timezone.now().date()
+        today = timezone.localdate()
         if today < self.start_date:
             return 'Upcoming'
         elif self.start_date <= today <= self.end_date:

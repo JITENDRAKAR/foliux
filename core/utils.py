@@ -653,7 +653,7 @@ def record_portfolio_value_history(user):
     Portfolio.objects.filter(user=user).exclude(instrument_id__in=active_ids).delete()
     # --------------------------------------------------------------------
 
-    today = timezone.now().date()
+    today = timezone.localdate()
     
     # 1. Stocks/ETFs
     stocks = Portfolio.objects.filter(user=user)
@@ -1188,11 +1188,11 @@ def execute_stock_sell(user, instrument, quantity_to_sell, price, exit_date=None
     import pandas as pd
     
     if not exit_date:
-        exit_date = timezone.now().date()
+        exit_date = timezone.localdate()
     elif isinstance(exit_date, str):
         exit_date = pd.to_datetime(exit_date).date()
         
-    if exit_date > timezone.now().date():
+    if exit_date > timezone.localdate():
         raise ValidationError("Exit date cannot be in the future.")
         
     portfolio = Portfolio.objects.filter(user=user, instrument_id=instrument.id).first()
@@ -1249,10 +1249,10 @@ def execute_stock_sell(user, instrument, quantity_to_sell, price, exit_date=None
     profile, _ = Profile.objects.get_or_create(user=user)
     if is_intraday:
         fixed_charge = profile.intraday_fixed_charge or Decimal('0')
-        pct_charge = profile.intraday_brokerage_pct or Decimal('0')
+        pct_charge = profile.intraday_brokerage_pct if profile.intraday_brokerage_pct is not None else Decimal('0.2')
     else:
         fixed_charge = profile.equity_fixed_charge or Decimal('0')
-        pct_charge = profile.equity_brokerage_pct or Decimal('0')
+        pct_charge = profile.equity_brokerage_pct if profile.equity_brokerage_pct is not None else Decimal('0.2')
         
     sell_brokerage = Decimal(str(fixed_charge)) + (price * Decimal(str(quantity_to_sell)) * Decimal(str(pct_charge)) / 100)
     sell_value_gross = Decimal(str(quantity_to_sell)) * price
@@ -1318,7 +1318,7 @@ def execute_stock_buy(user, instrument, quantity, avg_cost, transaction_date=Non
     from core.utils import fetch_live_ltp
     
     if not transaction_date:
-        transaction_date = timezone.now().date()
+        transaction_date = timezone.localdate()
         
     # Try to get initial LTP from live data if possible
     symbol = instrument.symbol.upper()
@@ -1332,7 +1332,7 @@ def execute_stock_buy(user, instrument, quantity, avg_cost, transaction_date=Non
     # Calculate Brokerage for BUY
     profile, _ = Profile.objects.get_or_create(user=user)
     fixed_charge = profile.equity_fixed_charge or Decimal('0')
-    pct_charge = profile.equity_brokerage_pct or Decimal('0')
+    pct_charge = profile.equity_brokerage_pct if profile.equity_brokerage_pct is not None else Decimal('0.2')
     total_brokerage = Decimal(str(fixed_charge)) + (Decimal(str(avg_cost)) * Decimal(str(quantity)) * Decimal(str(pct_charge)) / 100)
     price_with_brokerage = ((Decimal(str(avg_cost)) * Decimal(str(quantity))) + total_brokerage) / Decimal(str(quantity))
 

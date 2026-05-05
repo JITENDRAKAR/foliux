@@ -91,12 +91,12 @@ def api_add_transaction(request):
         t_type = request.data.get('transaction_type') # 'BUY' or 'SELL'
         date_str = request.data.get('date')
         
-        transaction_date = timezone.now().date()
+        transaction_date = timezone.localdate()
         if date_str:
              try:
                  import pandas as pd
                  transaction_date = pd.to_datetime(date_str).date()
-                 if transaction_date > timezone.now().date():
+                 if transaction_date > timezone.localdate():
                      return Response({"status": "error", "message": "Date cannot be in the future."}, status=400)
              except:
                  pass

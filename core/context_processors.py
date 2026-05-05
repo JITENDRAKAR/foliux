@@ -136,7 +136,7 @@ def ipo_info(request):
     """
     from .models import IPO
     from django.utils import timezone
-    today = timezone.now().date()
+    today = timezone.localdate()
     # Count IPOs that are currently open AND have an "Apply" recommendation
     active_ipo_count = IPO.objects.filter(start_date__lte=today, end_date__gte=today, advise='APPLY').count()
     return {
@@ -145,9 +145,13 @@ def ipo_info(request):
 
 def google_settings(request):
     """
-    Context processor to provide Google Client ID to templates.
+    Context processor to provide Google Client ID and today's local date to templates.
     """
     from django.conf import settings
+    from django.utils import timezone
+    today = timezone.localdate()
     return {
-        'GOOGLE_CLIENT_ID': getattr(settings, 'GOOGLE_CLIENT_ID', '')
+        'GOOGLE_CLIENT_ID': getattr(settings, 'GOOGLE_CLIENT_ID', ''),
+        'today': today,
+        'today_str': today.strftime('%Y-%m-%d'),
     }

@@ -20,25 +20,18 @@
                         {{ form.file }}
                     </div>
 
-                    <div class="alert {% if title == 'Portfolio' %}alert-danger{% else %}alert-info{% endif %} border-0 bg-light rounded-3 d-flex align-items-center mb-4">
-                        <i class="fas fa-info-circle me-3 {% if title == 'Portfolio' %}text-danger{% else %}text-info{% endif %}"></i>
-                        <div class="small {% if title == 'Portfolio' %}text-danger fw-bold{% endif %}">
-                            <strong>Note:</strong> {% if title == 'Portfolio' %}Use FOLIUX format with correct NSE codes (e.g., TCS, HDFC). If P&L is uploaded, no need to upload portfolio. Upload realized profit before portfolio.{% elif title == 'P&L' %}File must follow the standard FOLIUX format for accurate processing and include correct NSE codes (e.g., TCS, HDFC). If you are uploading P&L properly, there is no need to upload portfolio or realized data. Only cross-check.{% else %}File must follow the standard FOLIUX format for accurate processing and include correct NSE codes (e.g., TCS, HDFC).{% endif %}
+                    <div class="alert alert-danger border-0 bg-light rounded-3 d-flex align-items-center mb-4">
+                        <i class="fas fa-info-circle me-3 text-danger"></i>
+                        <div class="small text-danger fw-bold">
+                            <strong>Note:</strong> {% if title == 'Portfolio' %}Use FOLIUX format with correct NSE codes (e.g., TCS, HDFC). If P&L is uploaded, no need to upload portfolio. Upload realized profit before portfolio.{% else %}File must follow the standard FOLIUX format for accurate processing and include correct NSE codes (e.g., TCS, HDFC). If you are uploading P&L properly, there is no need to upload portfolio or realized data. Only cross-check.{% endif %}
                         </div>
                     </div>
 
-                    {% if title == 'Realized P&L' %}
+                    {% if 'Realized' in title %}
                     <div class="alert alert-danger border-0 bg-light rounded-3 d-flex align-items-center mb-4">
                         <i class="fas fa-exclamation-circle me-3 text-danger"></i>
                         <div class="small text-danger fw-bold">
                             If P&L is already uploaded, there is no need to upload Realized P&L.
-                        </div>
-                    </div>
-                    {% elif title == 'P&L' %}
-                    <div class="alert alert-danger border-0 bg-light rounded-3 d-flex align-items-center mb-4">
-                        <i class="fas fa-exclamation-circle me-3 text-danger"></i>
-                        <div class="small text-danger fw-bold">
-                            Ensure the data is uploaded from the beginning so the portfolio is calculated correctly. Once this data is uploaded, no further portfolio or realized P&L uploads are required—only cross-checking is needed.
                         </div>
                     </div>
                     {% endif %}

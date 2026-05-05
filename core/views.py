@@ -628,7 +628,7 @@ def _process_auto_mf_sips(user):
     from datetime import date
     from django.utils import timezone
     
-    today = timezone.now().date()
+    today = timezone.localdate()
     active_sips = MFSIP.objects.filter(user=user, is_active=True, next_execution_date__lte=today)
     
     for sip in active_sips:
@@ -902,7 +902,7 @@ def add_mf_portfolio(request):
                 units=units,
                 remaining_units=units,
                 price=avg_nav,
-                date=timezone.now().date()
+                date=timezone.localdate()
             )
             
         # If SIP is enabled, create MFSIP record
@@ -955,8 +955,8 @@ def sell_mf_portfolio(request, pk):
             units_to_sell = Decimal(request.POST.get('units', '0'))
             sell_price = Decimal(request.POST.get('price', '0'))
             sell_date_str = request.POST.get('date')
-            sell_date = pd.to_datetime(sell_date_str).date() if sell_date_str else timezone.now().date()
-            if sell_date > timezone.now().date():
+            sell_date = pd.to_datetime(sell_date_str).date() if sell_date_str else timezone.localdate()
+            if sell_date > timezone.localdate():
                 messages.error(request, "Date cannot be in the future.")
                 return redirect('mf_dashboard')
         except (ValueError, TypeError, InvalidOperation):
@@ -1245,7 +1245,7 @@ def add_coin(request):
             units=units,
             remaining_units=units,
             price=avg_price,
-            date=timezone.now().date()
+            date=timezone.localdate()
         )
         
         messages.success(request, f"Added {units} units of {coin.name} for {target_user.username if is_family_view else 'account'}.")
@@ -1269,8 +1269,8 @@ def sell_coin(request, pk):
             units_to_sell = Decimal(request.POST.get('units', '0'))
             sell_price = Decimal(request.POST.get('price', '0'))
             sell_date_str = request.POST.get('date')
-            sell_date = pd.to_datetime(sell_date_str).date() if sell_date_str else timezone.now().date()
-            if sell_date > timezone.now().date():
+            sell_date = pd.to_datetime(sell_date_str).date() if sell_date_str else timezone.localdate()
+            if sell_date > timezone.localdate():
                 messages.error(request, "Date cannot be in the future.")
                 return redirect('coin_dashboard')
         except (ValueError, TypeError, InvalidOperation):
@@ -1469,7 +1469,7 @@ def portfolio(request):
     
     # Calculate upcoming EMIs (due in next 7 days)
     from datetime import timedelta
-    next_week = timezone.now().date() + timedelta(days=7)
+    next_week = timezone.localdate() + timedelta(days=7)
     upcoming_emis_count = loans.filter(next_emi_date__lte=next_week, next_emi_date__isnull=False).count()
 
     # Calculate Totals
@@ -1910,9 +1910,9 @@ def upload_portfolio(request):
                             try:
                                 tx_date = pd.to_datetime(raw_date).date()
                             except:
-                                tx_date = timezone.now().date()
+                                tx_date = timezone.localdate()
                         else:
-                            tx_date = timezone.now().date()
+                            tx_date = timezone.localdate()
 
                         # Create Transaction record for each row (lot preservation)
                         Transaction.objects.create(
@@ -2613,8 +2613,8 @@ def buy_stock(request):
         date_str = request.POST.get('date')
         notes = request.POST.get('notes', '').strip()
         
-        transaction_date = pd.to_datetime(date_str).date() if date_str else timezone.now().date()
-        if transaction_date > timezone.now().date():
+        transaction_date = pd.to_datetime(date_str).date() if date_str else timezone.localdate()
+        if transaction_date > timezone.localdate():
             messages.error(request, "Date cannot be in the future.")
             return redirect('dashboard')
         
@@ -2698,7 +2698,7 @@ def sell_stock(request):
         return redirect(url)
     return redirect('dashboard')
 def get_current_financial_year():
-    now = timezone.now().date()
+    now = timezone.localdate()
     # Standard Indian Financial Year starts April 1.
     # User requested transition to 2026-2027 starting March 27, 2026.
     if now.month >= 4 or (now.year == 2026 and now.month == 3 and now.day >= 27):
@@ -2758,7 +2758,7 @@ def transaction_history(request):
         history = PortfolioValueHistory.objects.filter(user=target_user, date__gte=first_tx.date).order_by('date')
     else:
         # Fallback to last 180 days
-        history = PortfolioValueHistory.objects.filter(user=target_user, date__gte=timezone.now().date() - timedelta(days=180)).order_by('date')
+        history = PortfolioValueHistory.objects.filter(user=target_user, date__gte=timezone.localdate() - timedelta(days=180)).order_by('date')
     
     # Calculate NIFTY Scaling Ratio based on first ever record
     first_history = PortfolioValueHistory.objects.filter(user=target_user).order_by('date').first()
@@ -2942,7 +2942,7 @@ def lot_breakdown(request, instrument_id):
     for lot in lots:
         # For active lots, calculate P&L
         if lot.remaining_quantity > 0:
-            days_held = (timezone.now().date() - lot.date).days
+            days_held = (timezone.localdate() - lot.date).days
             current_value = Decimal(str(lot.remaining_quantity)) * ltp
             buy_value = Decimal(str(lot.remaining_quantity)) * lot.price
             pnl = current_value - buy_value
@@ -3814,8 +3814,8 @@ def add_nps(request):
         units = Decimal(request.POST.get('units', '0'))
         avg_nav = Decimal(request.POST.get('avg_nav', '0'))
         date_str = request.POST.get('date')
-        transaction_date = pd.to_datetime(date_str).date() if date_str else timezone.now().date()
-        if transaction_date > timezone.now().date():
+        transaction_date = pd.to_datetime(date_str).date() if date_str else timezone.localdate()
+        if transaction_date > timezone.localdate():
             messages.error(request, "Date cannot be in the future.")
             return redirect('nps_dashboard')
         fund, _ = NPSFund.objects.get_or_create(name=fund_name)
@@ -3851,8 +3851,8 @@ def sell_nps(request, pk):
         units_to_sell = Decimal(request.POST.get('units', '0'))
         sell_price = Decimal(request.POST.get('price', '0'))
         date_str = request.POST.get('date')
-        sell_date = pd.to_datetime(date_str).date() if date_str else timezone.now().date()
-        if sell_date > timezone.now().date():
+        sell_date = pd.to_datetime(date_str).date() if date_str else timezone.localdate()
+        if sell_date > timezone.localdate():
             messages.error(request, "Date cannot be in the future.")
             return redirect('nps_dashboard')
         if units_to_sell > holding.units:
@@ -3936,7 +3936,7 @@ def _process_auto_rd_deposits(user):
     from datetime import date
     from django.utils import timezone
     
-    today = timezone.now().date()
+    today = timezone.localdate()
     active_rds = FixedAsset.objects.filter(user=user, asset_type='RD', next_deposit_date__lte=today)
     
     for rd in active_rds:
@@ -4023,8 +4023,8 @@ def add_fd(request):
         try:
             invested_amount = Decimal(request.POST.get('invested_amount', '0'))
             interest_rate = Decimal(request.POST.get('interest_rate', '0'))
-            investment_date = pd.to_datetime(investment_date_str).date() if investment_date_str else timezone.now().date()
-            if investment_date > timezone.now().date():
+            investment_date = pd.to_datetime(investment_date_str).date() if investment_date_str else timezone.localdate()
+            if investment_date > timezone.localdate():
                 messages.error(request, "Investment date cannot be in the future.")
                 return redirect('add_fd')
             maturity_date = pd.to_datetime(maturity_date_str).date() if maturity_date_str else None
@@ -4138,8 +4138,8 @@ def add_other_asset(request):
             purchase_price = Decimal(request.POST.get('purchase_price', '0'))
             current_value = Decimal(request.POST.get('current_value', '0'))
             monthly_rent = Decimal(request.POST.get('monthly_rent', '0'))
-            purchase_date = pd.to_datetime(purchase_date_str).date() if purchase_date_str else timezone.now().date()
-            if purchase_date > timezone.now().date():
+            purchase_date = pd.to_datetime(purchase_date_str).date() if purchase_date_str else timezone.localdate()
+            if purchase_date > timezone.localdate():
                 messages.error(request, "Purchase date cannot be in the future.")
                 return redirect('add_other_asset')
             holder_name = request.POST.get('holder_name', '').strip()
@@ -4184,7 +4184,7 @@ def edit_other_asset(request, pk):
             asset.monthly_rent = Decimal(request.POST.get('monthly_rent', str(asset.monthly_rent)))
             if purchase_date_str:
                 potential_date = pd.to_datetime(purchase_date_str).date()
-                if potential_date > timezone.now().date():
+                if potential_date > timezone.localdate():
                     messages.error(request, "Purchase date cannot be in the future.")
                     return redirect('edit_other_asset', pk=pk)
                 asset.purchase_date = potential_date
@@ -4306,7 +4306,7 @@ def add_loan(request):
             return redirect('loan_dashboard')
     else:
         # Suggest today's date for next EMI
-        form = LoanForm(initial={'next_emi_date': timezone.now().date()})
+        form = LoanForm(initial={'next_emi_date': timezone.localdate()})
         
     return render(request, 'core/loan_form.html', {'form': form, 'action': 'Add'})
 
@@ -4343,7 +4343,7 @@ def loan_detail(request, pk):
     # Simple Amortization for UI (next 12 months)
     amortization = []
     temp_outstanding = float(loan.current_outstanding)
-    temp_date = loan.next_emi_date or (timezone.now().date() + relativedelta(months=1))
+    temp_date = loan.next_emi_date or (timezone.localdate() + relativedelta(months=1))
     
     for i in range(12):
         if temp_outstanding <= 0: break
@@ -4381,7 +4381,7 @@ def add_loan_payment(request, pk):
     if request.method == 'POST':
         amount = Decimal(request.POST.get('amount', '0'))
         date_str = request.POST.get('date')
-        payment_date = pd.to_datetime(date_str).date() if date_str else timezone.now().date()
+        payment_date = pd.to_datetime(date_str).date() if date_str else timezone.localdate()
         
         # Prepayment logic: typically all goes to principal
         principal = amount
@@ -4842,9 +4842,9 @@ def reset_account_data(user):
         profile.mf_profit_expectation = 22.00
         profile.coin_profit_expectation = 22.00
         profile.equity_fixed_charge = 0.00
-        profile.equity_brokerage_pct = 0.0200
+        profile.equity_brokerage_pct = 0.2000
         profile.intraday_fixed_charge = 0.00
-        profile.intraday_brokerage_pct = 0.0200
+        profile.intraday_brokerage_pct = 0.2000
         profile.financial_goal = 10000000.00
         
         # Delete profile picture if exists
