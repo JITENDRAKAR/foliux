@@ -459,7 +459,10 @@
                                         {% if item.action == 'REDUCE' %}REDU{% else %}{{ item.action }}{% endif %}
                                     </span>
                                 </td>
-                                <td class="small text-muted" style="max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ item.reason }}</td>
+                                <td class="small text-muted" style="max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"
+                                    {% if "TgtCap" in item.reason %}title="Qty can buy: {{ item.target_qty }}"{% endif %}>
+                                    {{ item.reason }}
+                                </td>
                                 <td class="fw-bold text-center {% if item.realized_profit >= 0 %}text-success{% else %}text-danger{% endif %} text-nowrap">
                                     {% if item.realized_profit > 0 %}<span class="sign-small">+</span>{% endif %}&#8377;{{ item.realized_profit|inr_format }}</td>
                             </tr>
