@@ -1585,6 +1585,14 @@ def nps_guide(request):
     """NPS Guide page."""
     return render(request, 'core/nps_guide.html')
 
+def stock_guide(request):
+    """Stock Market Guide page."""
+    return render(request, 'core/stock_guide.html')
+
+def education_hub(request):
+    """Education Hub landing page."""
+    return render(request, 'core/education_hub.html')
+
 
 def ipo_list(request):
     """IPO list page for users."""

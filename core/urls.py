@@ -88,6 +88,8 @@ urlpatterns = [
     path('portfolio/', views.portfolio, name='portfolio'),
     path('etf-guide/', views.etf_guide, name='etf_guide'),
     path('nps-guide/', views.nps_guide, name='nps_guide'),
+    path('stock-guide/', views.stock_guide, name='stock_guide'),
+    path('education/', views.education_hub, name='education_hub'),
     path('ipo/', views.ipo_list, name='ipo'),
     path('aboutproject/', views.about_project, name='about_project'),
     # Transactions and Lots
