@@ -36,7 +36,7 @@ class Portfolio(models.Model):
     instrument = models.ForeignKey(Instrument, on_delete=models.CASCADE)
     quantity = models.IntegerField()
     avg_cost = models.DecimalField(max_digits=10, decimal_places=2)
-    ltp = models.DecimalField(max_digits=10, decimal_places=2) # Last Traded Price
+    ltp = models.DecimalField(max_digits=10, decimal_places=2, default=0.00) # Last Traded Price
     notes = models.TextField(blank=True, null=True)
     
     @property

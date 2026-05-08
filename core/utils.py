@@ -1288,6 +1288,8 @@ def recalculate_instrument_lots(user, instrument):
                 portfolio = Portfolio(user=user, instrument=instrument)
             portfolio.quantity = total_remaining
             portfolio.avg_cost = total_cost / Decimal(str(total_remaining)) if total_remaining > 0 else 0
+            # Ensure LTP is set to prevent IntegrityError in MySQL
+            portfolio.ltp = instrument.last_price or Decimal('0')
             portfolio.save()
 
 

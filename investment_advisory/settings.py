@@ -151,10 +151,17 @@ WSGI_APPLICATION = 'investment_advisory.wsgi.application'
 USE_LOCAL_DB = os.environ.get('USE_LOCAL_DB', 'False') == 'True'
 
 if USE_LOCAL_DB:
+    # Use environment variable for DB path if provided, else default to BASE_DIR
+    sqlite_path = os.environ.get('SQLITE_DB_PATH')
+    if sqlite_path:
+        db_path = Path(sqlite_path)
+    else:
+        db_path = BASE_DIR / 'db.sqlite3'
+        
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
+            'NAME': db_path,
         }
     }
 else:
