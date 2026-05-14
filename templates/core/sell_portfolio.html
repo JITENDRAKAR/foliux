@@ -164,6 +164,7 @@
                                         <th style="width: 12%;">Qty to Sell</th>
                                         <th style="width: 12%;">Sell Price (₹)</th>
                                         <th style="width: 15%;">Exit Date</th>
+                                        <th style="width: 12%;">Sell Type</th>
                                         <th>Notes</th>
                                     </tr>
                                 </thead>
@@ -200,6 +201,12 @@
                                             {{ form.date }}
                                             {% if form.date.errors %}
                                                 <div class="text-danger x-small">{{ form.date.errors }}</div>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {{ form.sell_type }}
+                                            {% if form.sell_type.errors %}
+                                                <div class="text-danger x-small">{{ form.sell_type.errors }}</div>
                                             {% endif %}
                                         </td>
                                         <td>

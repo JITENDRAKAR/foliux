@@ -1784,7 +1784,8 @@ def add_portfolio_item(request):
                     if symbol and quantity and avg_cost and date:
                         inst = resolve_instrument(symbol)
                         if inst:
-                            execute_stock_buy(target_user, inst, quantity, avg_cost, date, notes)
+                            trade_type = form.cleaned_data.get('trade_type', 'NORMAL')
+                            execute_stock_buy(target_user, inst, quantity, avg_cost, date, notes, trade_type=trade_type)
                             success_count += 1
             
             if success_count > 0:
@@ -1822,14 +1823,22 @@ def sell_portfolio_item(request):
                     symbol = form.cleaned_data.get('symbol', '').strip().upper()
                     quantity = form.cleaned_data.get('quantity')
                     price = form.cleaned_data.get('price')
-                    exit_date = form.cleaned_data.get('date')
+                    exit_date = form.cleaned_data.get('date') or timezone.localdate()
                     notes = form.cleaned_data.get('notes')
+                    sell_type = form.cleaned_data.get('sell_type', 'NORMAL')
 
-                    if symbol and quantity and price and exit_date:
+                    if symbol and quantity and price:
                         inst = resolve_instrument(symbol)
                         if inst:
                             try:
-                                execute_stock_sell(target_user, inst, quantity, price, exit_date)
+                                execute_stock_sell(
+                                    user=target_user,
+                                    instrument=inst,
+                                    quantity_to_sell=quantity,
+                                    price=price,
+                                    exit_date=exit_date,
+                                    trade_type=sell_type
+                                )
                                 success_count += 1
                             except Exception as e:
                                 messages.error(request, f"Error selling {symbol}: {str(e)}")
@@ -2626,55 +2635,20 @@ def buy_stock(request):
             messages.error(request, "Date cannot be in the future.")
             return redirect('dashboard')
         
+        from .utils import execute_stock_buy, resolve_instrument
         try:
-            inst = Instrument.objects.get(symbol__iexact=symbol, is_verified=True)
-        except Instrument.DoesNotExist:
-            # Fallback for manual addition if not found or not verified
-            inst, _ = Instrument.objects.get_or_create(symbol=symbol, defaults={'name': symbol, 'is_verified': True})
-        
-        # Calculate Brokerage for BUY
-        profile, _ = Profile.objects.get_or_create(user=target_user)
-        fixed_charge = profile.equity_fixed_charge or Decimal('0')
-        pct_charge = profile.equity_brokerage_pct or Decimal('0')
-        
-        # Note: We apply Delivery charges on Buy by default as we don't know yet if it's Intraday.
-        total_brokerage = Decimal(str(fixed_charge)) + (price * Decimal(str(quantity)) * Decimal(str(pct_charge)) / 100)
-        price_with_brokerage = ( (price * Decimal(str(quantity))) + total_brokerage ) / Decimal(str(quantity))
+            inst = resolve_instrument(symbol)
+            if not inst:
+                # Fallback for manual addition if not found or not verified
+                inst, _ = Instrument.objects.get_or_create(symbol=symbol, defaults={'name': symbol, 'is_verified': True})
+            
+            trade_type = request.POST.get('trade_type', 'NORMAL')
+            execute_stock_buy(target_user, inst, quantity, price, date_str, notes, trade_type=trade_type)
+            
+            messages.success(request, f"Bought {quantity} units of {symbol} for {target_user.username if is_family_view else 'account'}")
+        except Exception as e:
+            messages.error(request, str(e))
 
-        # Create Transaction record
-        Transaction.objects.create(
-            user=target_user,
-            instrument=inst,
-            transaction_type='BUY',
-            quantity=quantity,
-            remaining_quantity=quantity,
-            price=price_with_brokerage,
-            date=transaction_date
-        )
-        
-        portfolio, created = Portfolio.objects.get_or_create(
-            user=target_user, 
-            instrument=inst,
-            defaults={'quantity': 0, 'avg_cost': Decimal('0'), 'ltp': price}
-        )
-        
-        # Update Weighted Average Cost for Portfolio summary
-        current_total_cost = Decimal(str(portfolio.quantity)) * portfolio.avg_cost
-        new_total_cost = Decimal(str(quantity)) * price_with_brokerage
-        total_quantity = portfolio.quantity + quantity
-        
-        new_avg_cost = (current_total_cost + new_total_cost) / Decimal(str(total_quantity))
-        
-        portfolio.quantity = total_quantity
-        portfolio.avg_cost = new_avg_cost
-        # Only update LTP if it was 0 or just created
-        if created or not portfolio.ltp or portfolio.ltp == 0:
-            portfolio.ltp = price
-        if notes:
-            portfolio.notes = notes
-        portfolio.save()
-        
-        messages.success(request, f"Bought {quantity} units of {symbol} for {target_user.username if is_family_view else 'account'}")
         url = redirect('dashboard').url
         if is_family_view:
             url += f"?user_id={target_user.id}"
@@ -2694,7 +2668,8 @@ def sell_stock(request):
         from .utils import execute_stock_sell
         try:
             inst = get_object_or_404(Instrument, symbol__iexact=symbol, is_verified=True)
-            profit, is_intraday = execute_stock_sell(target_user, inst, quantity_to_sell, price, exit_date_str)
+            trade_type = request.POST.get('trade_type', 'NORMAL')
+            profit, is_intraday_pnl = execute_stock_sell(target_user, inst, quantity_to_sell, price, exit_date_str, trade_type=trade_type)
             
             messages.success(request, f"Sold {quantity_to_sell} units of {symbol} for {target_user.username if is_family_view else 'account'}. Profit: {profit}")
         except Exception as e:
@@ -2720,14 +2695,16 @@ def sell_specific_lot(request):
         from .utils import execute_stock_sell
         try:
             inst = get_object_or_404(Instrument, symbol__iexact=symbol, is_verified=True)
+            sell_type = request.POST.get('sell_type', 'NORMAL')
             # Pass target_lot_id to execute_stock_sell to bypass FIFO
-            profit, is_intraday = execute_stock_sell(
+            profit, is_intraday_pnl = execute_stock_sell(
                 target_user, 
                 inst, 
                 quantity_to_sell, 
                 price, 
                 exit_date_str, 
-                target_lot_id=lot_id
+                target_lot_id=lot_id,
+                trade_type=sell_type
             )
             
             messages.success(request, f"Sold {quantity_to_sell} units of {symbol} from specific lot. Profit: {profit}")
@@ -3009,6 +2986,7 @@ def lot_breakdown(request, instrument_id):
             'quantity': lot.quantity, # Show original quantity in history
             'remaining_quantity': lot.remaining_quantity,
             'price': lot.price,
+            'trade_type': lot.trade_type,
             'days_held': days_held,
             'ltp': ltp,
             'pnl': pnl,
@@ -3059,6 +3037,8 @@ def lot_breakdown(request, instrument_id):
             'pnl': sr.realized_profit,
             'pnl_pct': pnl_pct,
             'holding_days': holding_days,
+            'trade_type': sr.trade_type,
+            'is_intraday': (sr.entry_date == sr.exit_date) if sr.entry_date else False
         })
         total_sell_quantity += sr.quantity
         total_realized_pnl += sr.realized_profit
@@ -4880,10 +4860,10 @@ def reset_account_data(user):
         profile.equity_profit_expectation = 22.00
         profile.mf_profit_expectation = 22.00
         profile.coin_profit_expectation = 22.00
-        profile.equity_fixed_charge = 0.00
-        profile.equity_brokerage_pct = 0.2000
-        profile.intraday_fixed_charge = 0.00
-        profile.intraday_brokerage_pct = 0.2000
+        profile.equity_fixed_charge = 30.00
+        profile.equity_brokerage_pct = 0.0000
+        profile.intraday_fixed_charge = 30.00
+        profile.intraday_brokerage_pct = 0.0000
         profile.financial_goal = 10000000.00
         
         # Delete profile picture if exists

@@ -169,6 +169,7 @@
                                         <th style="width: 12%;">Quantity</th>
                                         <th style="width: 12%;">Avg. Cost (₹)</th>
                                         <th style="width: 15%;">Purchase Date</th>
+                                        <th style="width: 12%;">Trade Type</th>
                                         <th>Notes</th>
                                     </tr>
                                 </thead>
@@ -205,6 +206,12 @@
                                             {{ form.date }}
                                             {% if form.date.errors %}
                                                 <div class="text-danger x-small">{{ form.date.errors }}</div>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {{ form.trade_type }}
+                                            {% if form.trade_type.errors %}
+                                                <div class="text-danger x-small">{{ form.trade_type.errors }}</div>
                                             {% endif %}
                                         </td>
                                         <td>

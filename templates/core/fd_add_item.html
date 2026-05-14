@@ -88,7 +88,7 @@
                     <div class="row mb-3">
                         <div class="col-md-6">
                             <label for="invested_amount" class="form-label">Invested Amount (INR)</label>
-                            <input type="number" step="0.01" name="invested_amount" id="invested_amount" class="form-control" placeholder="0.00" value="{{ prefill.invested_amount|default:'0.00' }}">
+                            <input type="number" step="0.01" name="invested_amount" id="invested_amount" class="form-control" placeholder="0.00" value="{{ prefill.invested_amount|default:'0.00' }}" min="0.01">
                         </div>
                         <div class="col-md-6">
                             <label for="interest_rate" class="form-label">Annual Interest Rate (%)</label>
@@ -112,7 +112,7 @@
                     <div class="row mb-4">
                         <div class="col-md-6">
                             <label for="monthly_deposit" class="form-label">Monthly Deposit (INR)</label>
-                            <input type="number" step="0.01" name="monthly_deposit" id="monthly_deposit" class="form-control" placeholder="5000.00" value="{{ prefill.monthly_deposit|default:'' }}">
+                            <input type="number" step="0.01" name="monthly_deposit" id="monthly_deposit" class="form-control" placeholder="5000.00" value="{{ prefill.monthly_deposit|default:'' }}" min="0.01">
                         </div>
                         <div class="col-md-6">
                             <label for="tenure_years" class="form-label">Tenure (Years)</label>

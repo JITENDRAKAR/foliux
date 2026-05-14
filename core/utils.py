@@ -1227,7 +1227,12 @@ def recalculate_instrument_lots(user, instrument):
 
             # Priority 1: Intraday (Same Day)
             if remaining_to_deduct > 0:
+                # Find buys on the same day
                 intraday_lots = [l for l in buy_lots if l.date == tx.date and l.remaining_quantity > 0]
+                
+                # Prioritize matching same trade_type (e.g., INTRADAY sell with INTRADAY buy)
+                intraday_lots.sort(key=lambda l: l.trade_type != tx.trade_type)
+                
                 for lot in intraday_lots:
                     if remaining_to_deduct <= 0: break
                     deduct = min(lot.remaining_quantity, remaining_to_deduct)
@@ -1238,7 +1243,9 @@ def recalculate_instrument_lots(user, instrument):
                     is_intraday = True
 
             # Priority 2: FIFO (Oldest)
-            if remaining_to_deduct > 0:
+            # Standard FIFO only applies if it's NOT an Intraday Sell, 
+            # or if it's an Intraday Sell but we allow overflow (usually we don't for tax reasons)
+            if remaining_to_deduct > 0 and tx.trade_type != 'INTRADAY':
                 # buy_lots is already sorted by date
                 for lot in buy_lots:
                     if lot.remaining_quantity <= 0: continue
@@ -1253,13 +1260,15 @@ def recalculate_instrument_lots(user, instrument):
             profile, _ = Profile.objects.get_or_create(user=user)
             if is_intraday:
                 fixed_charge = profile.intraday_fixed_charge or Decimal('0')
-                pct_charge = profile.intraday_brokerage_pct if profile.intraday_brokerage_pct is not None else Decimal('0.2')
+                pct_charge = profile.intraday_brokerage_pct if profile.intraday_brokerage_pct is not None else Decimal('0')
             else:
                 fixed_charge = profile.equity_fixed_charge or Decimal('0')
-                pct_charge = profile.equity_brokerage_pct if profile.equity_brokerage_pct is not None else Decimal('0.2')
+                pct_charge = profile.equity_brokerage_pct if profile.equity_brokerage_pct is not None else Decimal('0')
             
-            sell_brokerage = Decimal(str(fixed_charge)) + (tx.price * Decimal(str(tx.quantity)) * Decimal(str(pct_charge)) / 100)
-            sell_value_net = (tx.price * Decimal(str(tx.quantity))) - sell_brokerage
+            # USER REQUEST: Do not deduct brokerage from sell value during recalculation 
+            # to avoid double-deducting from historically synced 'Net' prices.
+            sell_brokerage = Decimal('0')
+            sell_value_net = (tx.price * Decimal(str(tx.quantity)))
             profit = sell_value_net - total_buy_value
             
             PnLStatement.objects.create(
@@ -1269,7 +1278,8 @@ def recalculate_instrument_lots(user, instrument):
                 buy_value=total_buy_value,
                 sell_value=sell_value_net,
                 realized_profit=profit,
-                exit_date=tx.date
+                exit_date=tx.date,
+                trade_type=tx.trade_type
             )
             
         # 4. Finalize - save lot quantities
@@ -1293,13 +1303,15 @@ def recalculate_instrument_lots(user, instrument):
             portfolio.save()
 
 
-def execute_stock_sell(user, instrument, quantity_to_sell, price, exit_date=None, target_lot_id=None):
+def execute_stock_sell(user, instrument, quantity_to_sell, price, exit_date=None, target_lot_id=None, trade_type='NORMAL'):
     """
     Simplified sell logic: records the transaction and triggers a full lot recalculation.
+    Supports Intraday validation.
     """
     from core.models import Transaction, Portfolio, PnLStatement
     from django.core.exceptions import ValidationError
     import pandas as pd
+    from django.db.models import Sum
 
     if not exit_date:
         exit_date = timezone.localdate()
@@ -1309,16 +1321,44 @@ def execute_stock_sell(user, instrument, quantity_to_sell, price, exit_date=None
     if exit_date > timezone.localdate():
         raise ValidationError("Exit date cannot be in the future.")
         
-    portfolio = Portfolio.objects.filter(user=user, instrument_id=instrument.id).first()
-    if not portfolio or quantity_to_sell > portfolio.quantity:
-        available = portfolio.quantity if portfolio else 0
-        raise ValidationError(f"Insufficient quantity. You have {available} units of {instrument.symbol}.")
+    # Intraday Validation
+    if trade_type == 'INTRADAY':
+        buy_qty = Transaction.objects.filter(
+            user=user, 
+            instrument=instrument, 
+            date=exit_date, 
+            transaction_type='BUY', 
+            trade_type='INTRADAY'
+        ).aggregate(total=Sum('quantity'))['total'] or 0
+        
+        sell_qty = Transaction.objects.filter(
+            user=user, 
+            instrument=instrument, 
+            date=exit_date, 
+            transaction_type='SELL', 
+            trade_type='INTRADAY'
+        ).aggregate(total=Sum('quantity'))['total'] or 0
+        
+        available_intraday = buy_qty - sell_qty
+        
+        if buy_qty == 0:
+            raise ValidationError("Same day Intraday Buy entry not found. Please first add Intraday Buy entry and then do Intraday Sell.")
+        
+        if quantity_to_sell > available_intraday:
+            raise ValidationError(f"Quantity exceeds same day bought quantity. Available to sell intraday: {available_intraday}")
+    else:
+        # Normal Sell Validation
+        portfolio = Portfolio.objects.filter(user=user, instrument_id=instrument.id).first()
+        if not portfolio or quantity_to_sell > portfolio.quantity:
+            available = portfolio.quantity if portfolio else 0
+            raise ValidationError(f"Insufficient quantity. You have {available} units of {instrument.symbol}.")
 
     # Record Sell Transaction
     Transaction.objects.create(
         user=user,
         instrument=instrument,
         transaction_type='SELL',
+        trade_type=trade_type,
         quantity=quantity_to_sell,
         price=price,
         date=exit_date,
@@ -1331,11 +1371,11 @@ def execute_stock_sell(user, instrument, quantity_to_sell, price, exit_date=None
     # Get profit from the last PnLStatement for this sell
     pnl = PnLStatement.objects.filter(user=user, instrument=instrument, exit_date=exit_date).order_by('-id').first()
     profit = pnl.realized_profit if pnl else 0
-    is_intraday = (pnl.entry_date == pnl.exit_date) if pnl else False
+    is_intraday_pnl = (pnl.entry_date == pnl.exit_date) if pnl else False
     
-    return profit, is_intraday
+    return profit, is_intraday_pnl
 
-def execute_stock_buy(user, instrument, quantity, avg_cost, transaction_date=None, notes=None):
+def execute_stock_buy(user, instrument, quantity, avg_cost, transaction_date=None, notes=None, trade_type='NORMAL'):
     """
     Simplified buy logic: records the transaction (with brokerage) and triggers a lot recalculation.
     """
@@ -1350,8 +1390,14 @@ def execute_stock_buy(user, instrument, quantity, avg_cost, transaction_date=Non
 
     # Calculate Brokerage for BUY
     profile, _ = Profile.objects.get_or_create(user=user)
-    fixed_charge = profile.equity_fixed_charge or Decimal('0')
-    pct_charge = profile.equity_brokerage_pct if profile.equity_brokerage_pct is not None else Decimal('0.2')
+    
+    if trade_type == 'INTRADAY':
+        fixed_charge = profile.intraday_fixed_charge or Decimal('0')
+        pct_charge = profile.intraday_brokerage_pct if profile.intraday_brokerage_pct is not None else Decimal('0')
+    else:
+        fixed_charge = profile.equity_fixed_charge or Decimal('0')
+        pct_charge = profile.equity_brokerage_pct if profile.equity_brokerage_pct is not None else Decimal('0')
+        
     total_brokerage = Decimal(str(fixed_charge)) + (Decimal(str(avg_cost)) * Decimal(str(quantity)) * Decimal(str(pct_charge)) / 100)
     price_with_brokerage = ((Decimal(str(avg_cost)) * Decimal(str(quantity))) + total_brokerage) / Decimal(str(quantity))
 
@@ -1360,6 +1406,7 @@ def execute_stock_buy(user, instrument, quantity, avg_cost, transaction_date=Non
         user=user,
         instrument=instrument,
         transaction_type='BUY',
+        trade_type=trade_type,
         quantity=quantity,
         remaining_quantity=quantity,
         price=price_with_brokerage,

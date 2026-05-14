@@ -113,8 +113,8 @@ class PortfolioForm(forms.ModelForm):
         model = Portfolio
         fields = ['quantity', 'avg_cost']
         widgets = {
-            'quantity': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Enter Quantity'}),
-            'avg_cost': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'placeholder': 'Enter Avg. Cost'}),
+            'quantity': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Enter Quantity', 'min': '1'}),
+            'avg_cost': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'placeholder': 'Enter Avg. Cost', 'min': '0.01'}),
         }
 
 class ManualPortfolioForm(forms.Form):
@@ -137,7 +137,8 @@ class ManualPortfolioForm(forms.Form):
     )
     quantity = forms.IntegerField(
         label='QUANTITY',
-        widget=forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Enter Quantity'})
+        min_value=1,
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Enter Quantity', 'min': '1'})
     )
     avg_cost = forms.DecimalField(
         label='AVERAGE COST',
@@ -149,6 +150,12 @@ class ManualPortfolioForm(forms.Form):
         label='PURCHASE DATE',
         required=True,
         widget=forms.DateInput(attrs={'class': 'form-control', 'type': 'date'})
+    )
+    trade_type = forms.ChoiceField(
+        label='TRADE TYPE',
+        choices=[('NORMAL', 'Normal'), ('INTRADAY', 'Intraday')],
+        initial='NORMAL',
+        widget=forms.Select(attrs={'class': 'form-control'})
     )
     notes = forms.CharField(
         label='NOTES',
@@ -189,7 +196,8 @@ class ManualSellForm(forms.Form):
     )
     quantity = forms.IntegerField(
         label='QUANTITY TO SELL',
-        widget=forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Enter Quantity to sell'})
+        min_value=1,
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Enter Quantity to sell', 'min': '1'})
     )
     price = forms.DecimalField(
         label='SELL PRICE',
@@ -201,6 +209,12 @@ class ManualSellForm(forms.Form):
         label='EXIT DATE',
         required=True,
         widget=forms.DateInput(attrs={'class': 'form-control', 'type': 'date'})
+    )
+    sell_type = forms.ChoiceField(
+        label='SELL TYPE',
+        choices=[('NORMAL', 'Normal Sell'), ('INTRADAY', 'Intraday Sell')],
+        initial='NORMAL',
+        widget=forms.Select(attrs={'class': 'form-control'})
     )
     notes = forms.CharField(
         label='NOTES (OPTIONAL)',
@@ -222,7 +236,8 @@ class ManualSellForm(forms.Form):
 
 class EditLotForm(forms.Form):
     quantity = forms.IntegerField(
-        widget=forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Quantity'})
+        min_value=1,
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Quantity', 'min': '1'})
     )
     price = forms.DecimalField(
         max_digits=10, 
@@ -295,12 +310,12 @@ class LoanForm(forms.ModelForm):
         widgets = {
             'bank_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g. HDFC Bank'}),
             'category': forms.Select(attrs={'class': 'form-control'}),
-            'loan_amount': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Total Principal'}),
+            'loan_amount': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Total Principal', 'min': '1'}),
             'start_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
-            'interest_rate': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'placeholder': 'Annual Rate %'}),
+            'interest_rate': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'placeholder': 'Annual Rate %', 'min': '0'}),
             'interest_type': forms.Select(attrs={'class': 'form-control'}),
-            'tenure_months': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Total months'}),
-            'emi_amount': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'placeholder': 'Monthly EMI'}),
+            'tenure_months': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Total months', 'min': '1'}),
+            'emi_amount': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'placeholder': 'Monthly EMI', 'min': '0'}),
             'interest_lock': forms.Select(attrs={'class': 'form-control'}),
             'next_emi_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
         }
@@ -311,10 +326,10 @@ class LoanPaymentForm(forms.ModelForm):
         fields = ['payment_type', 'amount', 'date', 'principal_component', 'interest_component']
         widgets = {
             'payment_type': forms.Select(attrs={'class': 'form-control'}),
-            'amount': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'amount': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '1'}),
             'date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
-            'principal_component': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
-            'interest_component': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'principal_component': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0'}),
+            'interest_component': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0'}),
         }
 
 from .models import UserReview

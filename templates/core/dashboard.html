@@ -510,12 +510,21 @@
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label small fw-bold text-muted">Price</label>
-                            <input type="number" step="0.01" name="price" id="modalPrice" class="form-control" required>
+                            <input type="number" step="0.01" name="price" id="modalPrice" class="form-control" required min="0.01">
                         </div>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold text-muted" id="modalDateLabel">Date</label>
-                        <input type="date" name="date" id="modalDate" class="form-control" value="{{ today_str }}" max="{{ today_str }}">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label small fw-bold text-muted" id="modalDateLabel">Date</label>
+                            <input type="date" name="date" id="modalDate" class="form-control" value="{{ today_str }}" max="{{ today_str }}">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label small fw-bold text-muted" id="modalTradeTypeLabel">Trade Type</label>
+                            <select name="trade_type" id="modalTradeType" class="form-control" required>
+                                <option value="NORMAL" selected>Normal</option>
+                                <option value="INTRADAY">Intraday</option>
+                            </select>
+                        </div>
                     </div>
                     <div class="mb-3" id="notesFieldContainer">
                         <label class="form-label small fw-bold text-muted">Notes (Optional)</label>
@@ -690,6 +699,7 @@
         document.getElementById('modalQty').value = '';
         document.getElementById('modalDateLabel').innerText = 'Purchase Date';
         document.getElementById('modalDate').name = 'date';
+        document.getElementById('modalTradeTypeLabel').innerText = 'Trade Type';
         document.getElementById('transactionForm').action = "{% url 'buy_stock' %}";
         document.getElementById('modalSubmitBtn').className = 'btn btn-success rounded-pill px-4';
         document.getElementById('modalSubmitBtn').innerText = 'Confirm Buy';
@@ -705,6 +715,7 @@
         document.getElementById('modalQty').max = qty;
         document.getElementById('modalDateLabel').innerText = 'Exit Date';
         document.getElementById('modalDate').name = 'exit_date';
+        document.getElementById('modalTradeTypeLabel').innerText = 'Sell Type';
         document.getElementById('transactionForm').action = "{% url 'sell_stock' %}";
         document.getElementById('modalSubmitBtn').className = 'btn btn-danger rounded-pill px-4';
         document.getElementById('modalSubmitBtn').innerText = 'Confirm Sell';

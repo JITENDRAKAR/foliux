@@ -38,4 +38,4 @@ if ($LASTEXITCODE -ne 0) {
 
 # 5. Start Project
 Write-Host "Starting FOLIUX Project..." -ForegroundColor Green
-& "$VENV_NAME\Scripts\python.exe" manage.py runserver 8000
+& "$VENV_NAME\Scripts\python.exe" manage.py runserver 0.0.0.0:80

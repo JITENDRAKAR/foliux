@@ -60,6 +60,11 @@ class Portfolio(models.Model):
     class Meta:
         unique_together = ('user', 'instrument')
 
+TRADE_TYPES = [
+    ('NORMAL', 'Normal'),
+    ('INTRADAY', 'Intraday'),
+]
+
 class PnLStatement(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     instrument = models.ForeignKey(Instrument, on_delete=models.CASCADE)
@@ -69,6 +74,7 @@ class PnLStatement(models.Model):
     buy_value = models.DecimalField(max_digits=15, decimal_places=2)
     sell_value = models.DecimalField(max_digits=15, decimal_places=2)
     realized_profit = models.DecimalField(max_digits=15, decimal_places=2)
+    trade_type = models.CharField(max_length=10, choices=TRADE_TYPES, default='NORMAL')
     
     
     def __str__(self):
@@ -89,10 +95,10 @@ class Profile(models.Model):
     equity_profit_expectation = models.DecimalField(max_digits=10, decimal_places=2, default=22.00)
     mf_profit_expectation = models.DecimalField(max_digits=10, decimal_places=2, default=22.00)
     coin_profit_expectation = models.DecimalField(max_digits=10, decimal_places=2, default=22.00)
-    equity_fixed_charge = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, null=True, blank=True)
-    equity_brokerage_pct = models.DecimalField(max_digits=10, decimal_places=4, default=0.2000, null=True, blank=True) # Percentage (e.g., 0.2%)
-    intraday_fixed_charge = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, null=True, blank=True)
-    intraday_brokerage_pct = models.DecimalField(max_digits=10, decimal_places=4, default=0.2000, null=True, blank=True) # Percentage (e.g., 0.2%)
+    equity_fixed_charge = models.DecimalField(max_digits=10, decimal_places=2, default=25.00, null=True, blank=True)
+    equity_brokerage_pct = models.DecimalField(max_digits=10, decimal_places=4, default=0.0000, null=True, blank=True) # Percentage (e.g., 0.2%)
+    intraday_fixed_charge = models.DecimalField(max_digits=10, decimal_places=2, default=25.00, null=True, blank=True)
+    intraday_brokerage_pct = models.DecimalField(max_digits=10, decimal_places=4, default=0.0000, null=True, blank=True) # Percentage (e.g., 0.2%)
     financial_goal = models.DecimalField(max_digits=20, decimal_places=2, default=10000000.00)
 
     def save(self, *args, **kwargs):
@@ -222,6 +228,7 @@ class Transaction(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     instrument = models.ForeignKey(Instrument, on_delete=models.CASCADE)
     transaction_type = models.CharField(max_length=4, choices=TRANSACTION_TYPES)
+    trade_type = models.CharField(max_length=10, choices=TRADE_TYPES, default='NORMAL')
     quantity = models.IntegerField()
     remaining_quantity = models.IntegerField(default=0) # Only for BUY
     price = models.DecimalField(max_digits=10, decimal_places=2)
