@@ -4550,7 +4550,6 @@ def backtest_strategy_api(request):
         logger.error(f"Backtest failed: {e}")
         return JsonResponse({'error': str(e)}, status=500)
 
-@login_required
 @csrf_exempt
 def chatbot_response(request):
     """

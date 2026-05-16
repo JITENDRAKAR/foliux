@@ -1099,7 +1099,7 @@
 
     {% if has_investments %}
     // ── Allocation Chart (Portfolio) ──
-    (function() {
+    document.addEventListener('DOMContentLoaded', function() {
         const canvas = document.getElementById('allocationChart');
         if (!canvas) return;
         const ctx = canvas.getContext('2d');
@@ -1186,7 +1186,7 @@
                 }
             }
         });
-    })();
+    });
     {% endif %}
 
     // ── Investment Calculator Logic ──
