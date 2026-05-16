@@ -1743,7 +1743,7 @@ def dashboard(request):
         'history_labels': history_labels,
         'history_values': history_values,
         'history_invested': history_invested,
-        'news_alerts': NewsAlert.objects.filter(instrument__in=[r['instrument_obj'] for r in recommendations if r.get('in_portfolio')]).order_by('-news_date', '-created_at')[:10]
+        'news_alerts': NewsAlert.objects.filter(instrument__in=[r.get('instrument_obj') for r in recommendations if r.get('in_portfolio') and r.get('instrument_obj')]).order_by('-news_date', '-created_at')[:10]
     }
 
     # Record current value history for users
