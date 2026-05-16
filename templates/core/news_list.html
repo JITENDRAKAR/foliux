@@ -1,0 +1,145 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_head %}
+<style>
+    .news-page-header {
+        padding: 4rem 0 3rem;
+        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        border-radius: 0 0 40px 40px;
+        margin-bottom: 3rem;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    .news-container {
+        max-width: 900px;
+        margin: 0 auto;
+    }
+    .news-row {
+        background: #fff;
+        border-radius: 20px;
+        border: 1px solid #e2e8f0;
+        padding: 30px;
+        margin-bottom: 24px;
+        transition: all 0.3s ease;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        position: relative;
+        overflow: hidden;
+    }
+    .news-row:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 15px 30px -10px rgba(0, 0, 0, 0.1);
+        border-color: #3b82f6;
+    }
+    .news-row::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 4px;
+        height: 100%;
+        background: #3b82f6;
+        opacity: 0.8;
+    }
+    .news-symbol-badge {
+        display: inline-block;
+        background: rgba(59, 130, 246, 0.1);
+        color: #2563eb;
+        font-weight: 800;
+        font-size: 0.75rem;
+        padding: 4px 12px;
+        border-radius: 30px;
+        margin-bottom: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+    .news-title {
+        font-weight: 800;
+        font-size: 1.3rem;
+        color: #1e293b;
+        margin-bottom: 12px;
+        line-height: 1.4;
+    }
+    .news-summary {
+        font-size: 1rem;
+        color: #475569;
+        line-height: 1.6;
+        margin-bottom: 20px;
+    }
+    .news-meta {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-top: 1px solid #f1f5f9;
+        padding-top: 15px;
+    }
+    .news-date {
+        font-size: 0.85rem;
+        color: #94a3b8;
+        font-weight: 600;
+    }
+    .read-more-btn {
+        background: #2563eb;
+        color: #fff;
+        padding: 8px 20px;
+        border-radius: 30px;
+        font-weight: 700;
+        font-size: 0.85rem;
+        text-decoration: none;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .read-more-btn:hover {
+        background: #1d4ed8;
+        color: #fff;
+        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+        transform: translateX(3px);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="news-page-header text-center">
+    <div class="container">
+        <h1 class="fw-900 text-dark mb-2">Market Insights & News</h1>
+        <p class="text-muted fw-bold">Automated updates for your portfolio and our strategy stocks.</p>
+    </div>
+</div>
+
+<div class="container news-container pb-5">
+    {% if news_alerts %}
+        {% for alert in news_alerts %}
+        <div class="news-row animate__animated animate__fadeInUp">
+            <div class="d-flex justify-content-between align-items-start">
+                <span class="news-symbol-badge">{{ alert.instrument.symbol }}</span>
+                <span class="news-date"><i class="far fa-calendar-alt me-1"></i> {{ alert.news_date|date:"d M Y" }}</span>
+            </div>
+            <h2 class="news-title">{{ alert.title }}</h2>
+            <div class="news-summary">
+                {{ alert.summary|linebreaks }}
+            </div>
+            <div class="news-meta">
+                <span class="small text-muted">Source: Automated Alert</span>
+                {% if alert.url %}
+                <a href="{{ alert.url }}" target="_blank" class="read-more-btn">
+                    Read Full Story <i class="fas fa-external-link-alt"></i>
+                </a>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="text-center py-5">
+            <div class="bg-white rounded-4 p-5 shadow-sm border">
+                <i class="fas fa-newspaper text-muted mb-3" style="font-size: 4rem; opacity: 0.2;"></i>
+                <h4 class="text-dark fw-bold">No news alerts found.</h4>
+                <p class="text-muted">Our system automatically processes news for your stocks every day at 9 AM IST.</p>
+                <a href="{% url 'landing' %}" class="btn btn-primary rounded-pill px-4 mt-3">Back to Home</a>
+            </div>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

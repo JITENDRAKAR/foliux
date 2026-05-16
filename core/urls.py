@@ -129,4 +129,5 @@ urlpatterns = [
     path('chatbot-response/', views.chatbot_response, name='chatbot_response'),
     path('api/toggle-hidden-signal/', views.toggle_hidden_signal, name='toggle_hidden_signal'),
     path('feedback/', views.submit_review, name='feedback'),
+    path('stock-news/', views.stock_news_list, name='stock_news'),
 ]

@@ -1595,6 +1595,12 @@ def education_hub(request):
     return render(request, 'core/education_hub.html')
 
 
+def stock_news_list(request):
+    """View to list all stock news alerts in a dedicated page."""
+    news_alerts = NewsAlert.objects.all().order_by('-news_date', '-created_at')[:50]
+    return render(request, 'core/news_list.html', {'news_alerts': news_alerts})
+
+
 def ipo_list(request):
     """IPO list page for users."""
     from .models import IPO
