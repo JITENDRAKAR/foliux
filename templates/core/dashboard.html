@@ -209,7 +209,7 @@
         <div class="card shadow-sm">
             <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center border-bottom">
                 <div>
-                    <h5 class="mb-0 fw-bold">Upload P&L and Portfolio
+                    <h2 class="mb-0 fw-bold fs-5">Upload P&L and Portfolio
                         {% if current_strategy %}
                         <span class="badge bg-primary ms-2" style="font-size: 0.8rem; vertical-align: middle;">
                             {% if current_strategy == 'flexi' %}FlexiMultiInvest
@@ -228,7 +228,7 @@
                             <i class="fas fa-search"></i>
                         </span>
                         <input type="text" id="portfolioSearch" class="form-control border-start-0 rounded-end-pill" 
-                               placeholder="Search Stocks (Signals/Folio)" list="portfolioList">
+                               placeholder="Search Stocks (Signals/Folio)" list="portfolioList" aria-label="Search Stocks in Portfolio">
                         <datalist id="portfolioList">
                             {% for item in recommendations %}
                                 {% if item.in_portfolio %}
@@ -347,7 +347,7 @@
                     </div>
                 </div>
 
-                <h5 class="mb-4 fw-bold" id="portfolio-view-title">
+                <h2 class="mb-4 fw-bold fs-5" id="portfolio-view-title">
                     <i class="fas fa-list me-2"></i>Folio Recommendations
                 </h5>
 
@@ -492,7 +492,7 @@
         <div class="modal-content border-0 shadow">
             <div class="modal-header border-bottom-0">
                 <h5 class="modal-title fw-bold" id="modalTitle">Buy Stock</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form id="transactionForm" method="POST">
                 {% csrf_token %}
@@ -500,26 +500,26 @@
                     {% if is_family_view %}<input type="hidden" name="user_id" value="{{ target_user.id }}">{% endif %}
                     <input type="hidden" name="symbol" id="modalSymbol">
                     <div class="mb-3">
-                        <label class="form-label small fw-bold text-muted">Stock Symbol</label>
+                        <label class="form-label small fw-bold text-muted" for="displaySymbol">Stock Symbol</label>
                         <input type="text" class="form-control fw-bold" id="displaySymbol" disabled>
                     </div>
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label class="form-label small fw-bold text-muted">Quantity</label>
+                            <label class="form-label small fw-bold text-muted" for="modalQty">Quantity</label>
                             <input type="number" name="quantity" id="modalQty" class="form-control" required min="1">
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label class="form-label small fw-bold text-muted">Price</label>
+                            <label class="form-label small fw-bold text-muted" for="modalPrice">Price</label>
                             <input type="number" step="0.01" name="price" id="modalPrice" class="form-control" required min="0.01">
                         </div>
                     </div>
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label class="form-label small fw-bold text-muted" id="modalDateLabel">Date</label>
+                            <label class="form-label small fw-bold text-muted" id="modalDateLabel" for="modalDate">Date</label>
                             <input type="date" name="date" id="modalDate" class="form-control" value="{{ today_str }}" max="{{ today_str }}">
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label class="form-label small fw-bold text-muted" id="modalTradeTypeLabel">Trade Type</label>
+                            <label class="form-label small fw-bold text-muted" id="modalTradeTypeLabel" for="modalTradeType">Trade Type</label>
                             <select name="trade_type" id="modalTradeType" class="form-control" required>
                                 <option value="NORMAL" selected>Normal</option>
                                 <option value="INTRADAY">Intraday</option>
@@ -527,7 +527,7 @@
                         </div>
                     </div>
                     <div class="mb-3" id="notesFieldContainer">
-                        <label class="form-label small fw-bold text-muted">Notes (Optional)</label>
+                        <label class="form-label small fw-bold text-muted" for="modalNotes">Notes (Optional)</label>
                         <textarea name="notes" id="modalNotes" class="form-control" rows="2" placeholder="Why are you buying/selling?"></textarea>
                     </div>
                 </div>
