@@ -44,18 +44,17 @@ class Command(BaseCommand):
             return []
 
         # IST Timezone
-        # IST Timezone
         ist = pytz.timezone('Asia/Kolkata')
         now = datetime.datetime.now(ist)
-        # Define the 9am-9am window (previous day 9am to today 9am)
-        end_dt = now.replace(hour=9, minute=0, second=0, microsecond=0)
-        start_dt = end_dt - datetime.timedelta(days=1)
-        # IMAP search: messages sent since start_dt (date) and before end_dt+1day
+        # Last 24 hours from right now
+        end_dt = now
+        start_dt = now - datetime.timedelta(days=1)
+        # IMAP search: messages sent since start_dt (date)
         start_str = start_dt.strftime('%d-%b-%Y')
         end_str = (end_dt + datetime.timedelta(days=1)).strftime('%d-%b-%Y')
         status, messages = mail.search(None, f'(SENTSINCE {start_str} SENTBEFORE {end_str})')
         if status != 'OK':
-            self.stdout.write("No messages found for the 9am-9am window.")
+            self.stdout.write("No messages found for the last 24 hours.")
             return []
 
         email_ids = messages[0].split()
@@ -223,17 +222,11 @@ class Command(BaseCommand):
     def send_consolidated_alerts(self):
         ist = pytz.timezone('Asia/Kolkata')
         now = datetime.datetime.now(ist)
-        # Define the 9am-9am window (previous day 9am to today 9am)
-        end_dt = now.replace(hour=9, minute=0, second=0, microsecond=0)
-        start_dt = end_dt - datetime.timedelta(days=1)
+        # Last 24 hours from right now
+        end_dt = now
+        start_dt = now - datetime.timedelta(days=1)
         # Filter NewsAlert objects within this window (news_date is a date field)
         today_news = NewsAlert.objects.filter(news_date__gte=start_dt.date(), news_date__lte=end_dt.date())
-
-        # Get all news from today that hasn't been sent in a consolidated alert
-        # (Assuming we run this command once a day or want to send what's new)
-        # For simplicity in this local test, we'll just send all news of today to relevant users.
-        
-        today_news = NewsAlert.objects.filter(news_date=today)
         if not today_news.exists():
             self.stdout.write("No news to send today.")
             return
