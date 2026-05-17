@@ -637,14 +637,13 @@
   {% if not user.is_authenticated and GOOGLE_CLIENT_ID %}
   <!-- Google One Tap JavaScript API -->
   <script>
-    window.onload = function () {
+    window.addEventListener('load', function() {
       if (typeof google !== 'undefined') {
         google.accounts.id.initialize({
           client_id: "{{ GOOGLE_CLIENT_ID }}",
           callback: handleCredentialResponse,
-          auto_select: true, // Attempt auto-login if only one account exists
-          itp_support: true,
-          use_fedcm_for_prompt: true
+          auto_select: true,
+          cancel_on_tap_outside: false
         });
         
         // Display the One Tap prompt
@@ -658,7 +657,7 @@
           }
         });
       }
-    };
+    });
 
     function handleCredentialResponse(response) {
       const formData = new FormData();
