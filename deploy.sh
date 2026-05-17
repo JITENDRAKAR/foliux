@@ -77,7 +77,7 @@ fi
 # This ensures that your .env and database are never overwritten by Git
 rsync -av --delete \
     --exclude '.git/' \
-    --exclude 'venv/' \
+    --exclude 'venv_local/' \
     --exclude '__pycache__/' \
     --exclude '.env' \
     --exclude 'db.sqlite3' \
