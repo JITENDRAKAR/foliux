@@ -164,8 +164,7 @@ class Command(BaseCommand):
                         title=display_title,
                         summary=clean_summary[:1000],
                         url=news_url,
-                        alert_type="News",
-                        news_date=today
+                        news_date=now.date()
                     )
 
                     new_alerts.append(alert)
