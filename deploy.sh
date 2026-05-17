@@ -7,7 +7,7 @@
 # Configuration
 LIVE_DIR="/home/foliux"
 GIT_DIR="/home/foliux_git"
-VENV_PATH="$LIVE_DIR/venv"
+VENV_PATH="$LIVE_DIR/venv_local"
 SERVICE_NAME="foliux"
 REPO_URL="https://JITENDRAKAR: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@github.com/JITENDRAKAR/foliux.git"
 
@@ -138,4 +138,8 @@ fi
 echo -e "\n${GREEN}==========================================${NC}"
 echo -e "${GREEN}   DEPLOYMENT COMPLETED SUCCESSFULLY!     ${NC}"
 echo -e "${GREEN}==========================================${NC}"
+# Optional: run the daily news command to verify email flow
+echo -e "${YELLOW}Running daily news job for verification...${NC}"
+$VENV_PATH/bin/python manage.py process_stock_news
+
 echo -e "${BLUE}Finished at: $(date)${NC}"
