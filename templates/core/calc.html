@@ -1,0 +1,1922 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block extra_css %}
+<style>
+  /* FOLIUX Calculator Studio Premium Style System */
+  :root {
+    --studio-primary: #003D7C;
+    --studio-secondary: #0056b3;
+    --studio-accent: #00b4d8;
+    --studio-accent-rgb: 0, 180, 216;
+    --studio-success: #008D4C;
+    --studio-success-rgb: 0, 141, 76;
+    --studio-danger: #D62A2D;
+    --studio-warning: #ffc107;
+    --studio-dark-bg: #0f172a;
+    --studio-dark-card: #1e293b;
+    --studio-dark-text: #f8fafc;
+    --studio-light-bg: #f8fafc;
+    --studio-light-card: #ffffff;
+    --studio-light-text: #0f172a;
+    
+    /* Active theme values (dynamically toggled) */
+    --calc-bg: var(--studio-light-bg);
+    --calc-card: var(--studio-light-card);
+    --calc-text: var(--studio-light-text);
+    --calc-border: #e2e8f0;
+    --calc-muted: #64748b;
+  }
+
+  body.studio-dark-mode {
+    --calc-bg: var(--studio-dark-bg);
+    --calc-card: var(--studio-dark-card);
+    --calc-text: var(--studio-dark-text);
+    --calc-border: #334155;
+    --calc-muted: #94a3b8;
+    background-color: var(--studio-dark-bg) !important;
+    color: var(--studio-dark-text) !important;
+  }
+
+  body.studio-dark-mode, 
+  body.studio-dark-mode .text-slate-800, 
+  body.studio-dark-mode .text-slate-900, 
+  body.studio-dark-mode .form-label, 
+  body.studio-dark-mode h1, 
+  body.studio-dark-mode h2, 
+  body.studio-dark-mode h3, 
+  body.studio-dark-mode h4, 
+  body.studio-dark-mode h5, 
+  body.studio-dark-mode h6,
+  body.studio-dark-mode label,
+  body.studio-dark-mode p,
+  body.studio-dark-mode span,
+  body.studio-dark-mode div {
+    color: var(--studio-dark-text) !important;
+  }
+
+  body.studio-dark-mode .bg-light {
+    background-color: var(--studio-dark-card) !important;
+    border-color: var(--calc-border) !important;
+  }
+
+  body.studio-dark-mode .text-muted,
+  body.studio-dark-mode .metric-box-title {
+    color: var(--calc-muted) !important;
+  }
+
+  /* Transition smooth overrides */
+  .calc-studio-container {
+    background-color: var(--calc-bg);
+    transition: background-color 0.3s ease, color 0.3s ease;
+    color: var(--calc-text);
+    min-height: 100vh;
+  }
+
+  .premium-card {
+    background-color: var(--calc-card);
+    border: 1px solid var(--calc-border);
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.02);
+    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s ease, background-color 0.3s ease, border-color 0.3s ease;
+  }
+
+  body.studio-dark-mode .premium-card {
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+  }
+
+  .premium-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 15px 35px rgba(0,0,0,0.06);
+  }
+
+  body.studio-dark-mode .premium-card:hover {
+    box-shadow: 0 15px 35px rgba(0,0,0,0.3);
+  }
+
+  /* Glassmorphism overlays */
+  .studio-glass {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  /* Premium inputs */
+  .calc-slider {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 6px;
+    border-radius: 5px;
+    background: var(--calc-border);
+    outline: none;
+    transition: background 0.3s;
+  }
+
+  .calc-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--studio-primary);
+    cursor: pointer;
+    box-shadow: 0 0 10px rgba(0, 61, 124, 0.3);
+    transition: transform 0.1s, background-color 0.2s;
+  }
+
+  .calc-slider::-webkit-slider-thumb:hover {
+    transform: scale(1.2);
+  }
+
+  body.studio-dark-mode .calc-slider::-webkit-slider-thumb {
+    background: var(--studio-accent);
+    box-shadow: 0 0 10px rgba(0, 180, 216, 0.5);
+  }
+
+  .input-group-premium {
+    position: relative;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid var(--calc-border);
+    background-color: var(--calc-card);
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+
+  .input-group-premium:focus-within {
+    border-color: var(--studio-accent);
+    box-shadow: 0 0 0 3px rgba(0, 180, 216, 0.15);
+  }
+
+  .input-group-premium input {
+    border: none;
+    background: transparent;
+    color: var(--calc-text);
+    font-weight: 600;
+    padding: 0.75rem 1rem;
+    width: 100%;
+    outline: none;
+  }
+
+  .input-group-premium .addon {
+    background-color: rgba(var(--studio-accent-rgb), 0.1);
+    color: var(--studio-accent);
+    font-weight: 700;
+    padding: 0.75rem 1.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Navigation Sidebar tabs */
+  .calc-nav-link {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem 1.25rem;
+    color: var(--calc-muted);
+    font-weight: 500;
+    border-radius: 12px;
+    transition: all 0.2s;
+    cursor: pointer;
+    text-decoration: none;
+    margin-bottom: 0.25rem;
+  }
+
+  .calc-nav-link i {
+    width: 24px;
+    font-size: 1.1rem;
+  }
+
+  .calc-nav-link:hover {
+    color: var(--studio-secondary);
+    background-color: rgba(var(--studio-accent-rgb), 0.05);
+  }
+
+  .calc-nav-link.active {
+    color: #ffffff !important;
+    background: linear-gradient(135deg, var(--studio-primary) 0%, var(--studio-secondary) 100%);
+    box-shadow: 0 4px 15px rgba(0, 61, 124, 0.2);
+  }
+
+  body.studio-dark-mode .calc-nav-link.active {
+    background: linear-gradient(135deg, var(--studio-accent) 0%, var(--studio-secondary) 100%);
+    box-shadow: 0 4px 15px rgba(0, 180, 216, 0.2);
+  }
+
+  /* Metric cards */
+  .metric-box {
+    background-color: rgba(var(--studio-accent-rgb), 0.03);
+    border: 1px solid rgba(var(--studio-accent-rgb), 0.1);
+    border-radius: 16px;
+    padding: 1.25rem;
+    text-align: center;
+  }
+
+  .metric-box-title {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--calc-muted);
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+  }
+
+  .metric-box-value {
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: var(--calc-text);
+  }
+
+  .metric-box-value.success {
+    color: var(--studio-success);
+  }
+
+  /* Dark mode switch styling */
+  .theme-toggle-btn {
+    border-radius: 50%;
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--calc-border);
+    background-color: var(--calc-card);
+    color: var(--calc-text);
+    cursor: pointer;
+    transition: all 0.3s;
+  }
+
+  .theme-toggle-btn:hover {
+    transform: rotate(30deg) scale(1.05);
+  }
+
+  /* Lakhs & Crores badges */
+  .indian-unit-badge {
+    background-color: rgba(var(--studio-accent-rgb), 0.1);
+    color: var(--studio-accent);
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 0.25rem 0.5rem;
+    border-radius: 6px;
+    margin-left: 0.5rem;
+  }
+
+  /* List items */
+  .calc-list-item {
+    padding: 0.75rem 1rem;
+    border-radius: 12px;
+    border: 1px solid var(--calc-border);
+    margin-bottom: 0.5rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    background-color: var(--calc-card);
+  }
+
+  .calc-list-item:hover {
+    border-color: var(--studio-accent);
+    background-color: rgba(var(--studio-accent-rgb), 0.02);
+  }
+
+  .calc-list-item.selected {
+    border-color: var(--studio-accent);
+    background-color: rgba(var(--studio-accent-rgb), 0.05);
+    font-weight: 600;
+  }
+
+  /* Search input styling */
+  .search-wrapper {
+    position: relative;
+    border-radius: 16px;
+    overflow: hidden;
+    border: 1px solid var(--calc-border);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.01);
+  }
+
+  .search-wrapper i {
+    position: absolute;
+    left: 1.25rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--calc-muted);
+  }
+
+  .search-wrapper input {
+    width: 100%;
+    border: none;
+    background-color: var(--calc-card);
+    color: var(--calc-text);
+    padding: 1rem 1rem 1rem 3rem;
+    outline: none;
+    font-weight: 500;
+  }
+
+  /* Compliance disclaimer styling */
+  .compliance-container {
+    background-color: rgba(0,0,0,0.02);
+    border-radius: 16px;
+    border: 1px solid var(--calc-border);
+    padding: 1.5rem;
+    margin-top: 3rem;
+    color: var(--calc-muted);
+    font-size: 0.85rem;
+    line-height: 1.6;
+  }
+
+  body.studio-dark-mode .compliance-container {
+    background-color: rgba(255,255,255,0.01);
+  }
+
+  /* Custom tabs for comparison section */
+  .comparison-tab {
+    cursor: pointer;
+    padding: 0.75rem 1.5rem;
+    border-bottom: 2px solid transparent;
+    font-weight: 600;
+    color: var(--calc-muted);
+    transition: all 0.2s;
+  }
+
+  .comparison-tab.active {
+    color: var(--studio-secondary);
+    border-color: var(--studio-secondary);
+  }
+
+  body.studio-dark-mode .comparison-tab.active {
+    color: var(--studio-accent);
+    border-color: var(--studio-accent);
+  }
+
+  /* Live Data Badge */
+  .live-pulse {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: #10b981;
+    display: inline-block;
+    margin-right: 6px;
+    box-shadow: 0 0 8px #10b981;
+    animation: live-pulse-anim 2s infinite;
+  }
+
+  @keyframes live-pulse-anim {
+    0% { transform: scale(1); opacity: 1; box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
+    70% { transform: scale(1.2); opacity: 0.5; box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+    100% { transform: scale(1); opacity: 1; box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+  }
+
+  .popular-badge {
+    background: linear-gradient(135deg, #ff9f43 0%, #ff5252 100%);
+    color: white;
+    font-size: 0.65rem;
+    font-weight: 700;
+    padding: 0.15rem 0.4rem;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-left: 0.5rem;
+    display: inline-block;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="calc-studio-container py-4 px-1" id="calcStudioWrapper">
+  <div class="container-fluid">
+    
+    <!-- Top Action Bar -->
+    <div class="row align-items-center mb-4">
+      <div class="col-md-8">
+        <div class="d-flex align-items-center gap-3">
+          <div class="bg-primary text-white rounded-4 d-flex align-items-center justify-content-center" style="width: 54px; height: 54px;">
+            <i class="fas fa-chart-line fs-3"></i>
+          </div>
+          <div>
+            <h1 class="h2 fw-extrabold mb-0" style="letter-spacing: -0.03em;">Wealth Studio</h1>
+            <p class="text-muted small mb-0">Institutional-grade financial simulators & strategy backtesters.</p>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4 text-md-end mt-3 mt-md-0">
+        <div class="d-flex justify-content-md-end align-items-center gap-2">
+          <span class="text-muted small me-2"><span class="live-pulse"></span>Indian Market Feed Online</span>
+          <button class="theme-toggle-btn" id="studioThemeToggle" title="Toggle Dark/Light Mode">
+            <i class="fas fa-moon"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Search and Category Filters -->
+    <div class="row mb-4">
+      <div class="col-12 col-lg-4 mb-3 mb-lg-0">
+        <div class="search-wrapper">
+          <i class="fas fa-search"></i>
+          <input type="text" id="calcSearchInput" placeholder="Search calculators (e.g. SIP, Tax, EMI)...">
+        </div>
+      </div>
+      <div class="col-12 col-lg-8">
+        <div class="d-flex flex-nowrap overflow-x-auto gap-2 pb-2" id="categoryTabWrapper">
+          <button class="btn btn-outline-secondary rounded-pill px-3 py-2 text-nowrap active" onclick="filterCategory('all', this)">All Simulators</button>
+          <button class="btn btn-outline-secondary rounded-pill px-3 py-2 text-nowrap" onclick="filterCategory('investment', this)"><i class="fas fa-piggy-bank me-2"></i>Investment</button>
+          <button class="btn btn-outline-secondary rounded-pill px-3 py-2 text-nowrap" onclick="filterCategory('retirement', this)"><i class="fas fa-couch me-2"></i>Retirement</button>
+          <button class="btn btn-outline-secondary rounded-pill px-3 py-2 text-nowrap" onclick="filterCategory('loan', this)"><i class="fas fa-home me-2"></i>Loan & EMI</button>
+          <button class="btn btn-outline-secondary rounded-pill px-3 py-2 text-nowrap" onclick="filterCategory('tax', this)"><i class="fas fa-file-invoice-dollar me-2"></i>Tax & Salary</button>
+          <button class="btn btn-outline-secondary rounded-pill px-3 py-2 text-nowrap" onclick="filterCategory('trading', this)"><i class="fas fa-exchange-alt me-2"></i>Trading</button>
+          <button class="btn btn-outline-secondary rounded-pill px-3 py-2 text-nowrap" onclick="filterCategory('crypto', this)"><i class="fab fa-bitcoin me-2"></i>Crypto</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Workspace Area -->
+    <div class="row">
+      
+      <!-- Left Sidebar: Calculator List -->
+      <div class="col-12 col-lg-3 mb-4 mb-lg-0">
+        <div class="premium-card p-3" style="max-height: 75vh; overflow-y: auto;">
+          <h5 class="fw-bold mb-3 small text-uppercase tracking-wider" style="color: var(--calc-muted);">Calculators</h5>
+          <div id="calculatorListContainer">
+            <!-- Dynamically populated calculator items -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Area: Interactive Calculator Interface -->
+      <div class="col-12 col-lg-9">
+        <div class="premium-card p-4 mb-4">
+          
+          <!-- Workspace Title -->
+          <div class="d-flex flex-wrap justify-content-between align-items-start border-bottom pb-3 mb-4">
+            <div>
+              <h2 class="h3 fw-extrabold mb-1" id="activeCalcTitle">Loading Calculator...</h2>
+              <p class="text-muted small mb-0" id="activeCalcDescription">Please wait while the computational engine initializes.</p>
+            </div>
+            <div class="d-flex gap-2 mt-2 mt-sm-0">
+              <button class="btn btn-sm btn-outline-secondary rounded-pill" onclick="saveToHistory()" title="Save calculation details to local history"><i class="fas fa-history me-1"></i>Save</button>
+              <button class="btn btn-sm btn-outline-secondary rounded-pill" onclick="exportCalculationCSV()" title="Export results as CSV"><i class="fas fa-file-csv me-1"></i>Export</button>
+              <button class="btn btn-sm btn-outline-primary rounded-pill px-3" onclick="copyShareableSummary()" title="Copy shareable text summary"><i class="fas fa-share-alt me-1"></i>Share</button>
+            </div>
+          </div>
+
+          <!-- Dynamic Workspace Split -->
+          <div class="row">
+            <!-- Left Side: Interactive Input Parameters (Sliders + Inputs) -->
+            <div class="col-12 col-md-6 mb-4 mb-md-0 border-end pe-md-4">
+              <h5 class="fw-bold mb-4 d-flex align-items-center">
+                <i class="fas fa-sliders-h text-primary me-2"></i>Parameters
+              </h5>
+              <div id="dynamicInputsContainer">
+                <!-- Dynamically injected input elements -->
+              </div>
+            </div>
+
+            <!-- Right Side: Live Visual Representation & Metrics -->
+            <div class="col-12 col-md-6 ps-md-4">
+              <h5 class="fw-bold mb-4 d-flex align-items-center justify-content-between">
+                <span><i class="fas fa-chart-pie text-success me-2"></i>Results Projection</span>
+                <span class="badge bg-success bg-opacity-10 text-success fw-bold border border-success border-opacity-25 small" style="font-size: 0.75rem;">Real-time</span>
+              </h5>
+              
+              <!-- Metrics Cards Row -->
+              <div class="row g-3 mb-4" id="dynamicMetricsContainer">
+                <!-- Dynamically injected metric blocks -->
+              </div>
+
+              <!-- Live Chart Container -->
+              <div class="bg-light rounded-4 p-3 border mb-3 text-center position-relative" style="min-height: 250px;">
+                <canvas id="activeCalcChart" style="max-height: 250px;"></canvas>
+                <div id="noChartFallback" class="position-absolute top-50 start-50 translate-middle d-none text-muted small">
+                  <i class="fas fa-chart-line fs-2 mb-2 d-block"></i>Visual projection is ready for calculations
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Calculator Comparisons & History Section -->
+        <div class="row">
+          <div class="col-12 col-md-6 mb-4 mb-md-0">
+            <div class="premium-card p-4 h-100">
+              <h5 class="fw-bold mb-3 d-flex align-items-center">
+                <i class="fas fa-exchange-alt text-warning me-2"></i>Quick Comparison Lab
+              </h5>
+              <p class="text-muted small">Compare options to choose the best strategic financial vehicle.</p>
+              
+              <div class="d-flex border-bottom mb-3">
+                <div class="comparison-tab active" onclick="toggleComparisonTab('regime', this)">Old vs New Tax Regime</div>
+                <div class="comparison-tab" onclick="toggleComparisonTab('sipLump', this)">SIP vs Lumpsum</div>
+              </div>
+
+              <!-- Comparison Content: Tax Regime -->
+              <div id="compareRegimeContainer" class="comparison-panel">
+                <div class="row g-3 align-items-end mb-3">
+                  <div class="col-sm-8">
+                    <label class="form-label small fw-bold">Enter Annual Income (INR)</label>
+                    <input type="number" class="form-control rounded-3" id="compTaxIncome" value="1500000" oninput="runTaxComparison()">
+                  </div>
+                  <div class="col-sm-4">
+                    <label class="form-label small fw-bold">Tax Deductions (Old)</label>
+                    <input type="number" class="form-control rounded-3" id="compTaxDeduct" value="250000" oninput="runTaxComparison()">
+                  </div>
+                </div>
+                <div class="p-3 bg-light rounded-3 border">
+                  <div class="d-flex justify-content-between mb-2">
+                    <span class="small fw-semibold text-muted">New Regime Tax:</span>
+                    <span class="fw-extrabold text-success" id="compNewRegimeResult">₹1,15,000</span>
+                  </div>
+                  <div class="d-flex justify-content-between mb-2">
+                    <span class="small fw-semibold text-muted">Old Regime Tax:</span>
+                    <span class="fw-extrabold text-danger" id="compOldRegimeResult">₹1,95,000</span>
+                  </div>
+                  <div class="border-top mt-2 pt-2 text-center small fw-bold text-primary" id="compTaxAdvice">
+                    New Regime saves you ₹80,000!
+                  </div>
+                </div>
+              </div>
+
+              <!-- Comparison Content: SIP vs Lumpsum -->
+              <div id="compareSipLumpContainer" class="comparison-panel d-none">
+                <div class="row g-3 align-items-end mb-3">
+                  <div class="col-sm-6">
+                    <label class="form-label small fw-bold">Amount (₹)</label>
+                    <input type="number" class="form-control rounded-3" id="compAmt" value="120000" oninput="runSipLumpComparison()">
+                  </div>
+                  <div class="col-sm-3">
+                    <label class="form-label small fw-bold">Rate (%)</label>
+                    <input type="number" class="form-control rounded-3" id="compRate" value="12" oninput="runSipLumpComparison()">
+                  </div>
+                  <div class="col-sm-3">
+                    <label class="form-label small fw-bold">Years</label>
+                    <input type="number" class="form-control rounded-3" id="compYears" value="10" oninput="runSipLumpComparison()">
+                  </div>
+                </div>
+                <div class="p-3 bg-light rounded-3 border">
+                  <div class="d-flex justify-content-between mb-2">
+                    <span class="small fw-semibold text-muted">Monthly SIP (₹10,000/mo):</span>
+                    <span class="fw-extrabold text-slate-800" id="compSipResult">₹22,41,692</span>
+                  </div>
+                  <div class="d-flex justify-content-between mb-2">
+                    <span class="small fw-semibold text-muted">One-time Lumpsum (₹1,20,000):</span>
+                    <span class="fw-extrabold text-slate-800" id="compLumpResult">₹3,72,701</span>
+                  </div>
+                  <div class="border-top mt-2 pt-2 text-center small text-muted">
+                    SIP deploys ₹1.2L annually; Lumpsum yields interest on a single upfront deployment.
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+          
+          <div class="col-12 col-md-6">
+            <div class="premium-card p-4 h-100">
+              <h5 class="fw-bold mb-3 d-flex align-items-center">
+                <i class="fas fa-history text-primary me-2"></i>My Calculation History
+              </h5>
+              <p class="text-muted small">Recent wealth simulations run on this device.</p>
+              
+              <div style="max-height: 220px; overflow-y: auto;" id="calcHistoryContainer">
+                <div class="text-center py-4 text-muted small">
+                  <i class="fas fa-folder-open fs-3 mb-2 d-block"></i>No saved calculations yet. Try clicking "Save" above!
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- SEBI & Compliance Disclaimers -->
+    <div class="compliance-container">
+      <div class="row border-bottom pb-3 mb-3">
+        <div class="col-md-6 d-flex align-items-center mb-2 mb-md-0">
+          <i class="fas fa-shield-alt text-primary fs-4 me-3"></i>
+          <div>
+            <h6 class="fw-bold mb-0 text-slate-900">Regulatory Compliance & Transparency</h6>
+            <p class="small text-muted mb-0">FOLIUX Wealth simulators comply with institutional disclosure guidelines.</p>
+          </div>
+        </div>
+        <div class="col-md-6 text-md-end text-muted small">
+          Last updated: 2026 / Version 2.4.0
+        </div>
+      </div>
+      <div class="row g-3">
+        <div class="col-md-6">
+          <p class="mb-2"><strong>SEBI Disclaimer:</strong> Simulation tools provided by FOLIUX are solely for educational purposes and do not constitute solicitation or recommendations to buy, sell, or hold securities. These projections are mathematical estimations based on past growth performance and do not guarantee future returns.</p>
+          <p class="mb-0"><strong>Investment Returns Disclaimer:</strong> Mutual fund, stock, and cryptocurrency investments are subject to market risks. Read all scheme related documents carefully. Past performance does not indicate future results.</p>
+        </div>
+        <div class="col-md-6">
+          <p class="mb-2"><strong>Stocks & Cryptocurrencies Risk Warning:</strong> Trading high-volatility financial instruments carries a highly significant risk of capital loss. Simulators model linear rate expectations; real market assets incur compounding volatility and potential drawdown events.</p>
+          <p class="mb-0"><strong>Tax Calculation Disclaimer:</strong> Tax regimes, HRA exempt rules, and salary breakdowns are estimated under the provisions of the Income Tax Act, 1961 (and subsequent amendments). Surcharges, rebates, and individual deductions may vary; consult a qualified Chartered Accountant (CA) or certified tax advisor before filing.</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  // Complete JavaScript Simulators Registry & Computational Core
+  const CALCULATORS_REGISTRY = {
+    // Investment Calculators
+    'sip': {
+      id: 'sip',
+      title: 'SIP Calculator',
+      description: 'Calculate maturity corpus and returns of Systematic Investment Plan (SIP) investments.',
+      category: 'investment',
+      popular: true,
+      inputs: [
+        { key: 'monthly', label: 'Monthly Investment', min: 500, max: 1000000, step: 500, default: 25000, type: 'currency' },
+        { key: 'rate', label: 'Expected Return Rate (Annual %)', min: 1, max: 30, step: 0.5, default: 12, type: 'percent' },
+        { key: 'tenure', label: 'Investment Period (Years)', min: 1, max: 40, step: 1, default: 15, type: 'number' }
+      ],
+      calculate: function(state) {
+        const P = state.monthly;
+        const r = state.rate;
+        const t = state.tenure;
+        const i = (r / 12) / 100;
+        const n = t * 12;
+
+        const maturity = P * ((Math.pow(1 + i, n) - 1) / i) * (1 + i);
+        const invested = P * n;
+        const returns = maturity - invested;
+
+        return {
+          metrics: [
+            { label: 'Invested Amount', value: invested, type: 'currency' },
+            { label: 'Est. Returns', value: returns, type: 'currency', class: 'success' },
+            { label: 'Total Value', value: maturity, type: 'currency' }
+          ],
+          chart: {
+            type: 'doughnut',
+            labels: ['Invested Amount', 'Estimated Returns'],
+            datasets: [{
+              data: [invested, returns],
+              backgroundColor: ['#003D7C', '#008D4C']
+            }]
+          }
+        };
+      }
+    },
+    'stepupsip': {
+      id: 'stepupsip',
+      title: 'Step-up SIP Calculator',
+      description: 'Model compounding acceleration by increasing SIP amounts annually with salary/income growth.',
+      category: 'investment',
+      popular: true,
+      inputs: [
+        { key: 'monthly', label: 'Starting Monthly SIP', min: 1000, max: 500000, step: 1000, default: 15000, type: 'currency' },
+        { key: 'stepup', label: 'Annual Step-up (%)', min: 1, max: 50, step: 1, default: 10, type: 'percent' },
+        { key: 'rate', label: 'Expected Return Rate (% p.a.)', min: 1, max: 30, step: 0.5, default: 12, type: 'percent' },
+        { key: 'tenure', label: 'Investment Period (Years)', min: 1, max: 40, step: 1, default: 15, type: 'number' }
+      ],
+      calculate: function(state) {
+        const startP = state.monthly;
+        const step = state.stepup / 100;
+        const r = state.rate;
+        const t = state.tenure;
+        const i = (r / 12) / 100;
+
+        let totalInvested = 0;
+        let totalValue = 0;
+        let monthlyContribution = startP;
+
+        for (let year = 1; year <= t; year++) {
+          for (let month = 1; month <= 12; month++) {
+            totalInvested += monthlyContribution;
+            totalValue = (totalValue + monthlyContribution) * (1 + i);
+          }
+          // Annual step up at the end of the year
+          monthlyContribution *= (1 + step);
+        }
+
+        const estReturns = totalValue - totalInvested;
+
+        return {
+          metrics: [
+            { label: 'Total Invested', value: totalInvested, type: 'currency' },
+            { label: 'Est. Returns', value: estReturns, type: 'currency', class: 'success' },
+            { label: 'Total Wealth Corpus', value: totalValue, type: 'currency' }
+          ],
+          chart: {
+            type: 'doughnut',
+            labels: ['Total Invested', 'Estimated Returns'],
+            datasets: [{
+              data: [totalInvested, estReturns],
+              backgroundColor: ['#003D7C', '#00b4d8']
+            }]
+          }
+        };
+      }
+    },
+    'lumpsum': {
+      id: 'lumpsum',
+      title: 'Lumpsum Calculator',
+      description: 'Calculate wealth growth for upfront investments under compound interest.',
+      category: 'investment',
+      inputs: [
+        { key: 'amount', label: 'Total Investment', min: 5000, max: 50000000, step: 5000, default: 500000, type: 'currency' },
+        { key: 'rate', label: 'Expected Return Rate (% p.a.)', min: 1, max: 30, step: 0.5, default: 12, type: 'percent' },
+        { key: 'tenure', label: 'Duration (Years)', min: 1, max: 40, step: 1, default: 10, type: 'number' }
+      ],
+      calculate: function(state) {
+        const P = state.amount;
+        const r = state.rate / 100;
+        const t = state.tenure;
+
+        const totalValue = P * Math.pow(1 + r, t);
+        const estReturns = totalValue - P;
+
+        return {
+          metrics: [
+            { label: 'Invested Capital', value: P, type: 'currency' },
+            { label: 'Est. Returns', value: estReturns, type: 'currency', class: 'success' },
+            { label: 'Future Value', value: totalValue, type: 'currency' }
+          ],
+          chart: {
+            type: 'doughnut',
+            labels: ['Capital', 'Wealth Added'],
+            datasets: [{
+              data: [P, estReturns],
+              backgroundColor: ['#003D7C', '#008D4C']
+            }]
+          }
+        };
+      }
+    },
+    'cagr': {
+      id: 'cagr',
+      title: 'CAGR Calculator',
+      description: 'Compute Compound Annual Growth Rate over a specific duration.',
+      category: 'investment',
+      inputs: [
+        { key: 'initial', label: 'Initial Value', min: 1000, max: 10000000, step: 1000, default: 100000, type: 'currency' },
+        { key: 'final', label: 'Final Value', min: 1000, max: 50000000, step: 5000, default: 320000, type: 'currency' },
+        { key: 'years', label: 'Duration (Years)', min: 0.5, max: 30, step: 0.5, default: 5, type: 'number' }
+      ],
+      calculate: function(state) {
+        const initVal = state.initial;
+        const finalVal = state.final;
+        const t = state.years;
+
+        const cagrVal = (Math.pow(finalVal / initVal, 1 / t) - 1) * 100;
+
+        return {
+          metrics: [
+            { label: 'Absolute Growth', value: finalVal - initVal, type: 'currency' },
+            { label: 'Total Returns (%)', value: ((finalVal - initVal) / initVal) * 100, type: 'percent' },
+            { label: 'CAGR Rate', value: cagrVal, type: 'percent', class: 'success' }
+          ],
+          chart: null
+        };
+      }
+    },
+    'swp': {
+      id: 'swp',
+      title: 'SWP Calculator',
+      description: 'Model a Systematic Withdrawal Plan to schedule regular income from an accumulated fund.',
+      category: 'investment',
+      inputs: [
+        { key: 'total', label: 'Total Investment Corpus', min: 100000, max: 100000000, step: 50000, default: 5000000, type: 'currency' },
+        { key: 'withdrawal', label: 'Monthly Withdrawal', min: 1000, max: 500000, step: 1000, default: 30000, type: 'currency' },
+        { key: 'rate', label: 'Expected Return Rate (% p.a.)', min: 1, max: 25, step: 0.5, default: 8.5, type: 'percent' },
+        { key: 'tenure', label: 'Withdrawal Period (Years)', min: 1, max: 40, step: 1, default: 15, type: 'number' }
+      ],
+      calculate: function(state) {
+        const P = state.total;
+        const W = state.withdrawal;
+        const r = state.rate;
+        const t = state.tenure;
+        const i = (r / 12) / 100;
+        const months = t * 12;
+
+        let balance = P;
+        let totalWithdrawn = 0;
+        let interestEarned = 0;
+
+        for (let m = 1; m <= months; m++) {
+          if (balance <= 0) {
+            balance = 0;
+            break;
+          }
+          const actualWithdrawal = Math.min(balance, W);
+          totalWithdrawn += actualWithdrawal;
+          balance -= actualWithdrawal;
+
+          const monthlyInt = balance * i;
+          interestEarned += monthlyInt;
+          balance += monthlyInt;
+        }
+
+        return {
+          metrics: [
+            { label: 'Total Capital', value: P, type: 'currency' },
+            { label: 'Total Withdrawals', value: totalWithdrawn, type: 'currency', class: 'success' },
+            { label: 'Ending Balance', value: balance, type: 'currency' }
+          ],
+          chart: {
+            type: 'bar',
+            labels: ['Total Capital', 'Total Withdrawn', 'Ending Balance'],
+            datasets: [{
+              label: 'SWP Summary',
+              data: [P, totalWithdrawn, balance],
+              backgroundColor: ['#003D7C', '#008D4C', '#00b4d8']
+            }]
+          }
+        };
+      }
+    },
+    'goal': {
+      id: 'goal',
+      title: 'Goal Planner',
+      description: 'Determine monthly savings or lump sum capital required to achieve a future goal.',
+      category: 'investment',
+      inputs: [
+        { key: 'target', label: 'Target Goal Amount', min: 100000, max: 100000000, step: 50000, default: 10000000, type: 'currency' },
+        { key: 'rate', label: 'Expected Returns Rate (%)', min: 1, max: 30, step: 0.5, default: 12, type: 'percent' },
+        { key: 'tenure', label: 'Time Horizon (Years)', min: 1, max: 30, step: 1, default: 10, type: 'number' }
+      ],
+      calculate: function(state) {
+        const G = state.target;
+        const r = state.rate;
+        const t = state.tenure;
+        const i = (r / 12) / 100;
+        const n = t * 12;
+
+        const reqSip = G / (((Math.pow(1 + i, n) - 1) / i) * (1 + i));
+        const reqLump = G / Math.pow(1 + r/100, t);
+
+        return {
+          metrics: [
+            { label: 'Target Goal', value: G, type: 'currency' },
+            { label: 'Monthly SIP Required', value: reqSip, type: 'currency', class: 'success' },
+            { label: 'Lumpsum Required', value: reqLump, type: 'currency' }
+          ],
+          chart: null
+        };
+      }
+    },
+    'fire': {
+      id: 'fire',
+      title: 'FIRE Calculator',
+      description: 'Model Financial Independence, Retire Early targets to establish a robust freedom corpus.',
+      category: 'investment',
+      popular: true,
+      inputs: [
+        { key: 'age', label: 'Current Age', min: 18, max: 60, step: 1, default: 30, type: 'number' },
+        { key: 'retire', label: 'Target Retirement Age', min: 25, max: 70, step: 1, default: 45, type: 'number' },
+        { key: 'expense', label: 'Current Monthly Expenses', min: 10000, max: 1000000, step: 5000, default: 80000, type: 'currency' },
+        { key: 'inflation', label: 'Expected Inflation Rate (%)', min: 1, max: 15, step: 0.5, default: 6, type: 'percent' },
+        { key: 'post_rate', label: 'Post-Retirement Return (%)', min: 1, max: 20, step: 0.5, default: 9, type: 'percent' }
+      ],
+      calculate: function(state) {
+        const curAge = state.age;
+        const retAge = state.retire;
+        const exp = state.expense;
+        const inf = state.inflation / 100;
+        const postR = state.post_rate / 100;
+        const yearsToRetire = retAge - curAge;
+        const retirementDuration = 85 - retAge; // Assuming average life expectancy of 85 years in calculations
+
+        const inflatedMonthlyExpenses = exp * Math.pow(1 + inf, yearsToRetire);
+        const annualExp = inflatedMonthlyExpenses * 12;
+
+        // Inflation adjusted real return post-retirement
+        const realReturn = ((1 + postR) / (1 + inf)) - 1;
+
+        // Calculate corpus required using growing annuity model
+        let corpusNeeded = 0;
+        if (realReturn > 0) {
+          corpusNeeded = annualExp * ((1 - Math.pow(1 + realReturn, -retirementDuration)) / realReturn);
+        } else {
+          corpusNeeded = annualExp * retirementDuration;
+        }
+
+        // Standard 25X rule for reference
+        const fire25x = annualExp * 25;
+
+        return {
+          metrics: [
+            { label: 'Expenses at Retirement', value: inflatedMonthlyExpenses, type: 'currency' },
+            { label: 'Corpus Required', value: corpusNeeded, type: 'currency', class: 'success' },
+            { label: '25X Rule Target', value: fire25x, type: 'currency' }
+          ],
+          chart: {
+            type: 'bar',
+            labels: ['Corpus Needed (Annuity)', '25X Rule Corpus'],
+            datasets: [{
+              label: 'FIRE Projections',
+              data: [corpusNeeded, fire25x],
+              backgroundColor: ['#008D4C', '#00b4d8']
+            }]
+          }
+        };
+      }
+    },
+
+    // Retirement & Pension
+    'nps': {
+      id: 'nps',
+      title: 'NPS Calculator',
+      description: 'Model updates in accumulated wealth, annuity purchase value, and monthly pension from NPS.',
+      category: 'retirement',
+      popular: true,
+      inputs: [
+        { key: 'contribution', label: 'Monthly Contribution', min: 500, max: 200000, step: 500, default: 10000, type: 'currency' },
+        { key: 'rate', label: 'Expected Return Rate (%)', min: 5, max: 18, step: 0.5, default: 10, type: 'percent' },
+        { key: 'age', label: 'Current Age', min: 18, max: 60, step: 1, default: 28, type: 'number' },
+        { key: 'annuity_pct', label: 'Annuity Purchase % (Min 40%)', min: 40, max: 100, step: 5, default: 40, type: 'percent' }
+      ],
+      calculate: function(state) {
+        const P = state.contribution;
+        const r = state.rate;
+        const age = state.age;
+        const apPct = state.annuity_pct / 100;
+        const t = 60 - age; // Maturity age in NPS is 60
+        
+        const i = (r / 12) / 100;
+        const n = t * 12;
+
+        const corpus = P * ((Math.pow(1 + i, n) - 1) / i) * (1 + i);
+        const lumpsumWithdrawn = corpus * (1 - apPct);
+        const annuityAmount = corpus * apPct;
+        const monthlyPension = (annuityAmount * 0.06) / 12; // Standard 6% annuity yield assumption
+
+        return {
+          metrics: [
+            { label: 'Total NPS Corpus', value: corpus, type: 'currency' },
+            { label: 'Annuity Wealth', value: annuityAmount, type: 'currency' },
+            { label: 'Est. Monthly Pension', value: monthlyPension, type: 'currency', class: 'success' }
+          ],
+          chart: {
+            type: 'doughnut',
+            labels: ['Lumpsum Wealth (60%)', 'Annuity Corpus (40%)'],
+            datasets: [{
+              data: [lumpsumWithdrawn, annuityAmount],
+              backgroundColor: ['#003D7C', '#ffc107']
+            }]
+          }
+        };
+      }
+    },
+    'epf': {
+      id: 'epf',
+      title: 'EPF Calculator',
+      description: 'Project retirement EPF accumulated savings with annual salary updates at employee rates.',
+      category: 'retirement',
+      inputs: [
+        { key: 'basic', label: 'Monthly Basic Salary + DA', min: 15000, max: 1000000, step: 2000, default: 60000, type: 'currency' },
+        { key: 'interest', label: 'EPF Interest Rate (% p.a.)', min: 5, max: 12, step: 0.05, default: 8.25, type: 'percent' },
+        { key: 'age', label: 'Current Age', min: 18, max: 55, step: 1, default: 28, type: 'number' },
+        { key: 'increment', label: 'Annual Salary Hike (%)', min: 0, max: 30, step: 1, default: 8, type: 'percent' }
+      ],
+      calculate: function(state) {
+        const basic = state.basic;
+        const epfRate = state.interest / 100;
+        const age = state.age;
+        const hike = state.increment / 100;
+        const tenure = 58 - age; // EPF standard retirement age is 58
+
+        let balance = 0;
+        let currentSalary = basic;
+        
+        // Month-by-month accumulation over working years
+        for (let yr = 1; yr <= tenure; yr++) {
+          const employeeContribution = currentSalary * 0.12;
+          const employerContribution = currentSalary * 0.0367; // Rest of 8.33% goes to EPS
+          const monthlyTotal = employeeContribution + employerContribution;
+
+          for (let m = 1; m <= 12; m++) {
+            balance += monthlyTotal;
+            // Compound balance monthly
+            balance *= (1 + epfRate/12);
+          }
+          currentSalary *= (1 + hike);
+        }
+
+        return {
+          metrics: [
+            { label: 'Working Years', value: tenure, type: 'number' },
+            { label: 'Salary at Maturity', value: currentSalary, type: 'currency' },
+            { label: 'Retirement EPF Corpus', value: balance, type: 'currency', class: 'success' }
+          ],
+          chart: null
+        };
+      }
+    },
+    'gratuity': {
+      id: 'gratuity',
+      title: 'Gratuity Calculator',
+      description: 'Quickly calculate eligible gratuity payouts upon completing continuous employment.',
+      category: 'retirement',
+      inputs: [
+        { key: 'basic', label: 'Last Drawn Basic + DA', min: 10000, max: 2000000, step: 5000, default: 80000, type: 'currency' },
+        { key: 'years', label: 'Years of Service', min: 5, max: 40, step: 1, default: 12, type: 'number' }
+      ],
+      calculate: function(state) {
+        const basic = state.basic;
+        const years = state.years;
+
+        // Gratuity standard formula in India: (15 * Last Drawn Salary * Years) / 26
+        const gratuityVal = (15 * basic * years) / 26;
+
+        return {
+          metrics: [
+            { label: 'Years of Service', value: years, type: 'number' },
+            { label: 'Exempt Limit Reference', value: 2000000, type: 'currency' },
+            { label: 'Gratuity Payable', value: gratuityVal, type: 'currency', class: 'success' }
+          ],
+          chart: null
+        };
+      }
+    },
+
+    // Loan & EMI
+    'emi': {
+      id: 'emi',
+      title: 'Loan EMI Calculator',
+      description: 'Model EMI breakdown and interest metrics for home loans, car loans, or personal loans.',
+      category: 'loan',
+      popular: true,
+      inputs: [
+        { key: 'principal', label: 'Loan Amount', min: 10000, max: 100000000, step: 10000, default: 4000000, type: 'currency' },
+        { key: 'rate', label: 'Interest Rate (% p.a.)', min: 5, max: 25, step: 0.1, default: 8.5, type: 'percent' },
+        { key: 'tenure', label: 'Tenure (Years)', min: 1, max: 30, step: 1, default: 20, type: 'number' }
+      ],
+      calculate: function(state) {
+        const L = state.principal;
+        const r = state.rate;
+        const t = state.tenure;
+        const i = (r / 12) / 100;
+        const n = t * 12;
+
+        const emiVal = L * i * Math.pow(1 + i, n) / (Math.pow(1 + i, n) - 1);
+        const totalPayment = emiVal * n;
+        const totalInterest = totalPayment - L;
+
+        return {
+          metrics: [
+            { label: 'Monthly EMI', value: emiVal, type: 'currency', class: 'success' },
+            { label: 'Total Interest', value: totalInterest, type: 'currency' },
+            { label: 'Total Payable', value: totalPayment, type: 'currency' }
+          ],
+          chart: {
+            type: 'doughnut',
+            labels: ['Principal Loan', 'Total Interest'],
+            datasets: [{
+              data: [L, totalInterest],
+              backgroundColor: ['#003D7C', '#D62A2D']
+            }]
+          }
+        };
+      }
+    },
+    'loaneligibility': {
+      id: 'loaneligibility',
+      title: 'Loan Eligibility',
+      description: 'Assess eligible borrow limit based on monthly salary and existing EMI burdens.',
+      category: 'loan',
+      inputs: [
+        { key: 'income', label: 'Net Monthly Income', min: 10000, max: 2000000, step: 5000, default: 120000, type: 'currency' },
+        { key: 'emis', label: 'Existing EMIs', min: 0, max: 500000, step: 1000, default: 15000, type: 'currency' },
+        { key: 'rate', label: 'Expected Rate (% p.a.)', min: 5, max: 25, step: 0.1, default: 8.75, type: 'percent' },
+        { key: 'tenure', label: 'Tenure (Years)', min: 1, max: 30, step: 1, default: 20, type: 'number' }
+      ],
+      calculate: function(state) {
+        const income = state.income;
+        const emis = state.emis;
+        const r = state.rate;
+        const t = state.tenure;
+
+        // Max allowable EMI burden (FOIR is typically 50%)
+        const maxEmi = (income * 0.50) - emis;
+        const i = (r / 12) / 100;
+        const n = t * 12;
+
+        let eligibleAmount = 0;
+        if (maxEmi > 0) {
+          eligibleAmount = maxEmi * ((Math.pow(1 + i, n) - 1) / (i * Math.pow(1 + i, n)));
+        }
+
+        return {
+          metrics: [
+            { label: 'FOIR Allowed EMI', value: income * 0.5, type: 'currency' },
+            { label: 'Max New EMI Eligible', value: Math.max(0, maxEmi), type: 'currency' },
+            { label: 'Eligible Loan Principal', value: eligibleAmount, type: 'currency', class: 'success' }
+          ],
+          chart: null
+        };
+      }
+    },
+    'prepayment': {
+      id: 'prepayment',
+      title: 'Prepayment Savings',
+      description: 'Simulate loan prepayment benefits in interest reductions and tenure savings.',
+      category: 'loan',
+      inputs: [
+        { key: 'principal', label: 'Outstanding Loan Amount', min: 100000, max: 100000000, step: 50000, default: 3500000, type: 'currency' },
+        { key: 'rate', label: 'Interest Rate (% p.a.)', min: 5, max: 25, step: 0.1, default: 8.5, type: 'percent' },
+        { key: 'emi', label: 'Current Monthly EMI', min: 1000, max: 1000000, step: 500, default: 30380, type: 'currency' },
+        { key: 'prepay', label: 'One-time Prepayment Amount', min: 10000, max: 10000000, step: 10000, default: 200000, type: 'currency' }
+      ],
+      calculate: function(state) {
+        const L = state.principal;
+        const r = state.rate;
+        const emi = state.emi;
+        const pPay = state.prepay;
+        const i = (r / 12) / 100;
+
+        // 1. Normal Schedule
+        let bal1 = L;
+        let totalInt1 = 0;
+        let months1 = 0;
+        while (bal1 > 0 && months1 < 480) {
+          const monthlyInt = bal1 * i;
+          totalInt1 += monthlyInt;
+          const principal = Math.min(bal1, emi - monthlyInt);
+          bal1 -= principal;
+          months1++;
+        }
+
+        // 2. Prepayment Schedule (deploying one-time prepayment in Month 1)
+        let bal2 = L - pPay;
+        let totalInt2 = 0;
+        let months2 = 1;
+        while (bal2 > 0 && months2 < 480) {
+          const monthlyInt = bal2 * i;
+          totalInt2 += monthlyInt;
+          const principal = Math.min(bal2, emi - monthlyInt);
+          bal2 -= principal;
+          months2++;
+        }
+
+        const interestSaved = totalInt1 - totalInt2;
+        const tenureReducedMonths = months1 - months2;
+
+        return {
+          metrics: [
+            { label: 'Original Tenure (Months)', value: months1, type: 'number' },
+            { label: 'Months Saved', value: tenureReducedMonths, type: 'number' },
+            { label: 'Net Interest Saved', value: interestSaved, type: 'currency', class: 'success' }
+          ],
+          chart: {
+            type: 'bar',
+            labels: ['Original Interest', 'New Interest', 'Interest Saved'],
+            data: [totalInt1, totalInt2, interestSaved],
+            datasets: [{
+              label: 'Prepayment Savings',
+              data: [totalInt1, totalInt2, interestSaved],
+              backgroundColor: ['#D62A2D', '#003D7C', '#008D4C']
+            }]
+          }
+        };
+      }
+    },
+
+    // Tax & Salary
+    'tax': {
+      id: 'tax',
+      title: 'Income Tax (Old vs New)',
+      description: 'Estimate income tax obligations comparing Old vs New tax regimes with Indian standard deductions.',
+      category: 'tax',
+      popular: true,
+      inputs: [
+        { key: 'income', label: 'Gross Annual CTC', min: 100000, max: 20000000, step: 25000, default: 1500000, type: 'currency' },
+        { key: 'deductions', label: 'Tax Deductions (Old Regime)', min: 0, max: 1000000, step: 5000, default: 250000, type: 'currency' }
+      ],
+      calculate: function(state) {
+        const income = state.income;
+        const deductOld = state.deductions;
+
+        // Computation Helper for Slabs
+        const computeNewTax = (inc) => {
+          // Standard deduction: 75,000 for New Regime
+          const taxable = Math.max(0, inc - 75000);
+          
+          // Budget 25/26 New Regime Slabs:
+          // Upto 4L: Nil
+          // 4L to 8L: 5%
+          // 8L to 12L: 10%
+          // 12L to 16L: 15%
+          // 16L to 20L: 20%
+          // Above 20L: 30%
+          let tax = 0;
+          if (taxable > 2000000) { tax += (taxable - 2000000) * 0.30; tax += 400000 * 0.20; tax += 400000 * 0.15; tax += 400000 * 0.10; tax += 400000 * 0.05; }
+          else if (taxable > 1600000) { tax += (taxable - 1600000) * 0.20; tax += 400000 * 0.15; tax += 400000 * 0.10; tax += 400000 * 0.05; }
+          else if (taxable > 1200000) { tax += (taxable - 1200000) * 0.15; tax += 400000 * 0.10; tax += 400000 * 0.05; }
+          else if (taxable > 800000) { tax += (taxable - 800000) * 0.10; tax += 400000 * 0.05; }
+          else if (taxable > 400000) { tax += (taxable - 400000) * 0.05; }
+
+          // Section 87A rebate for New regime: Income upto 12 Lakhs is completely tax-free
+          if (taxable <= 1200000) {
+            tax = 0;
+          }
+
+          // Cess 4%
+          return tax * 1.04;
+        };
+
+        const computeOldTax = (inc, deduct) => {
+          // Standard deduction: 50,000 for Old Regime
+          const taxable = Math.max(0, inc - 50000 - deduct);
+          
+          // Old Regime Slabs:
+          // Upto 2.5L: Nil
+          // 2.5L to 5L: 5%
+          // 5L to 10L: 20%
+          // Above 10L: 30%
+          let tax = 0;
+          if (taxable > 1000000) { tax += (taxable - 1000000) * 0.30; tax += 500000 * 0.20; tax += 250000 * 0.05; }
+          else if (taxable > 500000) { tax += (taxable - 500000) * 0.20; tax += 250000 * 0.05; }
+          else if (taxable > 250000) { tax += (taxable - 250000) * 0.05; }
+
+          // Rebate for income upto 5L
+          if (taxable <= 500000) {
+            tax = 0;
+          }
+
+          return tax * 1.04;
+        };
+
+        const newTax = computeNewTax(income);
+        const oldTax = computeOldTax(income, deductOld);
+        const savings = Math.abs(oldTax - newTax);
+        const bestOption = newTax < oldTax ? 'New Tax Regime' : 'Old Tax Regime';
+
+        return {
+          metrics: [
+            { label: 'Old Regime Tax', value: oldTax, type: 'currency' },
+            { label: 'New Regime Tax', value: newTax, type: 'currency' },
+            { label: `Save under ${bestOption}`, value: savings, type: 'currency', class: 'success' }
+          ],
+          chart: {
+            type: 'bar',
+            labels: ['Old Regime Tax', 'New Regime Tax'],
+            datasets: [{
+              label: 'Tax regime comparison',
+              data: [oldTax, newTax],
+              backgroundColor: ['#D62A2D', '#008D4C']
+            }]
+          }
+        };
+      }
+    },
+    'gst': {
+      id: 'gst',
+      title: 'GST Calculator',
+      description: 'Compute Goods & Services Tax (GST) allocations with forward or reverse parameters.',
+      category: 'tax',
+      inputs: [
+        { key: 'amount', label: 'Base/Net Price', min: 100, max: 10000000, step: 100, default: 50000, type: 'currency' },
+        { key: 'rate', label: 'GST Slab Rate (%)', min: 5, max: 28, step: 1, default: 18, type: 'percent' }
+      ],
+      calculate: function(state) {
+        const amt = state.amount;
+        const r = state.rate / 100;
+
+        const gstAmt = amt * r;
+        const total = amt + gstAmt;
+
+        return {
+          metrics: [
+            { label: 'CGST (half of GST)', value: gstAmt / 2, type: 'currency' },
+            { label: 'SGST (half of GST)', value: gstAmt / 2, type: 'currency' },
+            { label: 'Gross Total Price', value: total, type: 'currency', class: 'success' }
+          ],
+          chart: null
+        };
+      }
+    },
+    'hra': {
+      id: 'hra',
+      title: 'HRA Exemption',
+      description: 'Calculate house rent allowance income tax exemption limits easily.',
+      category: 'tax',
+      inputs: [
+        { key: 'basic', label: 'Basic Salary (Monthly)', min: 10000, max: 1000000, step: 1000, default: 50000, type: 'currency' },
+        { key: 'hra', label: 'HRA Received (Monthly)', min: 2000, max: 500000, step: 500, default: 20000, type: 'currency' },
+        { key: 'rent', label: 'Rent Paid (Monthly)', min: 0, max: 500000, step: 500, default: 18000, type: 'currency' },
+        { key: 'metro', label: 'Living in Metro City (1=Yes, 0=No)', min: 0, max: 1, step: 1, default: 1, type: 'number' }
+      ],
+      calculate: function(state) {
+        const basic = state.basic;
+        const hra = state.hra;
+        const rent = state.rent;
+        const isMetro = state.metro;
+
+        // Metro cities in India receive 50% allowance; others 40%
+        const rentRule = Math.max(0, rent - (basic * 0.10));
+        const cityRule = isMetro === 1 ? (basic * 0.50) : (basic * 0.40);
+
+        const exemptedMonthly = Math.min(hra, rentRule, cityRule);
+        const taxableMonthly = Math.max(0, hra - exemptedMonthly);
+
+        return {
+          metrics: [
+            { label: 'HRA Received (Annual)', value: hra * 12, type: 'currency' },
+            { label: 'Exempted HRA (Annual)', value: exemptedMonthly * 12, type: 'currency', class: 'success' },
+            { label: 'Taxable HRA (Annual)', value: taxableMonthly * 12, type: 'currency' }
+          ],
+          chart: {
+            type: 'doughnut',
+            labels: ['Exempted HRA', 'Taxable HRA'],
+            datasets: [{
+              data: [exemptedMonthly * 12, taxableMonthly * 12],
+              backgroundColor: ['#008D4C', '#D62A2D']
+            }]
+          }
+        };
+      }
+    },
+
+    // Trading & Stocks
+    'brokerage': {
+      id: 'brokerage',
+      title: 'Brokerage Calculator',
+      description: 'Simulate precise SEBI, STT, exchange, and GST charges for stock trades.',
+      category: 'trading',
+      popular: true,
+      inputs: [
+        { key: 'buy', label: 'Buy Price (INR)', min: 1, max: 50000, step: 1, default: 1200, type: 'currency' },
+        { key: 'sell', label: 'Sell Price (INR)', min: 1, max: 50000, step: 1, default: 1220, type: 'currency' },
+        { key: 'qty', label: 'Quantity', min: 1, max: 100000, step: 5, default: 500, type: 'number' },
+        { key: 'delivery', label: 'Delivery Mode (1=Yes, 0=Intraday)', min: 0, max: 1, step: 1, default: 1, type: 'number' }
+      ],
+      calculate: function(state) {
+        const B = state.buy;
+        const S = state.sell;
+        const Q = state.qty;
+        const isDelivery = state.delivery === 1;
+
+        const turnover = (B + S) * Q;
+        let brokerage = 0;
+        let stt = 0;
+
+        if (isDelivery) {
+          brokerage = 0; // Flat discount delivery brokerage
+          stt = (B * Q * 0.001) + (S * Q * 0.001); // 0.1% on buy & sell
+        } else {
+          brokerage = Math.min(B * Q * 0.0003, 20) + Math.min(S * Q * 0.0003, 20); // 0.03% or Rs.20 per side
+          stt = S * Q * 0.00025; // 0.025% on sell side
+        }
+
+        const exchangeCharges = turnover * 0.0000322; // NSE transaction charges (0.00322%)
+        const sebiFee = turnover * 0.0000001; // SEBI turnover fee (Rs. 10 per Crore)
+        
+        let stampDuty = 0;
+        if (isDelivery) { stampDuty = B * Q * 0.00015; } // 0.015% on buy side
+        else { stampDuty = B * Q * 0.00003; } // 0.003% on buy side
+
+        const gst = 0.18 * (brokerage + exchangeCharges + sebiFee); // 18% on fees
+        const totalCharges = brokerage + stt + exchangeCharges + sebiFee + stampDuty + gst;
+        const grossPnl = (S - B) * Q;
+        const netPnl = grossPnl - totalCharges;
+
+        return {
+          metrics: [
+            { label: 'Total Statutory Fees', value: totalCharges, type: 'currency' },
+            { label: 'Gross Profit/Loss', value: grossPnl, type: 'currency' },
+            { label: 'Net Profit/Loss', value: netPnl, type: 'currency', class: netPnl >= 0 ? 'success' : 'danger' }
+          ],
+          chart: null
+        };
+      }
+    },
+
+    // Crypto
+    'cryptoprofit': {
+      id: 'cryptoprofit',
+      title: 'Crypto Profit',
+      description: 'Model crypto profits with statutory Indian Flat 30% tax + 1% TDS constraints.',
+      category: 'crypto',
+      inputs: [
+        { key: 'buy', label: 'Purchase Price (INR)', min: 1, max: 10000000, step: 10, default: 250000, type: 'currency' },
+        { key: 'sell', label: 'Sale Price (INR)', min: 1, max: 10000000, step: 10, default: 280000, type: 'currency' },
+        { key: 'qty', label: 'Crypto Quantity', min: 0.0001, max: 100, step: 0.001, default: 0.5, type: 'number' }
+      ],
+      calculate: function(state) {
+        const B = state.buy;
+        const S = state.sell;
+        const Q = state.qty;
+
+        const totalCost = B * Q;
+        const totalRevenue = S * Q;
+        const grossProfit = totalRevenue - totalCost;
+
+        let taxPayable = 0;
+        if (grossProfit > 0) {
+          taxPayable = grossProfit * 0.30; // Flat 30% tax under Section 115BBH
+        }
+
+        const tdsAmt = totalRevenue * 0.01; // 1% TDS on aggregate sales
+        const netWealth = grossProfit - taxPayable;
+
+        return {
+          metrics: [
+            { label: 'Flat Tax (30%)', value: taxPayable, type: 'currency' },
+            { label: '1% TDS (withheld)', value: tdsAmt, type: 'currency' },
+            { label: 'Net Profit (post tax)', value: netWealth, type: 'currency', class: netWealth >= 0 ? 'success' : 'danger' }
+          ],
+          chart: null
+        };
+      }
+    }
+  };
+
+  // State Engine Setup
+  let activeCalculatorId = 'sip';
+  let chartInstance = null;
+
+  // Active theme management (syncs with base.html body if available, otherwise initializes to light)
+  function initTheme() {
+    const isDark = localStorage.getItem('studio-theme') === 'dark';
+    if (isDark) {
+      document.body.classList.add('studio-dark-mode');
+      document.getElementById('studioThemeToggle').innerHTML = '<i class="fas fa-sun text-warning"></i>';
+    } else {
+      document.body.classList.remove('studio-dark-mode');
+      document.getElementById('studioThemeToggle').innerHTML = '<i class="fas fa-moon"></i>';
+    }
+  }
+
+  document.getElementById('studioThemeToggle').addEventListener('click', () => {
+    const isDark = document.body.classList.toggle('studio-dark-mode');
+    localStorage.setItem('studio-theme', isDark ? 'dark' : 'light');
+    document.getElementById('studioThemeToggle').innerHTML = isDark ? '<i class="fas fa-sun text-warning"></i>' : '<i class="fas fa-moon"></i>';
+    // Re-trigger visual updates
+    runActiveCalculation();
+  });
+
+  // Load History from localStorage
+  function loadHistory() {
+    const histContainer = document.getElementById('calcHistoryContainer');
+    const logs = JSON.parse(localStorage.getItem('foliux_calc_history') || '[]');
+    
+    if (logs.length === 0) {
+      histContainer.innerHTML = `<div class="text-center py-4 text-muted small"><i class="fas fa-folder-open fs-3 mb-2 d-block"></i>No saved calculations yet. Try clicking "Save" above!</div>`;
+      return;
+    }
+
+    histContainer.innerHTML = '';
+    logs.reverse().forEach((log, index) => {
+      const formattedDate = new Date(log.timestamp).toLocaleDateString('en-IN', {month: 'short', day: 'numeric', hour: '2-digit', minute:'2-digit'});
+      const div = document.createElement('div');
+      div.className = 'calc-list-item d-flex justify-content-between align-items-center';
+      div.innerHTML = `
+        <div>
+          <h6 class="mb-0 fw-bold small text-slate-800">${log.title}</h6>
+          <span class="text-muted" style="font-size: 0.7rem;">${formattedDate}</span>
+        </div>
+        <div>
+          <button class="btn btn-xs btn-outline-primary rounded-pill p-1 px-2 small" onclick="loadSavedCalculation('${log.id}', ${logs.length - 1 - index})" style="font-size:0.7rem;">Recall</button>
+        </div>
+      `;
+      histContainer.appendChild(div);
+    });
+  }
+
+  // Save calculation states to LocalStorage
+  function saveToHistory() {
+    const calc = CALCULATORS_REGISTRY[activeCalculatorId];
+    const inputs = {};
+    calc.inputs.forEach(inp => {
+      inputs[inp.key] = parseFloat(document.getElementById(`input_${inp.key}`).value);
+    });
+
+    const logs = JSON.parse(localStorage.getItem('foliux_calc_history') || '[]');
+    logs.push({
+      id: activeCalculatorId,
+      title: calc.title,
+      inputs: inputs,
+      timestamp: Date.now()
+    });
+
+    // Limit to latest 10 logs
+    if (logs.length > 10) logs.shift();
+
+    localStorage.setItem('foliux_calc_history', JSON.stringify(logs));
+    loadHistory();
+    alert('Calculation saved successfully to history!');
+  }
+
+  // Load a calculation state from history logs
+  window.loadSavedCalculation = function(calcId, logIndex) {
+    const logs = JSON.parse(localStorage.getItem('foliux_calc_history') || '[]');
+    const log = logs[logIndex];
+    if (!log) return;
+
+    selectCalculator(calcId);
+    
+    // Inject saved input values
+    setTimeout(() => {
+      Object.keys(log.inputs).forEach(key => {
+        const val = log.inputs[key];
+        const slider = document.getElementById(`slider_${key}`);
+        const input = document.getElementById(`input_${key}`);
+        if (slider) slider.value = val;
+        if (input) input.value = val;
+      });
+      runActiveCalculation();
+    }, 100);
+  };
+
+  // Indian number currency standard formatter (Lakhs / Crores formatted neatly)
+  function formatIndianCurrency(num) {
+    if (isNaN(num)) return '₹0';
+    
+    const absNum = Math.abs(num);
+    let str = '';
+    
+    if (absNum >= 10000000) {
+      str = (num / 10000000).toFixed(2) + ' Cr';
+    } else if (absNum >= 100000) {
+      str = (num / 100000).toFixed(2) + ' L';
+    } else {
+      str = num.toLocaleString('en-IN', {
+        maximumFractionDigits: 0,
+        style: 'currency',
+        currency: 'INR'
+      });
+      return str;
+    }
+    
+    // Prefix rupee sign to abbreviated results
+    return (num < 0 ? '-' : '') + '₹' + str;
+  }
+
+  // Category based filtering logic
+  window.filterCategory = function(cat, btn) {
+    document.querySelectorAll('#categoryTabWrapper button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    populateCalculatorList(cat, document.getElementById('calcSearchInput').value);
+  };
+
+  // Populate calculator cards based on selected filter and keywords
+  function populateCalculatorList(categoryFilter = 'all', searchQuery = '') {
+    const listContainer = document.getElementById('calculatorListContainer');
+    listContainer.innerHTML = '';
+    
+    const query = searchQuery.toLowerCase().trim();
+
+    Object.values(CALCULATORS_REGISTRY).forEach(calc => {
+      const matchCategory = categoryFilter === 'all' || calc.category === categoryFilter;
+      const matchSearch = calc.title.toLowerCase().includes(query) || calc.description.toLowerCase().includes(query);
+
+      if (matchCategory && matchSearch) {
+        const div = document.createElement('div');
+        div.id = `sidebar_item_${calc.id}`;
+        div.className = `calc-list-item ${calc.id === activeCalculatorId ? 'selected' : ''}`;
+        div.onclick = () => selectCalculator(calc.id);
+        
+        let popularTag = calc.popular ? `<span class="popular-badge">Popular</span>` : '';
+        
+        div.innerHTML = `
+          <div class="d-flex align-items-center justify-content-between">
+            <span class="small fw-bold">${calc.title}</span>
+            ${popularTag}
+          </div>
+          <span class="text-muted d-block small mt-1" style="font-size:0.75rem; line-height: 1.2;">${calc.description.substring(0, 50)}...</span>
+        `;
+        listContainer.appendChild(div);
+      }
+    });
+  }
+
+  // Select active calculator view
+  window.selectCalculator = function(calcId) {
+    activeCalculatorId = calcId;
+    
+    // Update active highlight classes
+    document.querySelectorAll('.calc-list-item').forEach(el => el.classList.remove('selected'));
+    document.getElementById(`sidebar_item_${calcId}`)?.classList.add('selected');
+
+    const calc = CALCULATORS_REGISTRY[calcId];
+    document.getElementById('activeCalcTitle').innerText = calc.title;
+    document.getElementById('activeCalcDescription').innerText = calc.description;
+
+    // Render interactive fields dynamically
+    renderCalculatorInputs(calc);
+    runActiveCalculation();
+  };
+
+  // Render input fields (sliders & inputs side-by-side)
+  function renderCalculatorInputs(calc) {
+    const container = document.getElementById('dynamicInputsContainer');
+    container.innerHTML = '';
+
+    calc.inputs.forEach(input => {
+      const wrap = document.createElement('div');
+      wrap.className = 'mb-4';
+
+      let stepBadge = '';
+      if (input.type === 'currency') {
+        stepBadge = `<span class="indian-unit-badge" id="badge_${input.key}">₹</span>`;
+      }
+
+      wrap.innerHTML = `
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <label class="form-label small fw-bold mb-0">${input.label}</label>
+          ${stepBadge}
+        </div>
+        <div class="input-group-premium mb-2">
+          <input type="number" id="input_${input.key}" value="${input.default}" min="${input.min}" max="${input.max}" step="${input.step}" oninput="syncCalculatorValues('${input.key}', 'input')">
+          <span class="addon">${input.type === 'percent' ? '%' : input.type === 'currency' ? '₹' : 'Qty'}</span>
+        </div>
+        <input type="range" class="calc-slider" id="slider_${input.key}" value="${input.default}" min="${input.min}" max="${input.max}" step="${input.step}" oninput="syncCalculatorValues('${input.key}', 'slider')">
+      `;
+      container.appendChild(wrap);
+      
+      // Initial badge update
+      updateUnitBadge(input.key, input.default, input.type);
+    });
+  }
+
+  // Synchronize inputs and slider positions instantly
+  window.syncCalculatorValues = function(key, source) {
+    const slider = document.getElementById(`slider_${key}`);
+    const input = document.getElementById(`input_${key}`);
+    
+    if (source === 'slider') {
+      input.value = slider.value;
+    } else {
+      slider.value = input.value;
+    }
+
+    const calc = CALCULATORS_REGISTRY[activeCalculatorId];
+    const schema = calc.inputs.find(i => i.key === key);
+    updateUnitBadge(key, parseFloat(slider.value), schema.type);
+
+    runActiveCalculation();
+  };
+
+  // Helper to convert numeric output to lakhs/crores tags
+  function updateUnitBadge(key, val, type) {
+    const badge = document.getElementById(`badge_${key}`);
+    if (!badge || type !== 'currency') return;
+
+    if (val >= 10000000) {
+      badge.innerText = `${(val / 10000000).toFixed(2)} Cr`;
+    } else if (val >= 100000) {
+      badge.innerText = `${(val / 100000).toFixed(2)} L`;
+    } else {
+      badge.innerText = '₹';
+    }
+  }
+
+  // Perform core calculation and draw charts
+  function runActiveCalculation() {
+    const calc = CALCULATORS_REGISTRY[activeCalculatorId];
+    const state = {};
+    
+    calc.inputs.forEach(inp => {
+      state[inp.key] = parseFloat(document.getElementById(`input_${inp.key}`).value);
+    });
+
+    const output = calc.calculate(state);
+    
+    // Populate outcome metrics
+    const metricsContainer = document.getElementById('dynamicMetricsContainer');
+    metricsContainer.innerHTML = '';
+
+    output.metrics.forEach(metric => {
+      const col = document.createElement('div');
+      col.className = 'col-6 col-sm-4';
+      
+      let valStr = '';
+      if (metric.type === 'currency') {
+        valStr = formatIndianCurrency(metric.value);
+      } else if (metric.type === 'percent') {
+        valStr = metric.value.toFixed(2) + '%';
+      } else {
+        valStr = metric.value.toLocaleString();
+      }
+
+      let valClass = metric.class === 'success' ? 'success' : metric.class === 'danger' ? 'text-danger' : '';
+
+      col.innerHTML = `
+        <div class="metric-box">
+          <div class="metric-box-title">${metric.label}</div>
+          <div class="metric-box-value ${valClass}">${valStr}</div>
+        </div>
+      `;
+      metricsContainer.appendChild(col);
+    });
+
+    // Draw projections chart
+    const canvas = document.getElementById('activeCalcChart');
+    const fallback = document.getElementById('noChartFallback');
+
+    if (chartInstance) {
+      chartInstance.destroy();
+      chartInstance = null;
+    }
+
+    if (output.chart) {
+      canvas.classList.remove('d-none');
+      fallback.classList.add('d-none');
+      
+      const ctx = canvas.getContext('2d');
+      chartInstance = new Chart(ctx, {
+        type: output.chart.type,
+        data: output.chart.datasets[0] ? output.chart : {
+          labels: output.chart.labels,
+          datasets: [{
+            data: output.chart.data,
+            backgroundColor: output.chart.backgroundColor
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'bottom',
+              labels: {
+                color: document.body.classList.contains('studio-dark-mode') ? '#fff' : '#333'
+              }
+            }
+          }
+        }
+      });
+    } else {
+      canvas.classList.add('d-none');
+      fallback.classList.remove('d-none');
+    }
+  }
+
+  // Copy Calculation Summary details
+  window.copyShareableSummary = function() {
+    const calc = CALCULATORS_REGISTRY[activeCalculatorId];
+    let summaryText = `--- FOLIUX Wealth Studio Summary: ${calc.title} ---\n`;
+    
+    calc.inputs.forEach(inp => {
+      const val = document.getElementById(`input_${inp.key}`).value;
+      summaryText += `${inp.label}: ${val}\n`;
+    });
+
+    const state = {};
+    calc.inputs.forEach(inp => {
+      state[inp.key] = parseFloat(document.getElementById(`input_${inp.key}`).value);
+    });
+    const output = calc.calculate(state);
+
+    summaryText += `\nResults:\n`;
+    output.metrics.forEach(metric => {
+      let valStr = '';
+      if (metric.type === 'currency') valStr = formatIndianCurrency(metric.value);
+      else if (metric.type === 'percent') valStr = metric.value.toFixed(2) + '%';
+      else valStr = metric.value.toLocaleString();
+      summaryText += `${metric.label}: ${valStr}\n`;
+    });
+
+    summaryText += `\nGenerate institutional strategies online at: https://foliux.com/calc/\n`;
+
+    navigator.clipboard.writeText(summaryText).then(() => {
+      alert('Simulation summary details copied to clipboard!');
+    }).catch(err => {
+      console.error('Error copying text: ', err);
+    });
+  };
+
+  // Export results to CSV
+  window.exportCalculationCSV = function() {
+    const calc = CALCULATORS_REGISTRY[activeCalculatorId];
+    let csvContent = "data:text/csv;charset=utf-8,";
+    csvContent += "Parameters,Values\n";
+
+    calc.inputs.forEach(inp => {
+      const val = document.getElementById(`input_${inp.key}`).value;
+      csvContent += `"${inp.label}","${val}"\n`;
+    });
+
+    const state = {};
+    calc.inputs.forEach(inp => {
+      state[inp.key] = parseFloat(document.getElementById(`input_${inp.key}`).value);
+    });
+    const output = calc.calculate(state);
+
+    csvContent += "\nProjections,Values\n";
+    output.metrics.forEach(metric => {
+      csvContent += `"${metric.label}","${metric.value}"\n`;
+    });
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `foliux_${activeCalculatorId}_calculation.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // Comparison Tabs Switching
+  window.toggleComparisonTab = function(type, tab) {
+    document.querySelectorAll('.comparison-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+
+    if (type === 'regime') {
+      document.getElementById('compareRegimeContainer').classList.remove('d-none');
+      document.getElementById('compareSipLumpContainer').classList.add('d-none');
+      runTaxComparison();
+    } else {
+      document.getElementById('compareRegimeContainer').classList.add('d-none');
+      document.getElementById('compareSipLumpContainer').classList.remove('d-none');
+      runSipLumpComparison();
+    }
+  };
+
+  // Income Tax Comparison Core
+  window.runTaxComparison = function() {
+    const inc = parseFloat(document.getElementById('compTaxIncome').value) || 0;
+    const deduct = parseFloat(document.getElementById('compTaxDeduct').value) || 0;
+
+    const computeNewTax = (inc) => {
+      const taxable = Math.max(0, inc - 75000);
+      let tax = 0;
+      if (taxable > 2000000) { tax += (taxable - 2000000) * 0.30; tax += 400000 * 0.20; tax += 400000 * 0.15; tax += 400000 * 0.10; tax += 400000 * 0.05; }
+      else if (taxable > 1600000) { tax += (taxable - 1600000) * 0.20; tax += 400000 * 0.15; tax += 400000 * 0.10; tax += 400000 * 0.05; }
+      else if (taxable > 1200000) { tax += (taxable - 1200000) * 0.15; tax += 400000 * 0.10; tax += 400000 * 0.05; }
+      else if (taxable > 800000) { tax += (taxable - 800000) * 0.10; tax += 400000 * 0.05; }
+      else if (taxable > 400000) { tax += (taxable - 400000) * 0.05; }
+
+      if (taxable <= 1200000) tax = 0;
+      return tax * 1.04;
+    };
+
+    const computeOldTax = (inc, deduct) => {
+      const taxable = Math.max(0, inc - 50000 - deduct);
+      let tax = 0;
+      if (taxable > 1000000) { tax += (taxable - 1000000) * 0.30; tax += 500000 * 0.20; tax += 250000 * 0.05; }
+      else if (taxable > 500000) { tax += (taxable - 500000) * 0.20; tax += 250000 * 0.05; }
+      else if (taxable > 250000) { tax += (taxable - 250000) * 0.05; }
+
+      if (taxable <= 500000) tax = 0;
+      return tax * 1.04;
+    };
+
+    const newTax = computeNewTax(inc);
+    const oldTax = computeOldTax(inc, deduct);
+    const diff = Math.abs(newTax - oldTax);
+
+    document.getElementById('compNewRegimeResult').innerText = formatIndianCurrency(newTax);
+    document.getElementById('compOldRegimeResult').innerText = formatIndianCurrency(oldTax);
+
+    const advice = document.getElementById('compTaxAdvice');
+    if (newTax < oldTax) {
+      advice.innerText = `New Regime saves you ${formatIndianCurrency(diff)}!`;
+      advice.className = "border-top mt-2 pt-2 text-center small fw-bold text-success";
+    } else if (oldTax < newTax) {
+      advice.innerText = `Old Regime saves you ${formatIndianCurrency(diff)}!`;
+      advice.className = "border-top mt-2 pt-2 text-center small fw-bold text-success";
+    } else {
+      advice.innerText = `Both regimes cost equal tax!`;
+      advice.className = "border-top mt-2 pt-2 text-center small fw-bold text-muted";
+    }
+  };
+
+  // SIP vs Lumpsum Comparison Core
+  window.runSipLumpComparison = function() {
+    const amt = parseFloat(document.getElementById('compAmt').value) || 0;
+    const r = parseFloat(document.getElementById('compRate').value) || 0;
+    const t = parseFloat(document.getElementById('compYears').value) || 0;
+
+    // SIP deploying total divided annually monthly (amount / 12)
+    const monthlySip = amt / 12;
+    const i = (r / 12) / 100;
+    const n = t * 12;
+
+    const sipVal = monthlySip * ((Math.pow(1 + i, n) - 1) / i) * (1 + i);
+    const lumpVal = amt * Math.pow(1 + r/100, t);
+
+    document.getElementById('compSipResult').innerText = formatIndianCurrency(sipVal);
+    document.getElementById('compLumpResult').innerText = formatIndianCurrency(lumpVal);
+  };
+
+  // Search logic for dynamic filtering
+  document.getElementById('calcSearchInput').addEventListener('input', (e) => {
+    const activeCatTab = document.querySelector('#categoryTabWrapper button.active');
+    let cat = 'all';
+    if (activeCatTab) {
+      // Find category key from text or let's just parse
+      const txt = activeCatTab.innerText.toLowerCase();
+      if (txt.includes('investment')) cat = 'investment';
+      else if (txt.includes('retirement')) cat = 'retirement';
+      else if (txt.includes('loan')) cat = 'loan';
+      else if (txt.includes('tax')) cat = 'tax';
+      else if (txt.includes('trading')) cat = 'trading';
+      else if (txt.includes('crypto')) cat = 'crypto';
+    }
+    populateCalculatorList(cat, e.target.value);
+  });
+
+  // Initialization Core
+  window.addEventListener('DOMContentLoaded', () => {
+    initTheme();
+    populateCalculatorList('all', '');
+    selectCalculator('sip');
+    loadHistory();
+    runTaxComparison();
+  });
+</script>
+{% endblock %}

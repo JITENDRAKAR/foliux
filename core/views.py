@@ -4838,3 +4838,9 @@ def reset_account_data(user):
     except Exception as e:
         logger.error(f"Error resetting profile for user {user.username}: {e}")
 
+
+def wealth_calculators(request):
+    """Render the FOLIUX Wealth Studio calculators suite."""
+    return render(request, 'core/calc.html')
+
+
