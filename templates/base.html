@@ -71,6 +71,7 @@
       --success-green: #008D4C;
       --danger-red: #D62A2D;
       --warning-yellow: #ffc107;
+      --navbar-bg: #1e3a8a;
     }
 
     body {
@@ -81,9 +82,9 @@
     }
 
     .navbar {
-      background-color: var(--primary-color) !important;
+      background-color: var(--navbar-bg) !important;
       padding: 0.75rem 0;
-      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
     }
 
     .navbar-brand {
@@ -253,11 +254,13 @@
       --global-dark-muted: #94a3b8;
       --card-gradient-start: #ffffff;
       --card-gradient-end: #f8fafc;
+      --navbar-bg: #1e3a8a;
     }
     
     html[data-theme="dark"] {
       --card-gradient-start: var(--global-dark-card);
       --card-gradient-end: var(--global-dark-card);
+      --navbar-bg: #0b0f19;
     }
     
     html[data-theme="dark"] body {
@@ -500,6 +503,43 @@
     html[data-theme="dark"] .info-panel {
         background-color: var(--global-dark-card) !important;
         border-color: var(--global-dark-border) !important;
+    }
+
+    /* Education Hub & Guide dark mode overrides */
+    html[data-theme="dark"] .edu-card {
+        background-color: var(--global-dark-card) !important;
+        border-color: var(--global-dark-border) !important;
+    }
+    html[data-theme="dark"] .edu-title {
+        color: var(--global-dark-text) !important;
+    }
+    html[data-theme="dark"] .edu-description {
+        color: var(--global-dark-muted) !important;
+    }
+    html[data-theme="dark"] .btn-edu-outline {
+        border-color: var(--global-dark-border) !important;
+        color: var(--global-dark-text) !important;
+    }
+    html[data-theme="dark"] .btn-edu-outline:hover {
+        background-color: var(--primary-color) !important;
+        border-color: var(--primary-color) !important;
+        color: white !important;
+    }
+    html[data-theme="dark"] .concept-box,
+    html[data-theme="dark"] .step-box,
+    html[data-theme="dark"] .nps-box {
+        background-color: rgba(30, 41, 59, 0.5) !important;
+        border-color: var(--global-dark-border) !important;
+        color: var(--global-dark-text) !important;
+    }
+    html[data-theme="dark"] .list-custom li {
+        color: var(--global-dark-muted) !important;
+    }
+    html[data-theme="dark"] .guide-section.text-center {
+        background-color: var(--global-dark-card) !important;
+        background: var(--global-dark-card) !important;
+        border: 1px solid var(--global-dark-border) !important;
+        color: var(--global-dark-text) !important;
     }
   </style>
   {% block extra_css %}{% endblock %}
