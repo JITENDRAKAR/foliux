@@ -398,9 +398,6 @@
       <div class="col-md-4 text-md-end mt-3 mt-md-0">
         <div class="d-flex justify-content-md-end align-items-center gap-2">
           <span class="text-muted small me-2"><span class="live-pulse"></span>Indian Market Feed Online</span>
-          <button class="theme-toggle-btn" id="studioThemeToggle" title="Toggle Dark/Light Mode">
-            <i class="fas fa-moon"></i>
-          </button>
         </div>
       </div>
     </div>
@@ -1434,23 +1431,11 @@
   let activeCalculatorId = 'sip';
   let chartInstance = null;
 
-  // Active theme management (syncs with base.html body if available, otherwise initializes to light)
-  function initTheme() {
-    const isDark = localStorage.getItem('studio-theme') === 'dark';
-    if (isDark) {
-      document.body.classList.add('studio-dark-mode');
-      document.getElementById('studioThemeToggle').innerHTML = '<i class="fas fa-sun text-warning"></i>';
-    } else {
-      document.body.classList.remove('studio-dark-mode');
-      document.getElementById('studioThemeToggle').innerHTML = '<i class="fas fa-moon"></i>';
-    }
-  }
+  // Active theme management (managed globally in base.html)
+  function initTheme() {}
 
-  document.getElementById('studioThemeToggle').addEventListener('click', () => {
-    const isDark = document.body.classList.toggle('studio-dark-mode');
-    localStorage.setItem('studio-theme', isDark ? 'dark' : 'light');
-    document.getElementById('studioThemeToggle').innerHTML = isDark ? '<i class="fas fa-sun text-warning"></i>' : '<i class="fas fa-moon"></i>';
-    // Re-trigger visual updates
+  document.addEventListener('themeChanged', () => {
+    // Re-trigger visual updates for charts when global theme changes
     runActiveCalculation();
   });
 

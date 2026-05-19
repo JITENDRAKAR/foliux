@@ -1101,7 +1101,130 @@
         opacity: 0;
     }
 
-        opacity: 0;
+    /* LANDING PAGE DARK MODE OVERRIDES */
+    html[data-theme="dark"] .tile-container,
+    html[data-theme="dark"] .tile-middle,
+    html[data-theme="dark"] .index-card,
+    html[data-theme="dark"] .search-panel,
+    html[data-theme="dark"] .stock-detail-panel,
+    html[data-theme="dark"] .global-card,
+    html[data-theme="dark"] .search-results-popover {
+        background: var(--global-dark-card);
+        border-color: var(--global-dark-border);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+    }
+    
+    html[data-theme="dark"] .global-card:hover {
+        background: rgba(255, 255, 255, 0.05);
+    }
+
+    html[data-theme="dark"] .tile-title,
+    html[data-theme="dark"] .index-name,
+    html[data-theme="dark"] .stock-detail-name,
+    html[data-theme="dark"] .search-panel-title,
+    html[data-theme="dark"] .global-price,
+    html[data-theme="dark"] .feed-title,
+    html[data-theme="dark"] .stock-detail-price {
+        color: var(--global-dark-text);
+    }
+    
+    html[data-theme="dark"] .tile-title {
+        border-bottom-color: var(--global-dark-border);
+    }
+
+    html[data-theme="dark"] .feed-item {
+        border-bottom-color: var(--global-dark-border);
+    }
+    
+    html[data-theme="dark"] .feed-item:hover {
+        background: rgba(255, 255, 255, 0.05);
+    }
+
+    html[data-theme="dark"] .scroll-track-wrapper::after {
+        background: linear-gradient(to bottom, transparent, var(--global-dark-card));
+    }
+    
+    html[data-theme="dark"] .branding-card {
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);
+        border-color: var(--global-dark-border);
+    }
+    
+    html[data-theme="dark"] .branding-list-item {
+        color: var(--global-dark-muted);
+    }
+
+    html[data-theme="dark"] .metric-item {
+        background: rgba(255, 255, 255, 0.03);
+        border-color: var(--global-dark-border);
+    }
+    
+    html[data-theme="dark"] .metric-item:hover {
+        background: rgba(255, 255, 255, 0.08);
+    }
+
+    html[data-theme="dark"] .cat-tab {
+        background: var(--global-dark-card);
+        border-color: var(--global-dark-border);
+        color: var(--global-dark-text);
+    }
+    
+    html[data-theme="dark"] .cat-tab:hover,
+    html[data-theme="dark"] .cat-tab.active {
+        box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);
+    }
+
+    html[data-theme="dark"] .search-input-group {
+        background: rgba(0, 0, 0, 0.2);
+        border-color: var(--global-dark-border);
+    }
+    
+    html[data-theme="dark"] .search-input-group:focus-within {
+        background: rgba(0, 0, 0, 0.4);
+    }
+
+    html[data-theme="dark"] .search-input {
+        color: var(--global-dark-text);
+    }
+
+    html[data-theme="dark"] .preset-chip {
+        background: rgba(255, 255, 255, 0.05);
+        border-color: var(--global-dark-border);
+        color: var(--global-dark-muted);
+    }
+
+    html[data-theme="dark"] .suggestion-item:hover {
+        background: rgba(255, 255, 255, 0.05);
+    }
+
+    html[data-theme="dark"] .index-select,
+    html[data-theme="dark"] .commodity-select {
+        color: var(--global-dark-text);
+    }
+
+    html[data-theme="dark"] .index-select:hover,
+    html[data-theme="dark"] .commodity-select:hover {
+        background-color: rgba(255, 255, 255, 0.05);
+        border-color: var(--global-dark-border);
+    }
+
+    html[data-theme="dark"] .index-select:focus,
+    html[data-theme="dark"] .commodity-select:focus {
+        background-color: var(--global-dark-bg);
+        color: var(--global-dark-text);
+    }
+
+    html[data-theme="dark"] .brand-hero-section {
+        background: linear-gradient(160deg, #0f172a 0%, #1e293b 100%);
+    }
+
+    html[data-theme="dark"] .btn-period {
+        background: var(--global-dark-bg);
+        border-color: var(--global-dark-border);
+        color: var(--global-dark-muted);
+    }
+    
+    html[data-theme="dark"] .btn-period:hover {
+        background: rgba(255, 255, 255, 0.05);
     }
 </style>
 {% endblock %}

@@ -44,9 +44,18 @@
         background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
         min-height: 100vh;
     }
+    html[data-theme="dark"] body {
+        background: var(--global-dark-bg) !important;
+    }
     .form-select, .form-control {
         border: 2px solid #e2e8f0;
         transition: all 0.3s ease;
+    }
+    html[data-theme="dark"] .form-select,
+    html[data-theme="dark"] .form-control {
+        border-color: var(--global-dark-border);
+        background-color: var(--global-dark-bg);
+        color: var(--global-dark-text);
     }
     .form-select:focus, .form-control:focus {
         border-color: var(--primary-color);

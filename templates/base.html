@@ -24,16 +24,24 @@
     <meta property="twitter:description" content="Track your portfolio with institutional-grade logic. Automated signals for disciplined investing in the Indian market.">
     <meta property="twitter:image" content="https://foliux.com/static/images/og-image.png">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self' https:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://accounts.google.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; img-src 'self' data: https:; frame-src https://accounts.google.com; connect-src 'self' https:;">
-  <!-- Google Fonts: Inter -->
+  
+  <!-- Preconnect & Preload for Performance -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+  <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+  
+  <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" as="style">
+  <link rel="preload" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" as="style">
+  
+  <!-- Google Fonts: Inter -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <!-- Bootstrap CSS -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-  <!-- Font Awesome -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-  <!-- Animate.css -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
+  <!-- Font Awesome (Deferred) -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" media="print" onload="this.media='all'">
+  <!-- Animate.css (Deferred) -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" media="print" onload="this.media='all'">
 
   <!-- Favicon -->
   {% load static %}
@@ -221,8 +229,278 @@
       50% { transform: scale(1.2); opacity: 0.7; }
       100% { transform: scale(1); opacity: 1; }
     }
+    :root {
+      --primary-color: #2563eb;
+      --primary-hover: #1d4ed8;
+      --global-dark-bg: #0f172a;
+      --global-dark-card: #1e293b;
+      --global-dark-text: #f8fafc;
+      --global-dark-border: #334155;
+      --global-dark-muted: #94a3b8;
+      --card-gradient-start: #ffffff;
+      --card-gradient-end: #f8fafc;
+    }
+    
+    html[data-theme="dark"] {
+      --card-gradient-start: var(--global-dark-card);
+      --card-gradient-end: var(--global-dark-card);
+    }
+    
+    html[data-theme="dark"] body {
+      background-color: var(--global-dark-bg) !important;
+      color: var(--global-dark-text) !important;
+    }
+    
+    html[data-theme="dark"] .bg-white,
+    html[data-theme="dark"] .bg-light,
+    html[data-theme="dark"] .card,
+    html[data-theme="dark"] .card-header,
+    html[data-theme="dark"] .card-footer,
+    html[data-theme="dark"] .modal-content,
+    html[data-theme="dark"] .modal-header,
+    html[data-theme="dark"] .modal-footer,
+    html[data-theme="dark"] .offcanvas {
+      background-color: var(--global-dark-card) !important;
+      border-color: var(--global-dark-border) !important;
+      color: var(--global-dark-text) !important;
+    }
+    
+    html[data-theme="dark"] .text-dark,
+    html[data-theme="dark"] .text-slate-800,
+    html[data-theme="dark"] .text-slate-900,
+    html[data-theme="dark"] h1, html[data-theme="dark"] h2, html[data-theme="dark"] h3,
+    html[data-theme="dark"] h4, html[data-theme="dark"] h5, html[data-theme="dark"] h6,
+    html[data-theme="dark"] label, html[data-theme="dark"] .form-label {
+      color: var(--global-dark-text) !important;
+    }
+    
+    html[data-theme="dark"] .text-muted,
+    html[data-theme="dark"] .small.text-muted {
+      color: var(--global-dark-muted) !important;
+    }
+    
+    html[data-theme="dark"] .table {
+      background-color: var(--global-dark-card) !important;
+      color: var(--global-dark-text) !important;
+      border-color: var(--global-dark-border) !important;
+    }
+    html[data-theme="dark"] .table th, html[data-theme="dark"] .table td {
+      background-color: var(--global-dark-card) !important;
+      color: var(--global-dark-text) !important;
+      border-color: var(--global-dark-border) !important;
+    }
+    html[data-theme="dark"] .table tr {
+      background-color: var(--global-dark-card) !important;
+    }
+    html[data-theme="dark"] .table-hover tbody tr:hover,
+    html[data-theme="dark"] .table-hover tbody tr:hover td {
+      background-color: var(--global-dark-bg) !important;
+      color: var(--global-dark-text) !important;
+    }
+    html[data-theme="dark"] .table-light {
+      background-color: rgba(255,255,255,0.05) !important;
+      color: var(--global-dark-text) !important;
+    }
+    html[data-theme="dark"] .bg-primary-subtle {
+      background-color: rgba(37, 99, 235, 0.15) !important;
+      color: var(--global-dark-text) !important;
+    }
+    html[data-theme="dark"] .bg-success-subtle,
+    html[data-theme="dark"] .success-subtle {
+      background-color: rgba(16, 185, 129, 0.15) !important;
+      color: #34d399 !important;
+    }
+    html[data-theme="dark"] .bg-danger-subtle,
+    html[data-theme="dark"] .danger-subtle {
+      background-color: rgba(239, 68, 68, 0.15) !important;
+      color: #f87171 !important;
+    }
+    html[data-theme="dark"] .form-control, html[data-theme="dark"] .form-select {
+      background-color: var(--global-dark-bg);
+      border-color: var(--global-dark-border);
+      color: var(--global-dark-text);
+    }
+    html[data-theme="dark"] .form-control:focus, html[data-theme="dark"] .form-select:focus {
+      background-color: var(--global-dark-bg);
+      color: var(--global-dark-text);
+      border-color: var(--primary-color);
+    }
+    html[data-theme="dark"] .list-group-item {
+      background-color: var(--global-dark-card);
+      border-color: var(--global-dark-border);
+      color: var(--global-dark-text);
+    }
+    html[data-theme="dark"] .border {
+      border-color: var(--global-dark-border) !important;
+    }
+    
+    /* GLOBAL DASHBOARDS DARK MODE OVERRIDES */
+    html[data-theme="dark"] .stat-card-premium,
+    html[data-theme="dark"] .mf-card,
+    html[data-theme="dark"] .coin-card,
+    html[data-theme="dark"] .nps-card,
+    html[data-theme="dark"] .fd-card,
+    html[data-theme="dark"] .loan-card,
+    html[data-theme="dark"] .table-container,
+    html[data-theme="dark"] .table-responsive {
+        background: var(--global-dark-card) !important;
+        border-color: var(--global-dark-border) !important;
+        color: var(--global-dark-text) !important;
+    }
+    
+    html[data-theme="dark"] .stat-card-premium:hover,
+    html[data-theme="dark"] .mf-card:hover,
+    html[data-theme="dark"] .coin-card:hover {
+        border-color: rgba(59, 130, 246, 0.6) !important;
+    }
+
+    html[data-theme="dark"] .stat-value-large,
+    html[data-theme="dark"] .stats-value,
+    html[data-theme="dark"] .coin-value,
+    html[data-theme="dark"] .nps-value,
+    html[data-theme="dark"] .text-primary-dark {
+        color: var(--global-dark-text) !important;
+    }
+
+    html[data-theme="dark"] .stat-label-small,
+    html[data-theme="dark"] .stats-label,
+    html[data-theme="dark"] .coin-label,
+    html[data-theme="dark"] .nps-label {
+        color: var(--global-dark-muted) !important;
+    }
+
+    html[data-theme="dark"] .card-body.border-start {
+        background-color: var(--global-dark-card) !important;
+    }
+    
+    html[data-theme="dark"] .input-group-text,
+    html[data-theme="dark"] #portfolioSearch,
+    html[data-theme="dark"] #calcSearchInput {
+        background-color: var(--global-dark-bg) !important;
+        border-color: var(--global-dark-border) !important;
+        color: var(--global-dark-text) !important;
+    }
+
+    html[data-theme="dark"] .dropdown-menu {
+        background-color: var(--global-dark-card) !important;
+        border-color: var(--global-dark-border) !important;
+    }
+
+    html[data-theme="dark"] .dropdown-item {
+        color: var(--global-dark-text) !important;
+    }
+    
+    html[data-theme="dark"] .dropdown-item:hover,
+    html[data-theme="dark"] .dropdown-item:focus {
+        background-color: var(--global-dark-bg) !important;
+        color: var(--global-dark-text) !important;
+    }
+    
+    html[data-theme="dark"] .dropdown-divider {
+        border-color: var(--global-dark-border) !important;
+    }
+
+    html[data-theme="dark"] .text-primary-dark {
+        color: #93c5fd !important;
+    }
+
+    html[data-theme="dark"] .text-coin {
+        color: #fb923c !important;
+    }
+
+    /* Watchlist, Bulk Edit Autocomplete & Subtle Buttons */
+    html[data-theme="dark"] .autocomplete-results {
+        background-color: var(--global-dark-card) !important;
+        border-color: var(--global-dark-border) !important;
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.5) !important;
+    }
+    
+    html[data-theme="dark"] .autocomplete-item {
+        color: var(--global-dark-text) !important;
+        border-bottom-color: var(--global-dark-border) !important;
+    }
+    
+    html[data-theme="dark"] .autocomplete-item:hover {
+        background-color: var(--global-dark-bg) !important;
+        color: var(--primary-color) !important;
+    }
+
+    html[data-theme="dark"] .btn-success-subtle {
+        background-color: rgba(16, 185, 129, 0.15) !important;
+        color: #34d399 !important;
+        border-color: rgba(16, 185, 129, 0.25) !important;
+    }
+    
+    html[data-theme="dark"] .btn-danger-subtle {
+        background-color: rgba(239, 68, 68, 0.15) !important;
+        color: #f87171 !important;
+        border-color: rgba(239, 68, 68, 0.25) !important;
+    }
+
+    html[data-theme="dark"] .watchlist-table thead th,
+    html[data-theme="dark"] .table thead th {
+        background-color: var(--global-dark-bg) !important;
+        color: var(--global-dark-text) !important;
+    }
+
+    /* Profile Edit Screen Overrides */
+    html[data-theme="dark"] {
+        --glass-bg: rgba(30, 41, 59, 0.9) !important;
+    }
+    
+    html[data-theme="dark"] .profile-card {
+        border-color: var(--global-dark-border) !important;
+    }
+
+    html[data-theme="dark"] .form-section {
+        background: var(--global-dark-bg) !important;
+        border-color: var(--global-dark-border) !important;
+    }
+    
+    html[data-theme="dark"] .profile-pic-wrapper {
+        background: var(--global-dark-bg) !important;
+        border-color: var(--global-dark-card) !important;
+    }
+    
+    html[data-theme="dark"] .upload-trigger {
+        background: var(--global-dark-card) !important;
+        color: var(--global-dark-text) !important;
+    }
+    
+    html[data-theme="dark"] .crop-container {
+        background-color: var(--global-dark-bg) !important;
+    }
+
+    html[data-theme="dark"] .family-section .p-3.bg-white.border {
+        background-color: var(--global-dark-card) !important;
+        border-color: var(--global-dark-border) !important;
+    }
+
+    html[data-theme="dark"] .hidden-signals-section .p-3.bg-white.border {
+        background-color: var(--global-dark-card) !important;
+        border-color: var(--global-dark-border) !important;
+    }
+
+    /* Strategy Page Custom Cards / Panels if any */
+    html[data-theme="dark"] .strategy-card,
+    html[data-theme="dark"] .info-panel {
+        background-color: var(--global-dark-card) !important;
+        border-color: var(--global-dark-border) !important;
+    }
   </style>
   {% block extra_css %}{% endblock %}
+  <script>
+    // Explicitly default to day (light) mode if no preference exists
+    if (!localStorage.getItem('studio-theme')) {
+      localStorage.setItem('studio-theme', 'light');
+    }
+    if (localStorage.getItem('studio-theme') === 'dark') {
+      document.documentElement.setAttribute('data-theme', 'dark');
+      document.addEventListener("DOMContentLoaded", function() {
+          document.body.classList.add('studio-dark-mode');
+      });
+    }
+  </script>
 </head>
 
 <body>
@@ -269,6 +547,11 @@
 </li>
 <li class="nav-item">
     <a class="nav-link" href="{% url 'wealth_calculators' %}{% if is_family_view %}?user_id={{ target_user.id }}{% elif is_consolidated %}?user_id=consolidated{% endif %}">Calc</a>
+</li>
+<li class="nav-item d-flex align-items-center ms-lg-2">
+    <button id="globalThemeToggle" class="btn btn-link nav-link p-0 m-0 d-flex align-items-center justify-content-center" style="font-size: 1.1rem; border: none; background: none; width: 32px; height: 32px;" aria-label="Toggle Theme">
+        <i class="fas fa-moon"></i>
+    </button>
 </li>
 
 {% if user.is_authenticated %}
@@ -639,6 +922,33 @@
   {% include 'core/chatbot.html' %}
 
 
+  <script>
+    document.addEventListener("DOMContentLoaded", function() {
+      const themeToggleBtn = document.getElementById('globalThemeToggle');
+      if(themeToggleBtn) {
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        themeToggleBtn.innerHTML = isDark ? '<i class="fas fa-sun text-warning"></i>' : '<i class="fas fa-moon"></i>';
+        
+        themeToggleBtn.addEventListener('click', function() {
+          const currentTheme = document.documentElement.getAttribute('data-theme');
+          const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+          
+          if(newTheme === 'dark') {
+             document.documentElement.setAttribute('data-theme', 'dark');
+             document.body.classList.add('studio-dark-mode');
+          } else {
+             document.documentElement.removeAttribute('data-theme');
+             document.body.classList.remove('studio-dark-mode');
+          }
+          
+          localStorage.setItem('studio-theme', newTheme);
+          themeToggleBtn.innerHTML = newTheme === 'dark' ? '<i class="fas fa-sun text-warning"></i>' : '<i class="fas fa-moon"></i>';
+          
+          document.dispatchEvent(new Event('themeChanged'));
+        });
+      }
+    });
+  </script>
 </body>
 
 </html>
