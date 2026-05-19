@@ -482,6 +482,136 @@
         border-radius: 6px;
         font-size: 0.7rem;
     }
+
+    /* Dark Mode Overrides */
+    html[data-theme="dark"] {
+        --glass-bg: rgba(15, 23, 42, 0.85);
+        --glass-border: rgba(255, 255, 255, 0.08);
+        --card-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+    }
+    html[data-theme="dark"] .hero-section {
+        background: rgba(255, 255, 255, 0.02) !important;
+    }
+    html[data-theme="dark"] .hero-section h1 {
+        color: var(--global-dark-text) !important;
+    }
+    html[data-theme="dark"] .section-title {
+        color: var(--global-dark-text) !important;
+    }
+    html[data-theme="dark"] .strategy-card {
+        background: var(--global-dark-card) !important;
+        border-color: var(--global-dark-border) !important;
+    }
+    html[data-theme="dark"] .strategy-card.border-flexi {
+        border-top-color: #38bdf8 !important;
+    }
+    html[data-theme="dark"] .strategy-card-footer {
+        border-top-color: var(--global-dark-border) !important;
+    }
+    html[data-theme="dark"] .btn-portfolio-link {
+        background: var(--primary-color) !important;
+    }
+    html[data-theme="dark"] .strategy-title {
+        color: var(--global-dark-text) !important;
+    }
+    html[data-theme="dark"] .rule-item {
+        color: var(--global-dark-muted) !important;
+    }
+    html[data-theme="dark"] .rule-item strong {
+        color: var(--global-dark-text) !important;
+    }
+    html[data-theme="dark"] .badge-strategy {
+        background: rgba(37, 99, 235, 0.15) !important;
+        color: #60a5fa !important;
+    }
+    html[data-theme="dark"] .rec-stocks-section {
+        background: var(--global-dark-bg) !important;
+        border-color: var(--global-dark-border) !important;
+    }
+    html[data-theme="dark"] .stock-badge {
+        background: var(--global-dark-card) !important;
+        border-color: var(--global-dark-border) !important;
+        color: var(--global-dark-text) !important;
+    }
+    html[data-theme="dark"] .calc-container {
+        background: var(--global-dark-card) !important;
+        border-color: var(--global-dark-border) !important;
+    }
+    html[data-theme="dark"] .profile-btn-group {
+        background: var(--global-dark-bg) !important;
+    }
+    html[data-theme="dark"] .profile-btn {
+        color: var(--global-dark-muted) !important;
+    }
+    html[data-theme="dark"] .profile-btn.active {
+        background: var(--global-dark-card) !important;
+        color: #fff !important;
+    }
+    html[data-theme="dark"] .calc-input {
+        background: var(--global-dark-bg) !important;
+        border-color: var(--global-dark-border) !important;
+        color: var(--global-dark-text) !important;
+    }
+    html[data-theme="dark"] .result-item {
+        background: var(--global-dark-bg) !important;
+        border-color: var(--global-dark-border) !important;
+    }
+    html[data-theme="dark"] .result-item:hover {
+        background: var(--global-dark-card) !important;
+    }
+    html[data-theme="dark"] .result-label {
+        color: var(--global-dark-muted) !important;
+    }
+    html[data-theme="dark"] .result-value {
+        color: var(--global-dark-text) !important;
+    }
+    html[data-theme="dark"] .col-md-4 > div {
+        background: var(--global-dark-card) !important;
+        border-color: var(--global-dark-border) !important;
+    }
+    html[data-theme="dark"] .col-md-4 h5 {
+        color: var(--global-dark-text) !important;
+    }
+    html[data-theme="dark"] #calcTotalDisplay {
+        background: var(--global-dark-bg) !important;
+        border-color: var(--global-dark-border) !important;
+        color: #60a5fa !important;
+    }
+
+    /* ── Live Allocation Card dark mode fix ── */
+    html[data-theme="dark"] #liveAllocCard {
+        background: var(--global-dark-card) !important;
+        background-color: var(--global-dark-card) !important;
+        border-color: var(--global-dark-border) !important;
+        backdrop-filter: none !important;
+        box-shadow: 0 20px 40px rgba(0,0,0,0.4) !important;
+    }
+    html[data-theme="dark"] .live-alloc-title {
+        color: var(--global-dark-text) !important;
+    }
+    /* Hero heading text fix */
+    html[data-theme="dark"] h1[style*="color: #0f172a"],
+    html[data-theme="dark"] h1[style*="color:#0f172a"] {
+        color: var(--global-dark-text) !important;
+    }
+    /* Logic box dark mode */
+    html[data-theme="dark"] .logic-box {
+        background: rgba(255, 255, 255, 0.04) !important;
+        border-color: var(--global-dark-border) !important;
+        color: var(--global-dark-muted) !important;
+    }
+    html[data-theme="dark"] .logic-title {
+        color: var(--global-dark-text) !important;
+    }
+    /* "Explore Strategies" button outline fix in dark mode */
+    html[data-theme="dark"] .btn.btn-outline-dark {
+        color: var(--global-dark-text) !important;
+        border-color: var(--global-dark-border) !important;
+    }
+    html[data-theme="dark"] .btn.btn-outline-dark:hover {
+        background: var(--global-dark-card) !important;
+        color: var(--global-dark-text) !important;
+    }
 </style>
 {% endblock %}
 
@@ -552,9 +682,9 @@
             </div>
             <div class="col-lg-5">
                 {% if has_investments %}
-                <div class="card border-0 shadow-lg p-4 animate__animated animate__zoomIn" style="border-radius: 32px; background: rgba(255,255,255,0.8); backdrop-filter: blur(10px);">
+                <div class="card border-0 shadow-lg p-4 animate__animated animate__zoomIn" id="liveAllocCard" style="border-radius: 32px; background: rgba(255,255,255,0.8); backdrop-filter: blur(10px);">
                     <div class="d-flex justify-content-between align-items-center mb-4">
-                        <h5 class="fw-800 text-dark mb-0">Live Allocation</h5>
+                        <h5 class="fw-800 mb-0 live-alloc-title">Live Allocation</h5>
                         <a href="{% url 'dashboard' %}{% if is_family_view %}?user_id={{ target_user.id }}{% endif %}" class="small text-primary fw-700 text-decoration-none">Dashboard <i class="fas fa-external-link-alt ms-1"></i></a>
                     </div>
                     <div style="height: 250px;">
@@ -1108,12 +1238,17 @@
         const totalInvested = dataValues.reduce((a, b) => a + b, 0);
         const actualTotal = totalInvested > 0 ? totalInvested : 1;
 
+        function isDarkMode() {
+            return document.documentElement.getAttribute('data-theme') === 'dark';
+        }
+
         // Professional Center Text Plugin
         const centerTextPlugin = {
             id: 'centerText',
             afterDraw: function(chart) {
                 if (chart.config.type !== 'doughnut') return;
                 const { ctx, chartArea: { top, bottom, left, right } } = chart;
+                const dark = isDarkMode();
                 ctx.save();
                 const centerX = (left + right) / 2;
                 const centerY = (top + bottom) / 2;
@@ -1128,14 +1263,14 @@
 
                 // Value
                 ctx.font = '850 26px "Inter", sans-serif';
-                ctx.fillStyle = '#0F172A';
+                ctx.fillStyle = dark ? '#f8fafc' : '#0F172A';
                 const valueText = '₹' + totalInvested.toLocaleString('en-IN', { maximumFractionDigits: 0 });
                 ctx.fillText(valueText, centerX, centerY + 14);
                 ctx.restore();
             }
         };
 
-        new Chart(ctx, {
+        const allocChart = new Chart(ctx, {
             type: 'doughnut',
             plugins: [centerTextPlugin],
             data: {
@@ -1158,6 +1293,7 @@
                             padding: 30,
                             usePointStyle: true,
                             pointStyle: 'circle',
+                            color: isDarkMode() ? '#f8fafc' : '#1e293b',
                             font: { size: 12, weight: '700', family: 'Inter' },
                             generateLabels: (chart) => {
                                 const data = chart.data;
@@ -1167,6 +1303,7 @@
                                     return {
                                         text: `${label} (${p}%)`,
                                         fillStyle: data.datasets[0].backgroundColor[i],
+                                        fontColor: isDarkMode() ? '#f8fafc' : '#1e293b',
                                         index: i
                                     };
                                 });
@@ -1174,7 +1311,9 @@
                         }
                     },
                     tooltip: {
-                        backgroundColor: '#0F172A',
+                        backgroundColor: isDarkMode() ? '#1e293b' : '#0F172A',
+                        borderColor: isDarkMode() ? 'rgba(255,255,255,0.1)' : 'transparent',
+                        borderWidth: isDarkMode() ? 1 : 0,
                         padding: 15,
                         cornerRadius: 12,
                         titleFont: { size: 14, weight: 'bold' },
@@ -1184,6 +1323,18 @@
                         }
                     }
                 }
+            }
+        });
+
+        // Re-render chart when theme changes
+        document.addEventListener('themeChanged', function() {
+            if (allocChart) {
+                const dark = isDarkMode();
+                allocChart.options.plugins.legend.labels.color = dark ? '#f8fafc' : '#1e293b';
+                allocChart.options.plugins.tooltip.backgroundColor = dark ? '#1e293b' : '#0F172A';
+                allocChart.options.plugins.tooltip.borderColor = dark ? 'rgba(255,255,255,0.1)' : 'transparent';
+                allocChart.options.plugins.tooltip.borderWidth = dark ? 1 : 0;
+                allocChart.update();
             }
         });
     });
@@ -1275,6 +1426,7 @@
     function updateCalcChart(data) {
         const chartCanvas = document.getElementById('calcChart');
         if (!chartCanvas) return;
+        const dark = document.documentElement.getAttribute('data-theme') === 'dark';
 
         if (calcChart) {
             calcChart.data.datasets[0].data = data;
@@ -1299,7 +1451,9 @@
                     plugins: { 
                         legend: { display: false },
                         tooltip: {
-                            backgroundColor: '#0F172A',
+                            backgroundColor: dark ? '#1e293b' : '#0F172A',
+                            borderColor: dark ? 'rgba(255,255,255,0.1)' : 'transparent',
+                            borderWidth: dark ? 1 : 0,
                             padding: 12,
                             cornerRadius: 8,
                             callbacks: {

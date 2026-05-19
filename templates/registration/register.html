@@ -129,6 +129,35 @@
   .auth-logo:hover {
     transform: scale(1.05);
   }
+
+  /* Dark Mode Overrides */
+  html[data-theme="dark"] .social-btn,
+  html[data-theme="dark"] .google-btn {
+    background: var(--global-dark-bg) !important;
+    border-color: var(--global-dark-border) !important;
+    color: var(--global-dark-text) !important;
+  }
+  html[data-theme="dark"] .social-btn:hover,
+  html[data-theme="dark"] .google-btn:hover {
+    background: var(--global-dark-card) !important;
+    color: #fff !important;
+  }
+  html[data-theme="dark"] .social-btn-disabled {
+    background: var(--global-dark-bg) !important;
+    opacity: 0.4;
+  }
+  html[data-theme="dark"] .or-divider::before,
+  html[data-theme="dark"] .or-divider::after {
+    border-top-color: var(--global-dark-border) !important;
+  }
+  html[data-theme="dark"] .auth-logo {
+    border-color: var(--global-dark-border) !important;
+  }
+  html[data-theme="dark"] .verified-badge {
+    background: rgba(16, 185, 129, 0.15) !important;
+    border-color: #34d399 !important;
+    color: #34d399 !important;
+  }
 </style>
 {% endblock %}
 
@@ -167,7 +196,7 @@
 
           {% if GOOGLE_CLIENT_ID %}
           <div class="mb-4">
-              <a href="{% url 'google_login' %}" class="btn w-100 google-btn shadow-sm mb-3" style="display: flex; align-items: center; justify-content: center; gap: 10px; border-radius: 10px; font-weight: 600; font-size: 0.95rem; padding: 0.65rem 1rem; border: 1.5px solid #dee2e6; background: #fff; color: #333; transition: background 0.18s, box-shadow 0.18s, transform 0.15s; text-decoration: none; width: 100%; margin-bottom: 10px;">
+              <a href="{% url 'google_login' %}" class="btn w-100 social-btn google-btn shadow-sm mb-3">
                   <svg version="1.1" xmlns="http://www.w3.org/2000/svg" width="20px" height="20px" viewBox="0 0 48 48">
                       <g>
                           <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"></path>

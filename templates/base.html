@@ -3,6 +3,20 @@
 {% load socialaccount %}
 
 <head>
+  <script>
+    (function() {
+      let theme = localStorage.getItem('studio-theme');
+      {% if user.is_authenticated and user.profile.theme %}
+        theme = "{{ user.profile.theme }}";
+        localStorage.setItem('studio-theme', theme);
+      {% endif %}
+      if (theme === 'dark') {
+        document.documentElement.setAttribute('data-theme', 'dark');
+      } else {
+        document.documentElement.removeAttribute('data-theme');
+      }
+    })();
+  </script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>FOLIUX > Investment Tracking System</title>
@@ -943,6 +957,18 @@
           
           localStorage.setItem('studio-theme', newTheme);
           themeToggleBtn.innerHTML = newTheme === 'dark' ? '<i class="fas fa-sun text-warning"></i>' : '<i class="fas fa-moon"></i>';
+          
+          const isAuthenticated = {% if user.is_authenticated %}true{% else %}false{% endif %};
+          if (isAuthenticated) {
+             fetch("{% url 'update_theme_preference' %}", {
+                method: 'POST',
+                headers: {
+                   'Content-Type': 'application/json',
+                   'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: JSON.stringify({ theme: newTheme })
+             }).catch(err => console.error('Error saving theme preference:', err));
+          }
           
           document.dispatchEvent(new Event('themeChanged'));
         });

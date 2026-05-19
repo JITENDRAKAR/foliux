@@ -4844,3 +4844,25 @@ def wealth_calculators(request):
     return render(request, 'core/calc.html')
 
 
+from django.http import JsonResponse
+from django.views.decorators.http import require_POST
+from django.contrib.auth.decorators import login_required
+import json
+
+@login_required
+@require_POST
+def update_theme_preference(request):
+    try:
+        data = json.loads(request.body)
+        theme = data.get('theme')
+        if theme in ['light', 'dark']:
+            profile = request.user.profile
+            profile.theme = theme
+            profile.save()
+            return JsonResponse({'status': 'success'})
+        return JsonResponse({'status': 'error', 'message': 'Invalid theme value'}, status=400)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+

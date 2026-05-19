@@ -87,6 +87,37 @@
     .auth-logo:hover {
         transform: scale(1.05);
     }
+    
+    /* Dark Mode Overrides */
+    html[data-theme="dark"] .social-btn {
+        background: var(--global-dark-bg) !important;
+        border-color: var(--global-dark-border) !important;
+        color: var(--global-dark-text) !important;
+    }
+    html[data-theme="dark"] .social-btn:hover {
+        background: var(--global-dark-card) !important;
+        color: #fff !important;
+    }
+    html[data-theme="dark"] .google-btn {
+        background: var(--global-dark-bg) !important;
+        border-color: var(--global-dark-border) !important;
+        color: var(--global-dark-text) !important;
+    }
+    html[data-theme="dark"] .google-btn:hover {
+        background: var(--global-dark-card) !important;
+        border-color: var(--global-dark-border) !important;
+    }
+    html[data-theme="dark"] .social-btn-disabled {
+        background: var(--global-dark-bg) !important;
+        opacity: 0.4;
+    }
+    html[data-theme="dark"] .or-divider::before,
+    html[data-theme="dark"] .or-divider::after {
+        border-top-color: var(--global-dark-border) !important;
+    }
+    html[data-theme="dark"] .auth-logo {
+        border-color: var(--global-dark-border) !important;
+    }
 </style>
 {% endblock %}
 

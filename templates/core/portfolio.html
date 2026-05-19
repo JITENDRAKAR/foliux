@@ -156,6 +156,33 @@
         transform: translateY(-4px);
         box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1) !important;
     }
+
+    /* Dark Mode Overrides */
+    html[data-theme="dark"] .stat-card-premium {
+        background: var(--global-dark-card) !important;
+        border-color: var(--global-dark-border) !important;
+    }
+    html[data-theme="dark"] .stat-value-large {
+        color: var(--global-dark-text) !important;
+    }
+    html[data-theme="dark"] .chart-card {
+        background: var(--global-dark-card) !important;
+        border-color: var(--global-dark-border) !important;
+    }
+    html[data-theme="dark"] td div.fw-bold,
+    html[data-theme="dark"] td.fw-semibold,
+    html[data-theme="dark"] td.fw-bold:not(.text-success):not(.text-danger) {
+        color: var(--global-dark-text) !important;
+    }
+    html[data-theme="dark"] table,
+    html[data-theme="dark"] th,
+    html[data-theme="dark"] td {
+        color: var(--global-dark-text) !important;
+    }
+    html[data-theme="dark"] .h4,
+    html[data-theme="dark"] h4 {
+        color: var(--global-dark-text) !important;
+    }
 </style>
 {% endblock %}
 
@@ -694,13 +721,14 @@
 
                 function renderChart(historyData) {
                     const ctx = document.getElementById('portfolioHistoryChart').getContext('2d');
+                    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
                     
                     const netWorthGradient = ctx.createLinearGradient(0, 0, 0, 400);
-                    netWorthGradient.addColorStop(0, 'rgba(34, 197, 94, 0.2)');
+                    netWorthGradient.addColorStop(0, isDark ? 'rgba(34, 197, 94, 0.25)' : 'rgba(34, 197, 94, 0.2)');
                     netWorthGradient.addColorStop(1, 'rgba(34, 197, 94, 0)');
                     
                     const capitalGradient = ctx.createLinearGradient(0, 0, 0, 400);
-                    capitalGradient.addColorStop(0, 'rgba(59, 130, 246, 0.1)');
+                    capitalGradient.addColorStop(0, isDark ? 'rgba(59, 130, 246, 0.15)' : 'rgba(59, 130, 246, 0.1)');
                     capitalGradient.addColorStop(1, 'rgba(59, 130, 246, 0)');
 
                     new Chart(ctx, {
@@ -738,10 +766,22 @@
                             maintainAspectRatio: false,
                             interaction: { mode: 'index', intersect: false },
                             plugins: {
-                                legend: { position: 'top', labels: { usePointStyle: true, padding: 20, font: { weight: '600' } } },
+                                legend: { 
+                                    position: 'top', 
+                                    labels: { 
+                                        usePointStyle: true, 
+                                        padding: 20, 
+                                        color: isDark ? '#f8fafc' : '#1e293b',
+                                        font: { weight: '600' } 
+                                    } 
+                                },
                                 tooltip: {
                                     padding: 12,
-                                    backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                                    backgroundColor: isDark ? 'rgba(30, 41, 59, 0.95)' : 'rgba(15, 23, 42, 0.9)',
+                                    titleColor: isDark ? '#f8fafc' : '#ffffff',
+                                    bodyColor: isDark ? '#f8fafc' : '#ffffff',
+                                    borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
+                                    borderWidth: isDark ? 1 : 0,
                                     callbacks: {
                                         label: (ctx) => {
                                             return `${ctx.dataset.label}: ₹${ctx.raw.toLocaleString('en-IN', {minimumFractionDigits: 2})}`;
@@ -752,10 +792,17 @@
                             scales: {
                                 y: {
                                     beginAtZero: false,
-                                    grid: { color: 'rgba(0,0,0,0.05)' },
-                                    ticks: { callback: (val) => '₹' + (val/100000).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + 'L', font: { weight: '500' } }
+                                    grid: { color: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)' },
+                                    ticks: { 
+                                        color: isDark ? '#94a3b8' : '#475569',
+                                        callback: (val) => '₹' + (val/100000).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + 'L', 
+                                        font: { weight: '500' } 
+                                    }
                                 },
-                                x: { grid: { display: false } }
+                                x: { 
+                                    grid: { display: false },
+                                    ticks: { color: isDark ? '#94a3b8' : '#475569' }
+                                }
                             }
                         }
                     });
@@ -798,7 +845,7 @@
         </script>
         
         <div class="collapse" id="portfolioHistoryCollapse">
-            <div class="card p-3 border shadow-sm rounded-4 bg-white mb-4" style="background: linear-gradient(to bottom right, #ffffff, #f8fafc);">
+            <div class="card p-3 border shadow-sm rounded-4 bg-white mb-4" style="background: linear-gradient(to bottom right, var(--card-gradient-start), var(--card-gradient-end)) !important;">
                 <div style="height: 400px; width: 100%;">
                     <canvas id="portfolioHistoryChart"></canvas>
                 </div>
