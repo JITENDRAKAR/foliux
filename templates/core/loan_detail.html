@@ -38,7 +38,62 @@
     }
     .bg-emi { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
     .bg-prepayment { background: rgba(16, 185, 129, 0.1); color: #10b981; }
-    
+
+    /* ===== DARK MODE OVERRIDES ===== */
+    html[data-theme="dark"] .detail-card {
+        background: var(--global-dark-card) !important;
+        border-color: var(--global-dark-border) !important;
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3) !important;
+    }
+    html[data-theme="dark"] .bg-white {
+        background-color: var(--global-dark-card) !important;
+        border-color: var(--global-dark-border) !important;
+        color: var(--global-dark-text) !important;
+    }
+    html[data-theme="dark"] .link-dark {
+        color: var(--global-dark-text) !important;
+    }
+    html[data-theme="dark"] .link-dark:hover {
+        color: #60a5fa !important;
+    }
+    html[data-theme="dark"] .table thead th {
+        color: var(--global-dark-muted) !important;
+        border-bottom-color: var(--global-dark-border) !important;
+    }
+    html[data-theme="dark"] .table tbody tr td {
+        color: var(--global-dark-text) !important;
+        border-bottom-color: rgba(255, 255, 255, 0.05) !important;
+    }
+    html[data-theme="dark"] .table-hover tbody tr:hover {
+        background-color: rgba(255, 255, 255, 0.02) !important;
+    }
+    html[data-theme="dark"] .border-bottom {
+        border-color: var(--global-dark-border) !important;
+    }
+    html[data-theme="dark"] .bg-emi {
+        background: rgba(59, 130, 246, 0.18) !important;
+        color: #60a5fa !important;
+    }
+    html[data-theme="dark"] .bg-prepayment {
+        background: rgba(16, 185, 129, 0.18) !important;
+        color: #34d399 !important;
+    }
+    html[data-theme="dark"] .btn-outline-info {
+        border-color: rgba(6, 182, 212, 0.4) !important;
+        color: #22d3ee !important;
+    }
+    html[data-theme="dark"] .btn-outline-info:hover {
+        background-color: #06b6d4 !important;
+        color: #fff !important;
+    }
+    html[data-theme="dark"] .btn-outline-danger {
+        border-color: rgba(239, 68, 68, 0.4) !important;
+        color: #f87171 !important;
+    }
+    html[data-theme="dark"] .btn-outline-danger:hover {
+        background-color: #ef4444 !important;
+        color: #fff !important;
+    }
 </style>
 {% endblock %}
 

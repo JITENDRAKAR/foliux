@@ -16,6 +16,9 @@
     .text-other {
         color: #854d0e; /* Gold/Brown for physical assets */
     }
+    .bg-soft-other {
+        background-color: #fef9c3;
+    }
     .table-container {
         background: white;
         border-radius: 20px;
@@ -47,6 +50,61 @@
         transform: scale(1.02);
         box-shadow: 0 5px 15px rgba(133, 77, 14, 0.3);
         color: white;
+    }
+
+    /* ===== DARK MODE OVERRIDES ===== */
+    html[data-theme="dark"] .other-card {
+        background: linear-gradient(135deg, #1e293b 0%, #292524 100%) !important;
+        border-color: rgba(234, 179, 8, 0.2) !important;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
+    }
+    html[data-theme="dark"] .other-card:hover {
+        border-color: rgba(234, 179, 8, 0.4) !important;
+        box-shadow: 0 12px 30px rgba(234, 179, 8, 0.08) !important;
+    }
+    html[data-theme="dark"] .text-other {
+        color: #facc15 !important;
+    }
+    html[data-theme="dark"] .bg-soft-other {
+        background-color: rgba(234, 179, 8, 0.15) !important;
+        border-color: rgba(234, 179, 8, 0.3) !important;
+    }
+    html[data-theme="dark"] .table-container {
+        background: var(--global-dark-card) !important;
+        border-color: var(--global-dark-border) !important;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35) !important;
+    }
+    html[data-theme="dark"] .stats-value {
+        color: var(--global-dark-text) !important;
+    }
+    html[data-theme="dark"] .text-primary {
+        color: #60a5fa !important;
+    }
+    html[data-theme="dark"] .table thead th {
+        background-color: var(--global-dark-bg) !important;
+        color: var(--global-dark-text) !important;
+        border-color: var(--global-dark-border) !important;
+    }
+    html[data-theme="dark"] .table tbody tr:hover td {
+        background-color: rgba(255, 255, 255, 0.02) !important;
+    }
+    html[data-theme="dark"] .bg-white {
+        background-color: var(--global-dark-card) !important;
+        border-color: var(--global-dark-border) !important;
+        color: var(--global-dark-text) !important;
+    }
+    html[data-theme="dark"] .dropdown-menu {
+        background-color: var(--global-dark-card) !important;
+        border: 1px solid var(--global-dark-border) !important;
+    }
+    html[data-theme="dark"] .dropdown-item {
+        color: var(--global-dark-text) !important;
+    }
+    html[data-theme="dark"] .dropdown-item:hover {
+        background-color: var(--global-dark-bg) !important;
+    }
+    html[data-theme="dark"] .dropdown-divider {
+        border-color: var(--global-dark-border) !important;
     }
 </style>
 {% endblock %}

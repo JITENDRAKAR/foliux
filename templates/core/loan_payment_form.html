@@ -1,6 +1,43 @@
 {% extends "base.html" %}
 {% load static %}
 
+{% block extra_css %}
+<style>
+    /* ===== DARK MODE OVERRIDES ===== */
+    html[data-theme="dark"] .bg-white {
+        background-color: var(--global-dark-card) !important;
+        border-color: var(--global-dark-border) !important;
+        color: var(--global-dark-text) !important;
+    }
+    html[data-theme="dark"] .form-label {
+        color: var(--global-dark-text) !important;
+    }
+    html[data-theme="dark"] .form-control {
+        background-color: var(--global-dark-bg) !important;
+        border-color: var(--global-dark-border) !important;
+        color: var(--global-dark-text) !important;
+    }
+    html[data-theme="dark"] .form-control:focus {
+        border-color: #10b981 !important;
+        box-shadow: 0 0 0 0.25rem rgba(16, 185, 129, 0.25) !important;
+    }
+    html[data-theme="dark"] .input-group-text.bg-white {
+        background-color: var(--global-dark-border) !important;
+        border-color: var(--global-dark-border) !important;
+        color: var(--global-dark-text) !important;
+    }
+    html[data-theme="dark"] h2 {
+        color: var(--global-dark-text) !important;
+    }
+    html[data-theme="dark"] .link-secondary {
+        color: var(--global-dark-muted) !important;
+    }
+    html[data-theme="dark"] .link-secondary:hover {
+        color: #10b981 !important;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container py-5">
     <div class="row justify-content-center">

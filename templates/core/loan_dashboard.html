@@ -58,6 +58,51 @@
     .bg-loan-personal { background: rgba(139, 92, 246, 0.1); color: #8b5cf6; }
     .bg-loan-education { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
     .bg-loan-other { background: rgba(107, 114, 128, 0.1); color: #6b7280; }
+
+    /* ===== DARK MODE OVERRIDES ===== */
+    html[data-theme="dark"] .loan-card {
+        background: var(--global-dark-card) !important;
+        border-color: var(--global-dark-border) !important;
+    }
+    html[data-theme="dark"] .loan-card:hover {
+        box-shadow: 0 15px 30px rgba(0, 0, 0, 0.3) !important;
+    }
+    html[data-theme="dark"] .loan-card h5 {
+        color: var(--global-dark-text) !important;
+    }
+    html[data-theme="dark"] .bg-light {
+        background-color: var(--global-dark-bg) !important;
+        color: var(--global-dark-text) !important;
+    }
+    html[data-theme="dark"] .progress {
+        background-color: rgba(255, 255, 255, 0.08) !important;
+    }
+    html[data-theme="dark"] .dropdown-menu {
+        background-color: var(--global-dark-card) !important;
+        border: 1px solid var(--global-dark-border) !important;
+    }
+    html[data-theme="dark"] .dropdown-item {
+        color: var(--global-dark-text) !important;
+    }
+    html[data-theme="dark"] .dropdown-item:hover {
+        background-color: var(--global-dark-bg) !important;
+    }
+    html[data-theme="dark"] .dropdown-divider {
+        border-color: var(--global-dark-border) !important;
+    }
+    html[data-theme="dark"] .bg-loan-home { background: rgba(59, 130, 246, 0.18) !important; color: #60a5fa !important; }
+    html[data-theme="dark"] .bg-loan-car { background: rgba(16, 185, 129, 0.18) !important; color: #34d399 !important; }
+    html[data-theme="dark"] .bg-loan-personal { background: rgba(139, 92, 246, 0.18) !important; color: #a78bfa !important; }
+    html[data-theme="dark"] .bg-loan-education { background: rgba(245, 158, 11, 0.18) !important; color: #fbbf24 !important; }
+    html[data-theme="dark"] .bg-loan-other { background: rgba(107, 114, 128, 0.18) !important; color: #9ca3af !important; }
+    html[data-theme="dark"] .btn-outline-danger {
+        border-color: rgba(239, 68, 68, 0.4) !important;
+        color: #f87171 !important;
+    }
+    html[data-theme="dark"] .btn-outline-danger:hover {
+        background-color: #ef4444 !important;
+        color: #fff !important;
+    }
 </style>
 {% endblock %}
 

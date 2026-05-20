@@ -53,6 +53,26 @@
         box-shadow: 0 5px 15px rgba(247, 147, 26, 0.3);
         color: white;
     }
+
+    /* ===== DARK MODE OVERRIDES ===== */
+    html[data-theme="dark"] .coin-card {
+        background: linear-gradient(135deg, var(--global-dark-card) 0%, #1e293b 100%) !important;
+        border-color: var(--global-dark-border) !important;
+        box-shadow: 0 10px 30px rgba(247, 147, 26, 0.2) !important;
+    }
+    html[data-theme="dark"] .stats-value {
+        color: var(--global-dark-text) !important;
+    }
+    html[data-theme="dark"] .stats-label {
+        color: var(--global-dark-muted) !important;
+    }
+    html[data-theme="dark"] .table-container {
+        background: var(--global-dark-card) !important;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.2) !important;
+    }
+    html[data-theme="dark"] .text-coin {
+        color: #fb923c !important;
+    }
 </style>
 {% endblock %}
 

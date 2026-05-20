@@ -42,6 +42,39 @@
         box-shadow: 0 10px 20px rgba(133, 77, 14, 0.2);
         color: white;
     }
+    .text-other {
+        color: #854d0e;
+    }
+
+    /* ===== DARK MODE OVERRIDES ===== */
+    html[data-theme="dark"] .form-container {
+        background: var(--global-dark-card) !important;
+        border-color: var(--global-dark-border) !important;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3) !important;
+    }
+    html[data-theme="dark"] .form-label {
+        color: #facc15 !important;
+    }
+    html[data-theme="dark"] .text-other {
+        color: #facc15 !important;
+    }
+    html[data-theme="dark"] .form-control, 
+    html[data-theme="dark"] .form-select {
+        border-color: var(--global-dark-border) !important;
+        background-color: var(--global-dark-bg) !important;
+        color: var(--global-dark-text) !important;
+    }
+    html[data-theme="dark"] .form-control:focus, 
+    html[data-theme="dark"] .form-select:focus {
+        border-color: #facc15 !important;
+        box-shadow: 0 0 0 4px rgba(250, 204, 21, 0.15) !important;
+    }
+    html[data-theme="dark"] .btn-submit {
+        background: linear-gradient(135deg, #a16207 0%, #ca8a04 100%) !important;
+    }
+    html[data-theme="dark"] .btn-submit:hover {
+        box-shadow: 0 10px 20px rgba(234, 179, 8, 0.2) !important;
+    }
 </style>
 {% endblock %}
 
@@ -49,7 +82,7 @@
 <div class="row justify-content-center py-5">
     <div class="col-md-9">
         <div class="text-center mb-5">
-            <h1 class="fw-800 text-other" style="color: #854d0e;">{{ action }} Physical Asset</h1>
+            <h1 class="fw-800 text-other">{{ action }} Physical Asset</h1>
             <p class="text-muted">Record your Plot, Flat, Gold or other valuable physical assets.</p>
         </div>
         
@@ -112,7 +145,7 @@
                 </button>
                 
                 <div class="mt-4 pt-3 border-top text-center">
-                    <a href="{% url 'other_assets_dashboard' %}" class="text-decoration-none fw-600" style="color: #854d0e;">
+                    <a href="{% url 'other_assets_dashboard' %}" class="text-decoration-none fw-600 text-other">
                         <i class="fas fa-arrow-left me-2"></i>Back to Assets Dashboard
                     </a>
                 </div>

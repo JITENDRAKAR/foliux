@@ -58,6 +58,26 @@
         border-radius: 10px;
         font-weight: 700;
     }
+
+    /* ===== DARK MODE OVERRIDES ===== */
+    html[data-theme="dark"] .mf-card {
+        background: linear-gradient(135deg, var(--global-dark-card) 0%, #1e293b 100%) !important;
+        border-color: var(--global-dark-border) !important;
+        box-shadow: 0 10px 30px rgba(0, 61, 124, 0.3) !important;
+    }
+    html[data-theme="dark"] .stats-value {
+        color: var(--global-dark-text) !important;
+    }
+    html[data-theme="dark"] .stats-label {
+        color: var(--global-dark-muted) !important;
+    }
+    html[data-theme="dark"] .table-container {
+        background: var(--global-dark-card) !important;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.2) !important;
+    }
+    html[data-theme="dark"] .text-primary-dark {
+        color: #93c5fd !important;
+    }
 </style>
 {% endblock %}
 

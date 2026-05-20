@@ -66,6 +66,50 @@
         transition: background 0.2s;
     }
     .autocomplete-item:hover { background-color: #f8fafc; }
+
+    .text-nps {
+        color: #003366;
+    }
+
+    /* ===== DARK MODE OVERRIDES ===== */
+    html[data-theme="dark"] .form-container {
+        background: var(--global-dark-card) !important;
+        border-color: var(--global-dark-border) !important;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3) !important;
+    }
+    html[data-theme="dark"] .form-label {
+        color: #94a3b8 !important;
+    }
+    html[data-theme="dark"] .text-nps {
+        color: #93c5fd !important;
+    }
+    html[data-theme="dark"] .form-control {
+        border-color: var(--global-dark-border) !important;
+        background-color: var(--global-dark-bg) !important;
+        color: var(--global-dark-text) !important;
+    }
+    html[data-theme="dark"] .form-control:focus {
+        border-color: #93c5fd !important;
+        box-shadow: 0 0 0 4px rgba(147, 197, 253, 0.15) !important;
+    }
+    html[data-theme="dark"] .btn-submit {
+        background: linear-gradient(135deg, #00509e 0%, #3b82f6 100%) !important;
+    }
+    html[data-theme="dark"] .btn-submit:hover {
+        box-shadow: 0 10px 20px rgba(59, 130, 246, 0.2) !important;
+    }
+    html[data-theme="dark"] .autocomplete-results {
+        background-color: var(--global-dark-card) !important;
+        border-color: var(--global-dark-border) !important;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5) !important;
+    }
+    html[data-theme="dark"] .autocomplete-item {
+        color: var(--global-dark-text) !important;
+        border-bottom-color: var(--global-dark-border) !important;
+    }
+    html[data-theme="dark"] .autocomplete-item:hover {
+        background-color: var(--global-dark-bg) !important;
+    }
 </style>
 {% endblock %}
 
@@ -181,7 +225,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 </button>
                 
                 <div class="mt-4 pt-3 border-top text-center">
-                    <a href="{% url 'nps_dashboard' %}" class="text-decoration-none fw-600" style="color: #003366;">
+                    <a href="{% url 'nps_dashboard' %}" class="text-decoration-none fw-600 text-nps">
                         <i class="fas fa-arrow-left me-2"></i>Back to NPS Dashboard
                     </a>
                 </div>

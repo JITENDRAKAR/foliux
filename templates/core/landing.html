@@ -1124,7 +1124,8 @@
     html[data-theme="dark"] .search-panel-title,
     html[data-theme="dark"] .global-price,
     html[data-theme="dark"] .feed-title,
-    html[data-theme="dark"] .stock-detail-price {
+    html[data-theme="dark"] .stock-detail-price,
+    html[data-theme="dark"] .metric-value {
         color: var(--global-dark-text);
     }
     
@@ -1156,6 +1157,11 @@
     html[data-theme="dark"] .metric-item {
         background: rgba(255, 255, 255, 0.03);
         border-color: var(--global-dark-border);
+    }
+    
+    html[data-theme="dark"] .metric-label,
+    html[data-theme="dark"] .stock-detail-symbol {
+        color: var(--global-dark-muted);
     }
     
     html[data-theme="dark"] .metric-item:hover {

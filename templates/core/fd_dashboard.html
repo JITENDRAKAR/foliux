@@ -51,6 +51,34 @@
         box-shadow: 0 5px 15px rgba(100, 116, 139, 0.3);
         color: white;
     }
+    .matured-row {
+        background-color: rgba(241, 245, 249, 0.5);
+        opacity: 0.8;
+    }
+
+    /* ===== DARK MODE OVERRIDES ===== */
+    html[data-theme="dark"] .fd-card {
+        background: linear-gradient(135deg, var(--global-dark-card) 0%, #1e293b 100%) !important;
+        border-color: var(--global-dark-border) !important;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3) !important;
+    }
+    html[data-theme="dark"] .stats-value {
+        color: var(--global-dark-text) !important;
+    }
+    html[data-theme="dark"] .stats-label {
+        color: var(--global-dark-muted) !important;
+    }
+    html[data-theme="dark"] .table-container {
+        background: var(--global-dark-card) !important;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.2) !important;
+    }
+    html[data-theme="dark"] .text-fd {
+        color: #cbd5e1 !important;
+    }
+    html[data-theme="dark"] .matured-row {
+        background-color: rgba(30, 41, 59, 0.5) !important;
+        opacity: 0.7;
+    }
 </style>
 {% endblock %}
 
@@ -165,7 +193,7 @@
                 </thead>
                 <tbody>
                     {% for item in fd_holdings %}
-                    <tr {% if item.is_matured %}style="background-color: rgba(241, 245, 249, 0.5); opacity: 0.8;"{% endif %}>
+                    <tr class="{% if item.is_matured %}matured-row{% endif %}">
                         <td class="ps-4">
                             <div class="d-flex align-items-center gap-2 mb-1" 
                                  {% if item.fd_id or item.holder_name %}

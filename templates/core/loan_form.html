@@ -1,6 +1,61 @@
 {% extends "base.html" %}
 {% load static %}
 
+{% block extra_css %}
+<style>
+    /* ===== DARK MODE OVERRIDES ===== */
+    html[data-theme="dark"] .bg-white {
+        background-color: var(--global-dark-card) !important;
+        border-color: var(--global-dark-border) !important;
+        color: var(--global-dark-text) !important;
+    }
+    html[data-theme="dark"] .form-label {
+        color: var(--global-dark-text) !important;
+    }
+    html[data-theme="dark"] .form-control,
+    html[data-theme="dark"] .form-select {
+        background-color: var(--global-dark-bg) !important;
+        border-color: var(--global-dark-border) !important;
+        color: var(--global-dark-text) !important;
+    }
+    html[data-theme="dark"] .form-control:focus,
+    html[data-theme="dark"] .form-select:focus {
+        border-color: #ef4444 !important;
+        box-shadow: 0 0 0 0.25rem rgba(239, 68, 68, 0.25) !important;
+    }
+    html[data-theme="dark"] .input-group-text {
+        background-color: var(--global-dark-border) !important;
+        border-color: var(--global-dark-border) !important;
+        color: var(--global-dark-text) !important;
+    }
+    html[data-theme="dark"] .btn-outline-secondary {
+        border-color: var(--global-dark-border) !important;
+        color: var(--global-dark-muted) !important;
+    }
+    html[data-theme="dark"] .btn-outline-secondary:hover {
+        background-color: var(--global-dark-border) !important;
+        color: var(--global-dark-text) !important;
+    }
+    html[data-theme="dark"] .btn-light {
+        background-color: var(--global-dark-border) !important;
+        border-color: var(--global-dark-border) !important;
+        color: var(--global-dark-text) !important;
+    }
+    html[data-theme="dark"] .btn-light:hover {
+        background-color: var(--global-dark-bg) !important;
+    }
+    html[data-theme="dark"] .link-dark {
+        color: var(--global-dark-text) !important;
+    }
+    html[data-theme="dark"] .link-dark:hover {
+        color: #f87171 !important;
+    }
+    html[data-theme="dark"] h2 {
+        color: var(--global-dark-text) !important;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container py-5 animate__animated animate__fadeIn">
     <div class="row justify-content-center">

@@ -400,7 +400,8 @@
 
     html[data-theme="dark"] .dropdown-menu {
         background-color: var(--global-dark-card) !important;
-        border-color: var(--global-dark-border) !important;
+        border: 1px solid var(--global-dark-border) !important;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5) !important;
     }
 
     html[data-theme="dark"] .dropdown-item {
@@ -411,6 +412,11 @@
     html[data-theme="dark"] .dropdown-item:focus {
         background-color: var(--global-dark-bg) !important;
         color: var(--global-dark-text) !important;
+    }
+
+    html[data-theme="dark"] .dropdown-item.active {
+        background-color: var(--primary-color) !important;
+        color: white !important;
     }
     
     html[data-theme="dark"] .dropdown-divider {
@@ -550,14 +556,17 @@
     }
     if (localStorage.getItem('studio-theme') === 'dark') {
       document.documentElement.setAttribute('data-theme', 'dark');
-      document.addEventListener("DOMContentLoaded", function() {
-          document.body.classList.add('studio-dark-mode');
-      });
     }
   </script>
 </head>
 
 <body>
+  <script>
+    // Immediately apply dark mode class to body to prevent Flash of Unstyled Content (FOUC)
+    if (localStorage.getItem('studio-theme') === 'dark') {
+      document.body.classList.add('studio-dark-mode');
+    }
+  </script>
 
   <nav class="navbar navbar-expand-lg navbar-dark mb-0">
     <div class="container">

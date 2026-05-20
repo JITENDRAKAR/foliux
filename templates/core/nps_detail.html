@@ -40,6 +40,40 @@
         font-weight: 600;
         font-size: 0.85rem;
     }
+
+    /* ===== DARK MODE OVERRIDES ===== */
+    html[data-theme="dark"] .detail-card {
+        background: var(--global-dark-card) !important;
+        border-color: var(--global-dark-border) !important;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3) !important;
+    }
+    html[data-theme="dark"] .stat-box {
+        background: rgba(16, 185, 129, 0.1) !important;
+        border-color: rgba(16, 185, 129, 0.15) !important;
+    }
+    html[data-theme="dark"] .stat-box:hover {
+        background: rgba(16, 185, 129, 0.18) !important;
+    }
+    html[data-theme="dark"] .text-nps-green {
+        color: #34d399 !important;
+    }
+    html[data-theme="dark"] .badge-category {
+        background: rgba(16, 185, 129, 0.15) !important;
+        color: #34d399 !important;
+    }
+    html[data-theme="dark"] .breadcrumb-item a {
+        color: #60a5fa !important;
+    }
+    html[data-theme="dark"] .breadcrumb-item.active {
+        color: var(--global-dark-muted) !important;
+    }
+    html[data-theme="dark"] h5.fw-700 {
+        color: var(--global-dark-text) !important;
+    }
+    html[data-theme="dark"] .bg-light {
+        background-color: var(--global-dark-bg) !important;
+        color: var(--global-dark-muted) !important;
+    }
 </style>
 {% endblock %}
 
@@ -140,7 +174,17 @@
         gradient.addColorStop(0, 'rgba(16, 185, 129, 0.15)');
         gradient.addColorStop(1, 'rgba(16, 185, 129, 0)');
 
-        new Chart(ctx, {
+        const getThemeColors = () => {
+            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            return {
+                gridColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
+                tickColor: isDark ? '#94a3b8' : '#64748b'
+            };
+        };
+
+        let colors = getThemeColors();
+
+        const npsChart = new Chart(ctx, {
             type: 'line',
             data: {
                 labels: chartData.labels,
@@ -187,12 +231,14 @@
                         ticks: {
                             maxRotation: 0,
                             autoSkip: true,
-                            maxTicksLimit: 8
+                            maxTicksLimit: 8,
+                            color: colors.tickColor
                         }
                     },
                     y: {
-                        grid: { color: 'rgba(0,0,0,0.05)' },
+                        grid: { color: colors.gridColor },
                         ticks: {
+                            color: colors.tickColor,
                             callback: function(value) {
                                 return '₹' + value.toLocaleString();
                             }
@@ -200,6 +246,14 @@
                     }
                 }
             }
+        });
+
+        document.addEventListener('themeChanged', function() {
+            const newColors = getThemeColors();
+            npsChart.options.scales.x.ticks.color = newColors.tickColor;
+            npsChart.options.scales.y.ticks.color = newColors.tickColor;
+            npsChart.options.scales.y.grid.color = newColors.gridColor;
+            npsChart.update();
         });
     });
 </script>
