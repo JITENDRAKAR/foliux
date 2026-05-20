@@ -5,6 +5,8 @@ $ProjectDir = $PSScriptRoot
 $GitPath = "C:\Users\Unifi\AppData\Local\GitHubDesktop\app-3.5.6\resources\app\git\cmd\git.exe"
 
 Write-Host "Starting database dump..."
+$env:PYTHONIOENCODING="utf-8"
+$env:PYTHONUTF8="1"
 & python manage.py dumpdata --indent 4 --output db_backup.json
 
 if (Test-Path "$ProjectDir\db_backup.json") {
