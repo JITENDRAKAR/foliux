@@ -250,6 +250,24 @@ class Command(BaseCommand):
                     relevant_news.extend(news_by_instrument[inst_id])
 
             if relevant_news:
+                from django.db import transaction, IntegrityError
+                from core.models import EmailLog
+                
+                today_date = now.date()
+                try:
+                    with transaction.atomic():
+                        _, created = EmailLog.objects.get_or_create(
+                            user=user,
+                            email_type='daily_stock_news',
+                            date_sent=today_date
+                        )
+                        if not created:
+                            self.stdout.write(f"Already sent Daily Stock News Alert to {user.email} for {today_date}. Skipping.")
+                            continue
+                except IntegrityError:
+                    self.stdout.write(f"Race condition caught: Daily Stock News Alert already sent/sending to {user.email} for {today_date}. Skipping.")
+                    continue
+
                 self.send_user_email(user, relevant_news)
 
     def send_user_email(self, user, news_items):

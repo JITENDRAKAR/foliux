@@ -4820,9 +4820,9 @@ def reset_account_data(user):
         profile.equity_profit_expectation = 22.00
         profile.mf_profit_expectation = 22.00
         profile.coin_profit_expectation = 22.00
-        profile.equity_fixed_charge = 30.00
+        profile.equity_fixed_charge = 0.00
         profile.equity_brokerage_pct = 0.0000
-        profile.intraday_fixed_charge = 30.00
+        profile.intraday_fixed_charge = 0.00
         profile.intraday_brokerage_pct = 0.0000
         profile.financial_goal = 10000000.00
         

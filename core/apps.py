@@ -58,8 +58,6 @@ class CoreConfig(AppConfig):
             scheduler.add_job(scheduled_mf, 'interval', minutes=30, id='auto_update_mf', replace_existing=True)
             scheduler.add_job(scheduled_coin, 'interval', minutes=30, id='auto_update_coin', replace_existing=True)
             scheduler.add_job(scheduled_nps, 'interval', minutes=30, id='auto_update_nps', replace_existing=True)
-            scheduler.add_job(run_alerts, 'cron', hour=10, minute=0, id='daily_signal_alerts', replace_existing=True)
-            scheduler.add_job(run_stock_news, 'cron', hour=9, minute=0, id='daily_stock_news', replace_existing=True)
             
             try:
                 print("Starting background scheduler...")

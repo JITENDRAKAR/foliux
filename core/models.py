@@ -95,9 +95,9 @@ class Profile(models.Model):
     equity_profit_expectation = models.DecimalField(max_digits=10, decimal_places=2, default=22.00)
     mf_profit_expectation = models.DecimalField(max_digits=10, decimal_places=2, default=22.00)
     coin_profit_expectation = models.DecimalField(max_digits=10, decimal_places=2, default=22.00)
-    equity_fixed_charge = models.DecimalField(max_digits=10, decimal_places=2, default=25.00, null=True, blank=True)
+    equity_fixed_charge = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, null=True, blank=True)
     equity_brokerage_pct = models.DecimalField(max_digits=10, decimal_places=4, default=0.0000, null=True, blank=True) # Percentage (e.g., 0.2%)
-    intraday_fixed_charge = models.DecimalField(max_digits=10, decimal_places=2, default=25.00, null=True, blank=True)
+    intraday_fixed_charge = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, null=True, blank=True)
     intraday_brokerage_pct = models.DecimalField(max_digits=10, decimal_places=4, default=0.0000, null=True, blank=True) # Percentage (e.g., 0.2%)
     financial_goal = models.DecimalField(max_digits=20, decimal_places=2, default=10000000.00)
     theme = models.CharField(max_length=10, choices=[('light', 'Light'), ('dark', 'Dark')], default='light')
@@ -1044,4 +1044,21 @@ class NewsAlert(models.Model):
 
     def __str__(self):
         return f"{self.instrument.symbol} - {self.title}"
+
+
+class EmailLog(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='email_logs')
+    email_type = models.CharField(max_length=50)  # e.g., 'daily_stock_news'
+    date_sent = models.DateField()
+    sent_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('user', 'email_type', 'date_sent')
+        indexes = [
+            models.Index(fields=['user', 'email_type', 'date_sent']),
+        ]
+
+    def __str__(self):
+        return f"{self.user.email} - {self.email_type} - {self.date_sent}"
+
 
